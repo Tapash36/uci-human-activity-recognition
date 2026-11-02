@@ -11,3 +11,6 @@ pinned: false
 license: mit
 short_description: UCI Human Activity Recognition Using Smartphones
 ---
+# uci-human-activity-recognition
+
+UCI HAR web app running dual PyTorch models (1D-CNN & ANN) on FastAPI, mounted via Gradio at `/gradio` with ZeroGPU support. The root route serves the static dashboard at `/static/index.html`.
