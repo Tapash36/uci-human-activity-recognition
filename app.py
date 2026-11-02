@@ -4,6 +4,7 @@ import hmac
 import re
 import secrets
 import sqlite3
+import tempfile
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -22,43 +23,63 @@ from models import HAR_1DCNN, RegularizedHAR_ANN
 from sample_generator import generate_realistic_sample, ACTIVITY_NAMES
 
 BASE_DIR = Path(__file__).resolve().parent
-AUTH_DB_PATH = Path(
-    os.environ.get(
-        "HAR_AUTH_DB",
-        str(BASE_DIR / "har_auth.sqlite3")
-    )
-).expanduser()
+
+
+def _resolve_default_db_path() -> Path:
+    configured = os.environ.get("HAR_AUTH_DB")
+    if configured:
+        return Path(configured).expanduser()
+    candidate = BASE_DIR / "har_auth.sqlite3"
+    if os.access(str(BASE_DIR), os.W_OK):
+        return candidate
+    return Path(tempfile.gettempdir()) / "har_auth.sqlite3"
+
+
+AUTH_DB_PATH = _resolve_default_db_path()
 SESSION_COOKIE = "har_session"
 SESSION_TTL_SECONDS = 7 * 24 * 60 * 60
 PASSWORD_HASH_ITERATIONS = 600_000
 
 
 def get_auth_db() -> sqlite3.Connection:
-    connection = sqlite3.connect(str(AUTH_DB_PATH), timeout=10)
+    global AUTH_DB_PATH
+    try:
+        AUTH_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        connection = sqlite3.connect(str(AUTH_DB_PATH), timeout=10)
+    except (sqlite3.OperationalError, PermissionError):
+        AUTH_DB_PATH = Path(tempfile.gettempdir()) / "har_auth.sqlite3"
+        connection = sqlite3.connect(str(AUTH_DB_PATH), timeout=10)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
     return connection
 
 
 def initialize_auth_db() -> None:
-    AUTH_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    global AUTH_DB_PATH
+    schema_sql = """
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY,
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS auth_sessions (
+            token_hash TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            expires_at INTEGER NOT NULL
+        );
+    """
     connection = get_auth_db()
     try:
-        connection.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY,
-                username TEXT NOT NULL UNIQUE,
-                password_hash TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS auth_sessions (
-                token_hash TEXT PRIMARY KEY,
-                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                expires_at INTEGER NOT NULL
-            );
-            """
-        )
-    finally:
+        connection.executescript(schema_sql)
+    except (sqlite3.OperationalError, PermissionError):
+        connection.close()
+        AUTH_DB_PATH = Path(tempfile.gettempdir()) / "har_auth.sqlite3"
+        connection = get_auth_db()
+        try:
+            connection.executescript(schema_sql)
+        finally:
+            connection.close()
+    else:
         connection.close()
 
 
@@ -97,19 +118,26 @@ def verify_password(password: str, stored_hash: str) -> bool:
         return False
 
 
+def _is_https_request(request: Request) -> bool:
+    forwarded_proto = request.headers.get("x-forwarded-proto", "")
+    return request.url.scheme == "https" or "https" in forwarded_proto.lower()
+
+
 def set_session_cookie(response: Response, request: Request, token: str) -> None:
+    is_https = _is_https_request(request)
     response.set_cookie(
         key=SESSION_COOKIE,
         value=token,
         max_age=SESSION_TTL_SECONDS,
         httponly=True,
-        secure=request.url.scheme == "https",
-        samesite="lax",
+        secure=is_https,
+        samesite="none" if is_https else "lax",
         path="/",
     )
 
 
 def create_session(user_id: int) -> str:
+    initialize_auth_db()
     token = secrets.token_urlsafe(32)
     connection = get_auth_db()
     try:
@@ -125,11 +153,21 @@ def create_session(user_id: int) -> str:
     return token
 
 
+def _extract_session_token(request: Request) -> Optional[str]:
+    auth_header = request.headers.get("authorization", "")
+    if auth_header.lower().startswith("bearer "):
+        bearer_token = auth_header[7:].strip()
+        if bearer_token:
+            return bearer_token
+    return request.cookies.get(SESSION_COOKIE)
+
+
 def require_authenticated_user(request: Request) -> dict:
-    token = request.cookies.get(SESSION_COOKIE)
+    token = _extract_session_token(request)
     if not token:
         raise HTTPException(status_code=401, detail="Authentication required")
 
+    initialize_auth_db()
     token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
     connection = get_auth_db()
     try:
@@ -165,7 +203,17 @@ app.add_middleware(
 )
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# On Hugging Face ZeroGPU, torch.cuda is emulated in the main process and cannot run
+# forward passes inside plain FastAPI routes outside @spaces.GPU. Keep lightweight
+# 1D-CNN and MLP inference on CPU when running under ZeroGPU / Spaces unless overridden.
+_is_zero_gpu = bool(
+    os.environ.get("SPACES_ZERO_GPU")
+    or os.environ.get("ZERO_GPU")
+    or os.environ.get("SPACE_ID")
+)
+device = torch.device(
+    "cuda" if (torch.cuda.is_available() and not _is_zero_gpu) else "cpu"
+)
 
 # Initialize Models
 cnn_model = HAR_1DCNN(in_channels=9, num_classes=6).to(device)
@@ -177,13 +225,20 @@ ann_weights_loaded = False
 cnn_weights_path = BASE_DIR / "har_1dcnn_weights.pth"
 ann_weights_path = BASE_DIR / "har_ann_regularized.pth"
 
-if cnn_weights_path.exists():
-    cnn_model.load_state_dict(torch.load(cnn_weights_path, map_location=device))
-    cnn_weights_loaded = True
 
-if ann_weights_path.exists():
-    ann_model.load_state_dict(torch.load(ann_weights_path, map_location=device))
-    ann_weights_loaded = True
+def _load_weights(model: torch.nn.Module, weights_path: Path) -> bool:
+    if not weights_path.exists():
+        return False
+    try:
+        state_dict = torch.load(weights_path, map_location=device, weights_only=True)
+    except TypeError:
+        state_dict = torch.load(weights_path, map_location=device)
+    model.load_state_dict(state_dict)
+    return True
+
+
+cnn_weights_loaded = _load_weights(cnn_model, cnn_weights_path)
+ann_weights_loaded = _load_weights(ann_model, ann_weights_path)
 
 cnn_model.eval()
 ann_model.eval()
@@ -273,6 +328,7 @@ def register(payload: CredentialsPayload, request: Request, response: Response):
     if len(payload.password) < 12:
         raise HTTPException(status_code=400, detail="Password must be at least 12 characters.")
 
+    initialize_auth_db()
     username = payload.username.lower()
     connection = get_auth_db()
     try:
@@ -289,11 +345,12 @@ def register(payload: CredentialsPayload, request: Request, response: Response):
 
     token = create_session(user_id)
     set_session_cookie(response, request, token)
-    return {"username": username}
+    return {"username": username, "token": token}
 
 
 @app.post("/api/auth/login")
 def login(payload: CredentialsPayload, request: Request, response: Response):
+    initialize_auth_db()
     connection = get_auth_db()
     try:
         user = connection.execute(
@@ -308,7 +365,7 @@ def login(payload: CredentialsPayload, request: Request, response: Response):
 
     token = create_session(user["id"])
     set_session_cookie(response, request, token)
-    return {"username": user["username"]}
+    return {"username": user["username"], "token": token}
 
 
 @app.get("/api/auth/me")
@@ -318,8 +375,9 @@ def current_user(user: dict = Depends(require_authenticated_user)):
 
 @app.post("/api/auth/logout")
 def logout(request: Request, response: Response):
-    token = request.cookies.get(SESSION_COOKIE)
+    token = _extract_session_token(request)
     if token:
+        initialize_auth_db()
         connection = get_auth_db()
         try:
             with connection:
@@ -329,7 +387,14 @@ def logout(request: Request, response: Response):
                 )
         finally:
             connection.close()
-    response.delete_cookie(SESSION_COOKIE, path="/", httponly=True, samesite="lax")
+    is_https = _is_https_request(request)
+    response.delete_cookie(
+        SESSION_COOKIE,
+        path="/",
+        httponly=True,
+        secure=is_https,
+        samesite="none" if is_https else "lax",
+    )
     return {"status": "logged out"}
 
 
