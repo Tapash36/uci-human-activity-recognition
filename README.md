@@ -1,3 +1,14 @@
+---
+title: UCI HAR Studio
+emoji: 🏃
+colorFrom: blue
+colorTo: indigo
+sdk: gradio
+sdk_version: 4.44.0
+app_file: main.py
+pinned: false
+---
+
 <<<<<<< HEAD
 # UCI HAR Dual-Pipeline AI API & Mobile Web Studio
 
