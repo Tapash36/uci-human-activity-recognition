@@ -9,6 +9,12 @@ def keep_alive():
     return "ZeroGPU backend active"
 
 
-demo = gr.Interface(fn=keep_alive, inputs=None, outputs="text")
+with gr.Blocks() as demo:
+    status = gr.Textbox(label="Status")
+    gr.Button("Check ZeroGPU").click(
+        fn=keep_alive,
+        inputs=None,
+        outputs=status,
+    )
 
 app = gr.mount_gradio_app(fastapi_app, demo, path="/gradio")
