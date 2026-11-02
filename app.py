@@ -5,8 +5,9 @@ import re
 import secrets
 import sqlite3
 import time
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import AsyncIterator, List, Dict, Optional
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -19,12 +20,6 @@ from pydantic import BaseModel, Field
 
 from models import HAR_1DCNN, RegularizedHAR_ANN
 from sample_generator import generate_realistic_sample, ACTIVITY_NAMES
-
-app = FastAPI(
-    title="UCI HAR AI & Big Data Convergence API",
-    description="Dual-Pipeline Human Activity Recognition API (1D-CNN Raw Signals & Regularized ANN 561-Features)",
-    version="2.0.0"
-)
 
 BASE_DIR = Path(__file__).resolve().parent
 AUTH_DB_PATH = Path(
@@ -67,7 +62,18 @@ def initialize_auth_db() -> None:
         connection.close()
 
 
-app.add_event_handler("startup", initialize_auth_db)
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    initialize_auth_db()
+    yield
+
+
+app = FastAPI(
+    title="UCI HAR AI & Big Data Convergence API",
+    description="Dual-Pipeline Human Activity Recognition API (1D-CNN Raw Signals & Regularized ANN 561-Features)",
+    version="2.0.0",
+    lifespan=lifespan,
+)
 
 
 def hash_password(password: str) -> str:
