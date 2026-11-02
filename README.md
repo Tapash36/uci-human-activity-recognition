@@ -3,11 +3,11 @@ title: UCI HAR Studio
 emoji: 🏃
 colorFrom: blue
 colorTo: indigo
-sdk: docker
+sdk: gradio
+app_file: main.py
 pinned: false
 ---
 
-<<<<<<< HEAD
 # UCI HAR Dual-Pipeline AI API & Mobile Web Studio
 
 **Team Members:** Tapash Pradhan (20240301067), Pushpa Ramtel, Shova Dhital  
@@ -46,7 +46,7 @@ pip install -r requirements.txt
 
 ### Step 3: Run the API Server
 ```bash
-uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### Step 4: Open on Your Laptop & Smartphone
@@ -64,20 +64,4 @@ uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 - Preset samples are deterministic, making repeated activity selections consistent and avoiding changes to NumPy's shared random state.
 - For deployment beyond a trusted local network, serve the app over HTTPS. The session cookie is HTTP-only and marked Secure for HTTPS requests.
 - Same-origin use (including the phone dashboard) needs no CORS setup. For a separate browser client, set `HAR_ALLOWED_ORIGINS` to a comma-separated list of trusted origins, such as `https://dashboard.example.com`.
-=======
----
-title: Uci Har Studio
-emoji: 🐠
-colorFrom: indigo
-colorTo: pink
-sdk: gradio
-sdk_version: 6.31.0
-python_version: '3.12'
-app_file: app.py
-pinned: false
-license: mit
-short_description: 'UCI Human Activity Recognition Using Smartphones '
----
-
 Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
->>>>>>> 3339b9350d83a846be6df4fd1afbc7e0aa82b1cd

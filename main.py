@@ -1,16 +1,18 @@
-from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
+import gradio as gr
+import spaces
+import uvicorn
 
-# Import your existing FastAPI app from app.py
-from app import app
+from app import app as fastapi_app
 
 
-@app.get("/", include_in_schema=False)
-def redirect_to_dashboard():
-  return RedirectResponse(url="/static/index.html")
+@spaces.GPU
+def keep_alive():
+    return "ZeroGPU backend active"
 
+
+demo = gr.Interface(fn=keep_alive, inputs=None, outputs="text")
+
+app = gr.mount_gradio_app(fastapi_app, demo, path="/gradio")
 
 if __name__ == "__main__":
-  import uvicorn
-
-  uvicorn.run(app, host="0.0.0.0", port=7860)
+    uvicorn.run(app, host="0.0.0.0", port=7860)

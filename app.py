@@ -12,7 +12,7 @@ import torch
 import torch.nn.functional as F
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, Field
@@ -255,7 +255,7 @@ def adjust_Untrained_Probs(probs: np.ndarray, signals: Optional[np.ndarray] = No
 # ----------------- Routes -----------------
 @app.get("/")
 def serve_ui():
-    return FileResponse(BASE_DIR / "static" / "index.html")
+    return RedirectResponse(url="/static/index.html")
 
 @app.post("/api/auth/register")
 def register(payload: CredentialsPayload, request: Request, response: Response):
