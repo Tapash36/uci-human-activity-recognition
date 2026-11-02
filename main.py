@@ -1,6 +1,15 @@
 import os
 import types
 
+# Capture the target server port before overriding Gradio's internal env vars.
+SERVER_PORT = int(os.environ.get("PORT", os.environ.get("GRADIO_SERVER_PORT", "7860")))
+
+# Disable Gradio SSR mode and move Gradio's internal ports away from 7860
+# before importing gradio so mount_gradio_app never binds port 7860 during lifespan startup.
+os.environ["GRADIO_SSR_MODE"] = "false"
+os.environ["GRADIO_SERVER_PORT"] = "7861"
+os.environ["GRADIO_NODE_SERVER_PORT"] = "7862"
+
 try:
     import spaces
 except ImportError:
@@ -32,7 +41,11 @@ if gr is not None:
             outputs=status,
         )
 
-    app = gr.mount_gradio_app(fastapi_app, demo, path="/gradio")
+    demo.ssr_mode = False
+    try:
+        app = gr.mount_gradio_app(fastapi_app, demo, path="/gradio", ssr_mode=False)
+    except TypeError:
+        app = gr.mount_gradio_app(fastapi_app, demo, path="/gradio")
 else:
     demo = None
     app = fastapi_app
@@ -51,5 +64,4 @@ def _notify_zerogpu_startup() -> None:
 
 if __name__ == "__main__":
     _notify_zerogpu_startup()
-    port = int(os.environ.get("PORT", os.environ.get("GRADIO_SERVER_PORT", "7860")))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="0.0.0.0", port=SERVER_PORT)

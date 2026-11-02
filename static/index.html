@@ -321,7 +321,6 @@
     let chartsInitialized = false;
     let authMode = 'login';
     let presetRequestId = 0;
-
     const ACTIVITIES = ["WALKING", "WALKING_UPSTAIRS", "WALKING_DOWNSTAIRS", "SITTING", "STANDING", "LAYING"];
 
     function setAuthMessage(message, isError = true) {
@@ -416,7 +415,7 @@
       }
     }
 
-    async function apiFetch(url, options) {
+    async function apiFetch(url, options = {}) {
       const response = await fetch(url, options);
       if (response.status === 401) {
         if (isRecordingMobile) stopMobileSensor();

@@ -1,3 +1,5 @@
+__pycache__/
+*.py[cod]
 har_auth.sqlite3
 har_auth.sqlite3-shm
 har_auth.sqlite3-wal
