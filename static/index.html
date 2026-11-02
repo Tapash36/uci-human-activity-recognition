@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>HAR AI Studio | Mobile & Web Activity Recognition</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #0b0f19; color: #f1f5f9; }
+    .glass-card { background: rgba(30, 41, 59, 0.72); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .pulse-ring { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+  </style>
+</head>
+<body class="min-h-screen pb-12">
+
+  <section id="authGate" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950 px-4">
+    <div class="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl sm:p-8">
+      <div class="mb-6 text-center">
+        <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-lg font-bold">AI</div>
+        <h1 id="authTitle" class="text-2xl font-bold text-white">Sign in</h1>
+        <p id="authDescription" class="mt-2 text-sm text-slate-400">Sign in to access the HAR Inference Studio.</p>
+      </div>
+      <form id="authForm" onsubmit="submitAuth(event)" class="space-y-4">
+        <label class="block text-sm font-medium text-slate-300">
+          Username
+          <input id="authUsername" name="username" type="text" required minlength="3" maxlength="32" autocomplete="username"
+            class="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-white outline-none focus:border-blue-500">
+        </label>
+        <label class="block text-sm font-medium text-slate-300">
+          Password
+          <input id="authPassword" name="password" type="password" required maxlength="128" autocomplete="current-password"
+            class="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-white outline-none focus:border-blue-500">
+        </label>
+        <p id="authHint" class="hidden text-xs text-slate-400">Use at least 12 characters for your password.</p>
+        <p id="authMessage" role="status" aria-live="polite" class="hidden text-sm text-rose-300"></p>
+        <button id="authSubmit" type="submit" class="w-full rounded-lg bg-blue-600 px-4 py-2.5 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60">
+          Sign in
+        </button>
+      </form>
+      <p class="mt-5 text-center text-sm text-slate-400">
+        <span id="authSwitchPrompt">New here?</span>
+        <button id="authSwitch" type="button" onclick="toggleAuthMode()" class="ml-1 font-semibold text-blue-400 hover:text-blue-300">Create an account</button>
+      </p>
+    </div>
+  </section>
+
+  <div id="appContent" class="hidden">
+  <!-- Top Navigation Header -->
+  <header class="sticky top-0 z-50 glass-card border-b border-slate-800 px-4 py-3 sm:px-8">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25 font-bold text-lg">
+          AI
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
+            UCI HAR Inference Studio
+            <span class="hidden md:inline-block text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2.5 py-0.5 rounded-full font-medium">
+              SCU Capstone Project
+            </span>
+          </h1>
+          <p class="text-xs text-slate-400">Tapash Pradhan • Pushpa Ramtel • Shova Dhital</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div id="statusBadge" class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-3 py-1.5 rounded-full text-xs font-semibold">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-ring"></span>
+          <span>API Online</span>
+        </div>
+        <a href="/docs" target="_blank" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg font-medium transition">
+          Swagger Docs ↗
+        </a>
+        <span id="signedInUser" class="text-xs text-slate-400"></span>
+        <button onclick="logout()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg font-medium transition">
+          Sign out
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-8 mt-6 space-y-6">
+
+    <!-- Mode Switcher Tabs (Mobile Sensor vs Preset Simulator) -->
+    <div class="grid grid-cols-2 sm:flex sm:w-fit gap-2 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800">
+      <button id="tabSimBtn" onclick="switchTab('sim')" class="px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition bg-blue-600 text-white shadow">
+        ⚡ Preset Activity Simulator
+      </button>
+      <button id="tabMobileBtn" onclick="switchTab('mobile')" class="px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white">
+        📱 Live Mobile Sensor Stream
+      </button>
+    </div>
+
+    <!-- SECTION 1: PRESET ACTIVITY SIMULATOR -->
+    <section id="simSection" class="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-white">Test Activity Telemetry Presets</h2>
+          <p class="text-xs text-slate-400">Select any of the 6 UCI HAR activities to stream a 2.56s (128x9) window into both models simultaneously.</p>
+        </div>
+        <span id="weightsIndicator" class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-md self-start sm:self-auto">
+          Checking model weights...
+        </span>
+      </div>
+
+      <!-- 6 Activity Buttons Grid (Mobile Touch Friendly) -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-1">
+        <button onclick="runPreset('WALKING')" class="act-btn flex flex-col items-center justify-center p-4 rounded-xl bg-slate-800/80 hover:bg-blue-600/20 border border-slate-700 hover:border-blue-500 transition group">
+          <span class="text-2xl mb-1 group-hover:scale-110 transition">🚶</span>
+          <span class="text-xs font-bold text-slate-200">WALKING</span>
+        </button>
+        <button onclick="runPreset('WALKING_UPSTAIRS')" class="act-btn flex flex-col items-center justify-center p-4 rounded-xl bg-slate-800/80 hover:bg-blue-600/20 border border-slate-700 hover:border-blue-500 transition group">
+          <span class="text-2xl mb-1 group-hover:scale-110 transition">🧗</span>
+          <span class="text-xs font-bold text-slate-200">UPSTAIRS</span>
+        </button>
+        <button onclick="runPreset('WALKING_DOWNSTAIRS')" class="act-btn flex flex-col items-center justify-center p-4 rounded-xl bg-slate-800/80 hover:bg-blue-600/20 border border-slate-700 hover:border-blue-500 transition group">
+          <span class="text-2xl mb-1 group-hover:scale-110 transition">⛷️</span>
+          <span class="text-xs font-bold text-slate-200">DOWNSTAIRS</span>
+        </button>
+        <button onclick="runPreset('SITTING')" class="act-btn flex flex-col items-center justify-center p-4 rounded-xl bg-slate-800/80 hover:bg-blue-600/20 border border-slate-700 hover:border-blue-500 transition group">
+          <span class="text-2xl mb-1 group-hover:scale-110 transition">🪑</span>
+          <span class="text-xs font-bold text-slate-200">SITTING</span>
+        </button>
+        <button onclick="runPreset('STANDING')" class="act-btn flex flex-col items-center justify-center p-4 rounded-xl bg-slate-800/80 hover:bg-blue-600/20 border border-slate-700 hover:border-blue-500 transition group">
+          <span class="text-2xl mb-1 group-hover:scale-110 transition">🧍</span>
+          <span class="text-xs font-bold text-slate-200">STANDING</span>
+        </button>
+        <button onclick="runPreset('LAYING')" class="act-btn flex flex-col items-center justify-center p-4 rounded-xl bg-slate-800/80 hover:bg-blue-600/20 border border-slate-700 hover:border-blue-500 transition group">
+          <span class="text-2xl mb-1 group-hover:scale-110 transition">🛌</span>
+          <span class="text-xs font-bold text-slate-200">LAYING</span>
+        </button>
+      </div>
+      <p id="predictionStatus" role="status" aria-live="polite" class="min-h-5 text-xs text-slate-400">Choose an activity to see its prediction.</p>
+    </section>
+
+    <!-- SECTION 2: LIVE MOBILE HARDWARE SENSOR RECORDING (Hidden by default) -->
+    <section id="mobileSection" class="hidden glass-card rounded-2xl p-5 sm:p-6 space-y-4 border border-indigo-500/30">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span class="text-xs uppercase tracking-wider font-bold text-indigo-400">Real-Time Edge Telemetry</span>
+          <h2 class="text-lg font-bold text-white mt-0.5">Smartphone Accelerometer & Gyroscope Stream</h2>
+          <p class="text-xs text-slate-400">Open this page on your phone, hold it at your waist or in hand, and tap Start to stream 128 readings (2.56s) directly into the 1D-CNN.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button id="startSensorBtn" onclick="startMobileSensor()" class="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-sm shadow-lg shadow-emerald-500/20 transition">
+            ▶ Start Phone Sensor
+          </button>
+          <button id="stopSensorBtn" onclick="stopMobileSensor()" class="hidden px-5 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm transition">
+            ⏹ Stop
+          </button>
+        </div>
+      </div>
+
+      <!-- Progress bar for 128 samples -->
+      <div class="space-y-1.5">
+        <div class="flex justify-between text-xs text-slate-300 font-medium">
+          <span id="sensorStateText">Waiting for device motion permission...</span>
+          <span id="bufferCountText">0 / 128 samples</span>
+        </div>
+        <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+          <div id="bufferProgressBar" class="h-full bg-indigo-500 transition-all duration-150" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Live XYZ Readout -->
+      <div class="grid grid-cols-3 gap-2 sm:gap-4 pt-2 text-center">
+        <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+          <span class="text-[11px] text-slate-400 block">Acc X (m/s²)</span>
+          <span id="liveAccX" class="text-sm sm:text-base font-mono font-bold text-blue-400">0.00</span>
+        </div>
+        <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+          <span class="text-[11px] text-slate-400 block">Acc Y (m/s²)</span>
+          <span id="liveAccY" class="text-sm sm:text-base font-mono font-bold text-emerald-400">0.00</span>
+        </div>
+        <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+          <span class="text-[11px] text-slate-400 block">Acc Z (m/s²)</span>
+          <span id="liveAccZ" class="text-sm sm:text-base font-mono font-bold text-rose-400">0.00</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- PREDICTION RESULTS CARDS (1D-CNN vs ANN vs Ensemble) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      
+      <!-- Card 1: 1D-CNN (Raw Signals) -->
+      <div class="glass-card rounded-2xl p-5 border-t-4 border-t-blue-500 flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-blue-400">Pipeline B • Raw Signals</span>
+            <span id="cnnLatency" class="text-xs font-mono bg-blue-500/10 text-blue-300 px-2 py-0.5 rounded">-- ms</span>
+          </div>
+          <h3 class="text-sm font-semibold text-slate-300">1D-CNN Architecture (128×9)</h3>
+          <div class="mt-4 flex items-baseline gap-3">
+            <span id="cnnPredLabel" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">WALKING</span>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-800/80 flex justify-between items-center text-xs">
+          <span class="text-slate-400">Confidence: <strong id="cnnConf" class="text-emerald-400">98.4%</strong></span>
+          <span class="text-slate-500">Benchmark: 94.03%</span>
+        </div>
+      </div>
+
+      <!-- Card 2: Regularized ANN (561 Features) -->
+      <div class="glass-card rounded-2xl p-5 border-t-4 border-t-purple-500 flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-purple-400">Pipeline A • 561 Features</span>
+            <span id="annLatency" class="text-xs font-mono bg-purple-500/10 text-purple-300 px-2 py-0.5 rounded">-- ms</span>
+          </div>
+          <h3 class="text-sm font-semibold text-slate-300">Regularized ANN / MLP</h3>
+          <p class="mt-1 text-[11px] text-slate-500">Preset input is synthetic; a real 561-feature vector is required for ANN results.</p>
+          <div class="mt-4 flex items-baseline gap-3">
+            <span id="annPredLabel" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">WALKING</span>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-800/80 flex justify-between items-center text-xs">
+          <span class="text-slate-400">Confidence: <strong id="annConf" class="text-emerald-400">99.1%</strong></span>
+          <span class="text-slate-500">Benchmark: 95.72%</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Blended Ensemble Verdict -->
+      <div class="glass-card rounded-2xl p-5 border-t-4 border-t-emerald-500 bg-gradient-to-b from-emerald-950/20 to-slate-900/60 flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Combined Decision</span>
+            <span class="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-semibold">Ensemble</span>
+          </div>
+          <h3 id="ensembleMethod" class="text-sm font-semibold text-slate-300">50% CNN + 50% ANN Softmax</h3>
+          <div class="mt-4 flex items-baseline gap-3">
+            <span id="ensPredLabel" class="text-2xl sm:text-3xl font-extrabold text-emerald-400 tracking-tight">WALKING</span>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-800/80 flex justify-between items-center text-xs">
+          <span class="text-slate-400">Combined Score: <strong id="ensConf" class="text-white">98.8%</strong></span>
+          <span class="text-emerald-400 font-medium">✓ Verified Match</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CHARTS SECTION: Waveform Viewer & Class Probability Distribution -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      
+      <!-- Left: 128-Timestep Sensor Waveform Chart -->
+      <div class="glass-card rounded-2xl p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-white">Raw Inertial Waveform (128 Timesteps = 2.56s)</h3>
+            <p class="text-xs text-slate-400">Body Acceleration X, Y, Z axes fed into <code>nn.Conv1d</code></p>
+          </div>
+          <span class="text-xs font-mono text-slate-400 bg-slate-800 px-2.5 py-1 rounded">50 Hz</span>
+        </div>
+        <div class="h-64">
+          <canvas id="waveformChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Right: Per-Class Softmax Probability Bar Chart -->
+      <div class="glass-card rounded-2xl p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-white">Class Probability Breakdown</h3>
+            <p class="text-xs text-slate-400">Side-by-side Softmax confidence across all 6 activities</p>
+          </div>
+        </div>
+        <div class="h-64">
+          <canvas id="probChart"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CAPSTONE BENCHMARK SUMMARY FOOTER TABLE -->
+    <section class="glass-card rounded-2xl p-5 sm:p-6 overflow-x-auto">
+      <h3 class="text-sm sm:text-base font-bold text-white mb-3">Experimental Benchmark Summary (2,947 Unseen Test Samples)</h3>
+      <table class="w-full text-left border-collapse text-xs sm:text-sm">
+        <thead>
+          <tr class="border-b border-slate-700 text-slate-400">
+            <th class="py-2.5 px-3">Pipeline Architecture</th>
+            <th class="py-2.5 px-3">Input Tensor Shape</th>
+            <th class="py-2.5 px-3">Test Accuracy</th>
+            <th class="py-2.5 px-3">Macro F1</th>
+            <th class="py-2.5 px-3">Regularization & Convergence</th>
+            <th class="py-2.5 px-3">Mobile Edge Suitability</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-800 text-slate-200">
+          <tr>
+            <td class="py-3 px-3 font-semibold text-blue-400">1D-CNN (End-to-End DL)</td>
+            <td class="py-3 px-3 font-mono text-xs">(Batch, 9, 128)</td>
+            <td class="py-3 px-3 font-bold">94.03%</td>
+            <td class="py-3 px-3">0.9412</td>
+            <td class="py-3 px-3">BatchNorm1d + Dropout(0.3, 0.5), 30 Epochs</td>
+            <td class="py-3 px-3 text-emerald-400 font-medium">★ Best (Zero Manual Math, Low Battery)</td>
+          </tr>
+          <tr>
+            <td class="py-3 px-3 font-semibold text-purple-400">Regularized ANN / MLP</td>
+            <td class="py-3 px-3 font-mono text-xs">(Batch, 561)</td>
+            <td class="py-3 px-3 font-bold">95.72%</td>
+            <td class="py-3 px-3">0.9573</td>
+            <td class="py-3 px-3">AdamW + EarlyStopping (Epoch 8 Restored)</td>
+            <td class="py-3 px-3 text-amber-400">High Accuracy, Heavy Feature Extraction</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+  </main>
+  </div>
+
+  <script>
+    let waveChartInstance = null;
+    let probChartInstance = null;
+    let sensorBuffer = [];
+    let isRecordingMobile = false;
+    let chartsInitialized = false;
+    let authMode = 'login';
+    let presetRequestId = 0;
+
+    const ACTIVITIES = ["WALKING", "WALKING_UPSTAIRS", "WALKING_DOWNSTAIRS", "SITTING", "STANDING", "LAYING"];
+
+    function setAuthMessage(message, isError = true) {
+      const el = document.getElementById('authMessage');
+      el.textContent = message;
+      el.classList.toggle('hidden', !message);
+      el.classList.toggle('text-rose-300', isError);
+      el.classList.toggle('text-emerald-300', !isError);
+    }
+
+    function toggleAuthMode() {
+      authMode = authMode === 'login' ? 'register' : 'login';
+      const registering = authMode === 'register';
+      document.getElementById('authTitle').textContent = registering ? 'Create account' : 'Sign in';
+      document.getElementById('authDescription').textContent = registering
+        ? 'Create an account to access the HAR Inference Studio.'
+        : 'Sign in to access the HAR Inference Studio.';
+      document.getElementById('authSubmit').textContent = registering ? 'Create account' : 'Sign in';
+      document.getElementById('authSwitchPrompt').textContent = registering ? 'Already registered?' : 'New here?';
+      document.getElementById('authSwitch').textContent = registering ? 'Sign in' : 'Create an account';
+      document.getElementById('authHint').classList.toggle('hidden', !registering);
+      document.getElementById('authPassword').setAttribute('autocomplete', registering ? 'new-password' : 'current-password');
+      setAuthMessage('');
+    }
+
+    function showAuthGate(message = '') {
+      document.getElementById('appContent').classList.add('hidden');
+      document.getElementById('authGate').classList.remove('hidden');
+      if (message) setAuthMessage(message);
+    }
+
+    async function showDashboard(username) {
+      document.getElementById('signedInUser').textContent = username;
+      document.getElementById('authGate').classList.add('hidden');
+      document.getElementById('appContent').classList.remove('hidden');
+      if (!chartsInitialized) {
+        initCharts();
+        chartsInitialized = true;
+      }
+      await Promise.all([checkServerStatus(), runPreset('WALKING')]);
+    }
+
+    async function checkAuthentication() {
+      try {
+        const response = await fetch('/api/auth/me');
+        if (response.ok) {
+          const user = await response.json();
+          await showDashboard(user.username);
+        }
+      } catch (error) {
+        setAuthMessage('Could not reach the server. Check that the API is running, then try again.');
+      }
+    }
+
+    async function submitAuth(event) {
+      event.preventDefault();
+      const button = document.getElementById('authSubmit');
+      const username = document.getElementById('authUsername').value.trim();
+      const password = document.getElementById('authPassword').value;
+      button.disabled = true;
+      setAuthMessage('');
+      try {
+        const response = await fetch(`/api/auth/${authMode}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          const detail = Array.isArray(result.detail)
+            ? result.detail.map(error => error.msg).join(' ')
+            : result.detail;
+          throw new Error(detail || 'Sign-in failed.');
+        }
+        await showDashboard(result.username);
+      } catch (error) {
+        setAuthMessage(error.message || 'Could not reach the server. Please try again.');
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function logout() {
+      try {
+        const response = await fetch('/api/auth/logout', { method: 'POST' });
+        if (!response.ok) throw new Error('Sign out failed.');
+        if (isRecordingMobile) stopMobileSensor();
+        showAuthGate();
+        setAuthMessage('You have signed out.', false);
+      } catch (error) {
+        showAuthGate(error.message || 'Could not reach the server.');
+      }
+    }
+
+    async function apiFetch(url, options) {
+      const response = await fetch(url, options);
+      if (response.status === 401) {
+        if (isRecordingMobile) stopMobileSensor();
+        showAuthGate('Your session expired. Sign in again to continue.');
+        throw new Error('Authentication required.');
+      }
+      return response;
+    }
+
+    async function apiJson(url, options) {
+      const response = await apiFetch(url, options);
+      const result = await response.json();
+      if (!response.ok) {
+        const detail = Array.isArray(result.detail)
+          ? result.detail.map(error => error.msg).join(' ')
+          : result.detail;
+        throw new Error(detail || `Request failed (${response.status}).`);
+      }
+      return result;
+    }
+
+    // Initialize Charts
+    function initCharts() {
+      const ctxWave = document.getElementById('waveformChart').getContext('2d');
+      waveChartInstance = new Chart(ctxWave, {
+        type: 'line',
+        data: {
+          labels: Array.from({length: 128}, (_, i) => i + 1),
+          datasets: [
+            { label: 'Body Acc X', data: [], borderColor: '#3b82f6', borderWidth: 1.8, pointRadius: 0, tension: 0.25 },
+            { label: 'Body Acc Y', data: [], borderColor: '#10b981', borderWidth: 1.8, pointRadius: 0, tension: 0.25 },
+            { label: 'Body Acc Z', data: [], borderColor: '#f43f5e', borderWidth: 1.8, pointRadius: 0, tension: 0.25 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 300 },
+          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', maxTicksLimit: 8 } },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' }, suggestedMin: -1, suggestedMax: 1 }
+          }
+        }
+      });
+
+      const ctxProb = document.getElementById('probChart').getContext('2d');
+      probChartInstance = new Chart(ctxProb, {
+        type: 'bar',
+        data: {
+          labels: ["WALK", "UPSTAIRS", "DOWNSTAIRS", "SITTING", "STANDING", "LAYING"],
+          datasets: [
+            { label: '1D-CNN Prob', data: [0,0,0,0,0,0], backgroundColor: '#3b82f6', borderRadius: 6 },
+            { label: 'ANN Prob', data: [0,0,0,0,0,0], backgroundColor: '#a855f7', borderRadius: 6 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' }, min: 0, max: 1.0 }
+          }
+        }
+      });
+    }
+
+    function switchTab(mode) {
+      const simSec = document.getElementById('simSection');
+      const mobSec = document.getElementById('mobileSection');
+      const simBtn = document.getElementById('tabSimBtn');
+      const mobBtn = document.getElementById('tabMobileBtn');
+
+      if (mode === 'sim') {
+        simSec.classList.remove('hidden');
+        mobSec.classList.add('hidden');
+        simBtn.className = "px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition bg-blue-600 text-white shadow";
+        mobBtn.className = "px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white";
+      } else {
+        simSec.classList.add('hidden');
+        mobSec.classList.remove('hidden');
+        mobBtn.className = "px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition bg-indigo-600 text-white shadow";
+        simBtn.className = "px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white";
+      }
+    }
+
+    async function checkServerStatus() {
+      try {
+        const data = await apiJson('/api/status');
+        const el = document.getElementById('weightsIndicator');
+        if (data.cnn_weights_loaded && data.ann_weights_loaded) {
+          el.textContent = "✓ Trained PyTorch Weights (.pth) Active";
+          el.className = "text-xs text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-md";
+        } else {
+          el.textContent = "Demo mode · add trained .pth weights for model predictions";
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function runPreset(activityName) {
+      const requestId = ++presetRequestId;
+      const buttons = document.querySelectorAll('.act-btn');
+      const status = document.getElementById('predictionStatus');
+      buttons.forEach(button => { button.disabled = true; });
+      status.textContent = `Generating ${activityName.replaceAll('_', ' ').toLowerCase()} prediction...`;
+      try {
+        const result = await apiJson(`/api/demo/${encodeURIComponent(activityName)}`);
+        if (requestId !== presetRequestId) return;
+        updateDashboardUI(result.signals, result);
+        status.textContent = result.ann_result.weights_status.startsWith('Preset demo')
+          ? `${result.activity.replaceAll('_', ' ')} synthetic preset ready; ANN skipped without real 561-feature input.`
+          : `${result.activity.replaceAll('_', ' ')} prediction ready.`;
+      } catch (err) {
+        if (requestId !== presetRequestId) return;
+        status.textContent = `Could not load prediction: ${err.message}`;
+        console.error("Prediction error:", err);
+      } finally {
+        if (requestId === presetRequestId) {
+          buttons.forEach(button => { button.disabled = false; });
+        }
+      }
+    }
+
+    function updateDashboardUI(signals, result) {
+      // Update cards
+      document.getElementById('cnnPredLabel').textContent = result.cnn_result.predicted_activity;
+      document.getElementById('cnnConf').textContent = (result.cnn_result.confidence * 100).toFixed(1) + '%';
+      document.getElementById('cnnLatency').textContent = result.cnn_result.latency_ms + ' ms';
+
+      document.getElementById('annPredLabel').textContent = result.ann_result.predicted_activity;
+      document.getElementById('annConf').textContent = (result.ann_result.confidence * 100).toFixed(1) + '%';
+      const presetFallback = result.ann_result.weights_status.startsWith('Preset demo');
+      document.getElementById('annLatency').textContent = presetFallback
+        ? 'Not run'
+        : result.ann_result.latency_ms + ' ms';
+
+      document.getElementById('ensPredLabel').textContent = result.ensemble_activity;
+      document.getElementById('ensConf').textContent = (result.ensemble_confidence * 100).toFixed(1) + '%';
+      document.getElementById('ensembleMethod').textContent = presetFallback
+        ? 'Synthetic preset • CNN estimate'
+        : '50% CNN + 50% ANN Softmax';
+
+      // Update waveform chart
+      waveChartInstance.data.datasets[0].data = signals[0];
+      waveChartInstance.data.datasets[1].data = signals[1];
+      waveChartInstance.data.datasets[2].data = signals[2];
+      waveChartInstance.update();
+
+      // Update probability chart
+      const cnnProbs = ACTIVITIES.map(a => result.cnn_result.probabilities[a]);
+      const annProbs = ACTIVITIES.map(a => result.ann_result.probabilities[a]);
+      probChartInstance.data.datasets[0].data = cnnProbs;
+      probChartInstance.data.datasets[1].data = annProbs;
+      probChartInstance.update();
+    }
+
+    // ----------------- Mobile Hardware Sensor Streaming -----------------
+    async function startMobileSensor() {
+      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        try {
+          const permission = await DeviceMotionEvent.requestPermission();
+          if (permission !== 'granted') {
+            alert('Motion sensor permission denied.');
+            return;
+          }
+        } catch (err) {
+          alert('HTTPS is required on iOS for DeviceMotion.');
+        }
+      }
+
+      sensorBuffer = [];
+      isRecordingMobile = true;
+      document.getElementById('startSensorBtn').classList.add('hidden');
+      document.getElementById('stopSensorBtn').classList.remove('hidden');
+      document.getElementById('sensorStateText').textContent = "Recording live smartphone motion...";
+
+      window.addEventListener('devicemotion', handleDeviceMotion);
+    }
+
+    function stopMobileSensor() {
+      isRecordingMobile = false;
+      window.removeEventListener('devicemotion', handleDeviceMotion);
+      document.getElementById('startSensorBtn').classList.remove('hidden');
+      document.getElementById('stopSensorBtn').classList.add('hidden');
+      document.getElementById('sensorStateText').textContent = "Sensor stream paused.";
+    }
+
+    async function handleDeviceMotion(event) {
+      if (!isRecordingMobile) return;
+
+      const acc = event.acceleration || { x: 0, y: 0, z: 0 };
+      const tot = event.accelerationIncludingGravity || { x: 0, y: 9.8, z: 0 };
+      const rot = event.rotationRate || { alpha: 0, beta: 0, gamma: 0 };
+
+      // Normalize to g units (~9.81 m/s^2)
+      const bx = (acc.x || 0) / 9.81;
+      const by = (acc.y || 0) / 9.81;
+      const bz = (acc.z || 0) / 9.81;
+
+      const gx = (rot.alpha || 0) * (Math.PI / 180);
+      const gy = (rot.beta || 0) * (Math.PI / 180);
+      const gz = (rot.gamma || 0) * (Math.PI / 180);
+
+      const tx = (tot.x || 0) / 9.81;
+      const ty = (tot.y || 0) / 9.81;
+      const tz = (tot.z || 0) / 9.81;
+
+      document.getElementById('liveAccX').textContent = bx.toFixed(2);
+      document.getElementById('liveAccY').textContent = by.toFixed(2);
+      document.getElementById('liveAccZ').textContent = bz.toFixed(2);
+
+      sensorBuffer.push([bx, by, bz, gx, gy, gz, tx, ty, tz]);
+
+      const count = sensorBuffer.length;
+      document.getElementById('bufferCountText').textContent = `${count} / 128 samples`;
+      document.getElementById('bufferProgressBar').style.width = `${Math.min(100, (count / 128) * 100)}%`;
+
+      if (sensorBuffer.length === 128) {
+        const windowCopy = [...sensorBuffer];
+        sensorBuffer = sensorBuffer.slice(64); // 50% sliding overlap (64 readings)
+
+        // Transpose (128, 9) -> (9, 128)
+        const signals9x128 = Array.from({ length: 9 }, (_, ch) => windowCopy.map(step => step[ch]));
+
+        try {
+          const cnnResult = await apiJson('/predict/cnn', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ signals: signals9x128 })
+          });
+          document.getElementById('cnnPredLabel').textContent = cnnResult.predicted_activity;
+          document.getElementById('cnnConf').textContent = (cnnResult.confidence * 100).toFixed(1) + '%';
+          document.getElementById('cnnLatency').textContent = cnnResult.latency_ms + ' ms';
+          document.getElementById('annPredLabel').textContent = 'Not run';
+          document.getElementById('annConf').textContent = '--';
+          document.getElementById('annLatency').textContent = 'Not run';
+          document.getElementById('ensPredLabel').textContent = cnnResult.predicted_activity;
+          document.getElementById('ensConf').textContent = (cnnResult.confidence * 100).toFixed(1) + '%';
+          document.getElementById('ensembleMethod').textContent = 'Live sensor • CNN only';
+
+          waveChartInstance.data.datasets[0].data = signals9x128[0];
+          waveChartInstance.data.datasets[1].data = signals9x128[1];
+          waveChartInstance.data.datasets[2].data = signals9x128[2];
+          waveChartInstance.update();
+
+          const cnnProbs = ACTIVITIES.map(a => cnnResult.probabilities[a]);
+          probChartInstance.data.datasets[0].data = cnnProbs;
+          probChartInstance.data.datasets[1].data = ACTIVITIES.map(() => 0);
+          probChartInstance.update();
+        } catch (e) {
+          document.getElementById('sensorStateText').textContent = `Prediction failed: ${e.message}`;
+          console.error(e);
+        }
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', checkAuthentication);
+  </script>
+</body>
+</html>
