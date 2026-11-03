@@ -303,6 +303,13 @@
           </div>
 
           <div class="flex flex-wrap items-center gap-3 shrink-0">
+            <label for="liveModelTypeSelect" class="sr-only">Model Type</label>
+            <select id="liveModelTypeSelect"
+              class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="cnn" selected>Model: 1D-CNN (Raw 128×9)</option>
+              <option value="ann">Model: Regularized ANN (561 Features)</option>
+              <option value="ensemble">Model: Ensemble (CNN + ANN)</option>
+            </select>
             <span id="sensorConnectionBadge" class="rounded-full border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
               Sensors inactive
             </span>
@@ -1143,13 +1150,18 @@
       sensorPredictionInFlight = true;
       samplesSincePrediction = 0;
       const windowCopy = sensorBuffer.map(sample => [...sample]);
+      const modelSelect = document.getElementById('liveModelTypeSelect');
+      const selectedModelType = modelSelect ? modelSelect.value : 'cnn';
       document.getElementById('sensorStateText').textContent = 'Analyzing motion with AI...';
       document.getElementById('livePredictionStatus').textContent = 'Updating prediction from your phone sensors...';
       try {
         const result = await apiJson('/predict', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ window: windowCopy })
+          body: JSON.stringify({
+            window: windowCopy,
+            model_type: selectedModelType
+          })
         });
         if (!isRecordingMobile || requestSessionId !== sensorSessionId) return;
 
@@ -1163,17 +1175,35 @@
         document.getElementById('livePredictionConfidence').textContent =
           `${(result.confidence * 100).toFixed(1)}% · ${result.latency_ms} ms`;
         document.getElementById('livePredictionStatus').textContent =
-          'Live prediction updated from your phone sensors.';
+          `Live prediction updated (${result.model_used}).`;
 
-        document.getElementById('cnnPredLabel').textContent = friendly;
-        document.getElementById('cnnConf').textContent = `${(result.confidence * 100).toFixed(1)}%`;
-        document.getElementById('cnnLatency').textContent = `${result.latency_ms} ms`;
-        document.getElementById('annPredLabel').textContent = 'Not used in live mode';
-        document.getElementById('annConf').textContent = '--';
-        document.getElementById('annLatency').textContent = '--';
+        if (selectedModelType === 'ann') {
+          document.getElementById('annPredLabel').textContent = friendly;
+          document.getElementById('annConf').textContent = `${(result.confidence * 100).toFixed(1)}%`;
+          document.getElementById('annLatency').textContent = `${result.latency_ms} ms`;
+          document.getElementById('cnnPredLabel').textContent = 'Standby (ANN active)';
+          document.getElementById('cnnConf').textContent = '--';
+          document.getElementById('cnnLatency').textContent = '--';
+          document.getElementById('ensembleMethod').textContent = 'Live Phone Sensor • Regularized ANN';
+        } else if (selectedModelType === 'ensemble') {
+          document.getElementById('cnnPredLabel').textContent = friendly;
+          document.getElementById('cnnConf').textContent = `${(result.confidence * 100).toFixed(1)}%`;
+          document.getElementById('cnnLatency').textContent = `${result.latency_ms} ms`;
+          document.getElementById('annPredLabel').textContent = friendly;
+          document.getElementById('annConf').textContent = `${(result.confidence * 100).toFixed(1)}%`;
+          document.getElementById('annLatency').textContent = `${result.latency_ms} ms`;
+          document.getElementById('ensembleMethod').textContent = 'Live Phone Sensor • CNN + ANN';
+        } else {
+          document.getElementById('cnnPredLabel').textContent = friendly;
+          document.getElementById('cnnConf').textContent = `${(result.confidence * 100).toFixed(1)}%`;
+          document.getElementById('cnnLatency').textContent = `${result.latency_ms} ms`;
+          document.getElementById('annPredLabel').textContent = 'Standby (CNN active)';
+          document.getElementById('annConf').textContent = '--';
+          document.getElementById('annLatency').textContent = '--';
+          document.getElementById('ensembleMethod').textContent = 'Live Phone Sensor • 1D-CNN';
+        }
         document.getElementById('ensPredLabel').textContent = friendly;
         document.getElementById('ensConf').textContent = `${(result.confidence * 100).toFixed(1)}%`;
-        document.getElementById('ensembleMethod').textContent = 'Live Phone Sensor • 1D-CNN';
 
         renderCustomProbBars(result.probabilities);
 
@@ -1182,8 +1212,9 @@
         waveChartInstance.data.datasets[2].data = windowCopy.map(step => step[2]);
         waveChartInstance.update();
 
-        probChartInstance.data.datasets[0].data = ACTIVITIES.map(name => result.probabilities[name]);
-        probChartInstance.data.datasets[1].data = ACTIVITIES.map(() => 0);
+        const probsArray = ACTIVITIES.map(name => result.probabilities[name]);
+        probChartInstance.data.datasets[0].data = selectedModelType === 'ann' ? ACTIVITIES.map(() => 0) : probsArray;
+        probChartInstance.data.datasets[1].data = selectedModelType === 'cnn' ? ACTIVITIES.map(() => 0) : probsArray;
         probChartInstance.update();
       } catch (error) {
         if (isRecordingMobile) {

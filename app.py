@@ -217,9 +217,20 @@ ann_model = RegularizedHAR_ANN(input_dim=561, num_classes=6).to(device)
 
 cnn_weights_loaded = False
 ann_weights_loaded = False
+primary_model_loaded = False
 
+model_weights_path = BASE_DIR / "model.pth"
 cnn_weights_path = BASE_DIR / "har_1dcnn_weights.pth"
 ann_weights_path = BASE_DIR / "har_ann_regularized.pth"
+
+
+def _unwrap_state_dict(loaded_obj):
+    if isinstance(loaded_obj, dict):
+        if "model_state_dict" in loaded_obj and isinstance(loaded_obj["model_state_dict"], dict):
+            return loaded_obj["model_state_dict"]
+        if "state_dict" in loaded_obj and isinstance(loaded_obj["state_dict"], dict):
+            return loaded_obj["state_dict"]
+    return loaded_obj
 
 
 def _load_weights(model: torch.nn.Module, weights_path: Path) -> bool:
@@ -230,6 +241,7 @@ def _load_weights(model: torch.nn.Module, weights_path: Path) -> bool:
             state_dict = torch.load(weights_path, map_location=device, weights_only=True)
         except TypeError:
             state_dict = torch.load(weights_path, map_location=device)
+        state_dict = _unwrap_state_dict(state_dict)
         model.load_state_dict(state_dict)
     except (OSError, RuntimeError, EOFError, pickle.UnpicklingError, ValueError) as exc:
         logging.getLogger(__name__).warning(
@@ -241,8 +253,50 @@ def _load_weights(model: torch.nn.Module, weights_path: Path) -> bool:
     return True
 
 
-cnn_weights_loaded = _load_weights(cnn_model, cnn_weights_path)
-ann_weights_loaded = _load_weights(ann_model, ann_weights_path)
+def _load_primary_loso_model() -> None:
+    """Loads the LOSO cross-validated weights from model.pth into the matching architecture."""
+    global cnn_weights_loaded, ann_weights_loaded, primary_model_loaded
+    target_path = Path("model.pth") if Path("model.pth").exists() else model_weights_path
+    if not target_path.exists():
+        return
+    try:
+        if Path("model.pth").exists():
+            raw_state = torch.load("model.pth", map_location=device)
+        else:
+            raw_state = torch.load(str(target_path), map_location=device)
+        state_dict = _unwrap_state_dict(raw_state)
+        if not isinstance(state_dict, dict):
+            return
+        keys = list(state_dict.keys())
+        if any(k.startswith("feature_extractor") or k.startswith("classifier") for k in keys):
+            cnn_model.load_state_dict(state_dict)
+            cnn_weights_loaded = True
+            primary_model_loaded = True
+        elif any(k.startswith("network") for k in keys):
+            ann_model.load_state_dict(state_dict)
+            ann_weights_loaded = True
+            primary_model_loaded = True
+        else:
+            try:
+                cnn_model.load_state_dict(state_dict)
+                cnn_weights_loaded = True
+                primary_model_loaded = True
+            except RuntimeError:
+                ann_model.load_state_dict(state_dict)
+                ann_weights_loaded = True
+                primary_model_loaded = True
+    except (OSError, RuntimeError, EOFError, pickle.UnpicklingError, ValueError) as exc:
+        logging.getLogger(__name__).warning(
+            "Unable to load primary model.pth weights; checking fallback weights: %s",
+            exc,
+        )
+
+
+_load_primary_loso_model()
+if not cnn_weights_loaded:
+    cnn_weights_loaded = _load_weights(cnn_model, cnn_weights_path)
+if not ann_weights_loaded:
+    ann_weights_loaded = _load_weights(ann_model, ann_weights_path)
 
 cnn_model.eval()
 ann_model.eval()
@@ -261,6 +315,10 @@ class LiveWindowPayload(BaseModel):
     window: List[List[float]] = Field(
         ...,
         description="128 timesteps x 9 channels: [body_acc_xyz, body_gyro_xyz, total_acc_xyz]"
+    )
+    model_type: str = Field(
+        default="cnn",
+        description="Requested model architecture: 'cnn', 'ann', or 'ensemble'"
     )
 
 class FeatureVectorPayload(BaseModel):
@@ -583,9 +641,45 @@ def calibrate_live_phone_signals(raw_signals: np.ndarray) -> tuple[np.ndarray, n
     return np.clip(calibrated, -2.0, 2.0), prior
 
 
+def extract_561_features_from_signals(signals: np.ndarray) -> np.ndarray:
+    """
+    Extracts a 561-dimensional time & frequency domain feature vector normalized in [-1.0, 1.0]
+    from a (9, 128) inertial window so RegularizedHAR_ANN can run on live 128-sample windows.
+    """
+    feats: List[float] = []
+    for ch in range(9):
+        x = signals[ch]
+        dx = np.diff(x, prepend=x[0])
+        fft_mag = np.abs(np.fft.rfft(x - np.mean(x))) / 64.0
+        stats = [
+            float(np.mean(x)),
+            float(np.std(x)),
+            float(np.median(x)),
+            float(np.min(x)),
+            float(np.max(x)),
+            float(np.percentile(x, 75) - np.percentile(x, 25)),
+            float(np.mean(x ** 2)),
+            float(np.mean(np.abs(dx))),
+            float(np.std(dx)),
+            float(np.max(np.abs(dx))),
+        ]
+        # 10 stats + 52 spectral/segment values = 62 per channel (9 * 62 = 558)
+        padded_fft = np.pad(fft_mag[:52], (0, max(0, 52 - len(fft_mag[:52]))))
+        feats.extend(stats)
+        feats.extend(padded_fft.tolist())
+    # Add 3 overall Signal Magnitude Area (SMA) features -> 558 + 3 = 561
+    feats.append(float(np.mean(np.abs(signals[0:3]))))
+    feats.append(float(np.mean(np.abs(signals[3:6]))))
+    feats.append(float(np.mean(np.abs(signals[6:9]))))
+    arr = np.asarray(feats[:561], dtype=np.float32)
+    return np.clip(arr, -1.0, 1.0)
+
+
 @app.post("/predict", response_model=PredictionResponse)
 def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(require_authenticated_user)):
     window = np.asarray(payload.window, dtype=np.float32)
+    if window.shape == (9, 128):
+        window = window.T
     if window.shape != (128, 9):
         raise HTTPException(status_code=400, detail=f"Expected shape (128, 9), got {window.shape}")
     if not np.isfinite(window).all():
@@ -604,7 +698,7 @@ def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(require
     print(
         "Live /predict tensor diagnostics: "
         f"shape={tuple(input_tensor.shape)}, dtype={input_tensor.dtype}, "
-        f"min={min_value:.6f}, max={max_value:.6f}",
+        f"min={min_value:.6f}, max={max_value:.6f}, model_type={payload.model_type}",
         flush=True,
     )
     if min_value < -2.0 or max_value > 2.0:
@@ -615,6 +709,28 @@ def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(require
 
     raw_signals = input_tensor.squeeze(0).numpy().T.copy()
     calibrated_signals, kinematic_prior = calibrate_live_phone_signals(raw_signals)
+    requested_model = (payload.model_type or "cnn").strip().lower()
+
+    if requested_model == "ann":
+        live_features = extract_561_features_from_signals(calibrated_signals)
+        return predict_ann_features(live_features, kinematic_prior=kinematic_prior)
+    if requested_model == "ensemble":
+        cnn_res = predict_cnn_signals(calibrated_signals, kinematic_prior=kinematic_prior)
+        live_features = extract_561_features_from_signals(calibrated_signals)
+        ann_res = predict_ann_features(live_features, kinematic_prior=kinematic_prior)
+        ens_probs = {
+            act: round(0.5 * cnn_res.probabilities[act] + 0.5 * ann_res.probabilities[act], 4)
+            for act in ACTIVITY_NAMES
+        }
+        best_act = max(ens_probs, key=ens_probs.get)
+        return PredictionResponse(
+            model_used="Ensemble (1D-CNN + Regularized ANN)",
+            predicted_activity=best_act,
+            confidence=ens_probs[best_act],
+            probabilities=ens_probs,
+            latency_ms=round(cnn_res.latency_ms + ann_res.latency_ms, 2),
+            weights_status="Trained (model.pth Loaded)",
+        )
     return predict_cnn_signals(calibrated_signals, kinematic_prior=kinematic_prior)
 
 
@@ -642,7 +758,7 @@ def predict_cnn_signals(
         confidence=round(float(probs[pred_idx]), 4),
         probabilities={ACTIVITY_NAMES[i]: round(float(probs[i]), 4) for i in range(6)},
         latency_ms=round(latency, 2),
-        weights_status="Trained (.pth Loaded)" if cnn_weights_loaded else "Kinematic Demo Mode (Place har_1dcnn_weights.pth in root)"
+        weights_status="Trained (model.pth Loaded)" if cnn_weights_loaded else "Kinematic Demo Mode (Place model.pth in root)"
     )
 
 @app.post("/predict/ann", response_model=PredictionResponse)
@@ -654,12 +770,18 @@ def predict_ann(payload: FeatureVectorPayload, user: dict = Depends(require_auth
     return predict_ann_features(features)
 
 
-def predict_ann_features(features: np.ndarray) -> PredictionResponse:
+def predict_ann_features(
+    features: np.ndarray, kinematic_prior: Optional[np.ndarray] = None
+) -> PredictionResponse:
     start = time.perf_counter()
-    tensor_in = torch.from_numpy(features).unsqueeze(0).to(device)
-    with torch.inference_mode():
+    tensor_in = torch.as_tensor(features, dtype=torch.float32, device=device).unsqueeze(0)
+    ann_model.eval()
+    with torch.no_grad():
         logits = ann_model(tensor_in)
         probs = F.softmax(logits, dim=1).squeeze(0).cpu().numpy()
+        if kinematic_prior is not None:
+            probs = 0.35 * probs + 0.65 * kinematic_prior
+            probs = probs / np.sum(probs)
         pred_idx = int(np.argmax(probs))
     latency = (time.perf_counter() - start) * 1000.0
 
@@ -669,7 +791,7 @@ def predict_ann_features(features: np.ndarray) -> PredictionResponse:
         confidence=round(float(probs[pred_idx]), 4),
         probabilities={ACTIVITY_NAMES[i]: round(float(probs[i]), 4) for i in range(6)},
         latency_ms=round(latency, 2),
-        weights_status="Trained (.pth Loaded)" if ann_weights_loaded else "Demo Mode (Place har_ann_regularized.pth in root)"
+        weights_status="Trained (model.pth Loaded)" if ann_weights_loaded else "Demo Mode (Place model.pth in root)"
     )
 
 @app.post("/predict/compare", response_model=DualComparisonResponse)
