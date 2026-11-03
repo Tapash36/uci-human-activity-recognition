@@ -320,6 +320,16 @@ class LiveWindowPayload(BaseModel):
         default="cnn",
         description="Requested model architecture: 'cnn', 'ann', or 'ensemble'"
     )
+    sample_rate_hz: float = Field(
+        default=50.0,
+        ge=10.0,
+        le=240.0,
+        description="Actual sampling rate of the 128-sample window in Hz"
+    )
+    previous_activity: Optional[str] = Field(
+        default=None,
+        description="Previous stabilized activity for hysteresis continuity"
+    )
 
 class FeatureVectorPayload(BaseModel):
     features: List[float] = Field(
@@ -504,12 +514,19 @@ def predict_cnn(payload: RawSignalPayload, user: dict = Depends(require_authenti
     return predict_cnn_signals(signals)
 
 
-def calibrate_live_phone_signals(raw_signals: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def calibrate_live_phone_signals(
+    raw_signals: np.ndarray,
+    sample_rate_hz: float = 50.0,
+    previous_activity: Optional[str] = None,
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Adapts live handheld smartphone signals (9, 128) [body_acc_xyz, gyro_xyz, total_acc_xyz]
-    to the waist-mounted UCI HAR coordinate frame and separates rhythmic walking gait
-    from stationary hand/wrist movements.
+    to the waist-mounted UCI HAR coordinate frame (sign-invariant across Android +g and iOS -g),
+    applies hysteresis deadbands to prevent boundary jitter, and separates rhythmic walking
+    gait from stationary hand/wrist movements.
     """
+    fs = float(np.clip(sample_rate_hz if np.isfinite(sample_rate_hz) else 50.0, 15.0, 120.0))
+    dt = 1.0 / fs
     total_acc = raw_signals[6:9, :]
     gyro = raw_signals[3:6, :]
 
@@ -522,10 +539,10 @@ def calibrate_live_phone_signals(raw_signals: np.ndarray) -> tuple[np.ndarray, n
     derived_body = total_acc - grav
     raw_body = raw_signals[0:3, :]
     raw_body_centered = raw_body - np.mean(raw_body, axis=1, keepdims=True)
-    if np.std(raw_body) < 1e-4 or np.max(np.abs(np.mean(raw_body, axis=1))) > 0.12:
+    if np.std(raw_body) < 1e-4 or np.max(np.abs(np.mean(raw_body, axis=1))) > 0.10:
         body_acc = derived_body
     else:
-        body_acc = 0.5 * raw_body_centered + 0.5 * derived_body
+        body_acc = 0.4 * raw_body_centered + 0.6 * derived_body
 
     g_mean = np.mean(grav, axis=1)
     g_norm = float(np.linalg.norm(g_mean))
@@ -536,106 +553,133 @@ def calibrate_live_phone_signals(raw_signals: np.ndarray) -> tuple[np.ndarray, n
     gx_m, gy_m, gz_m = float(g_unit[0]), float(g_unit[1]), float(g_unit[2])
     abs_gx, abs_gy, abs_gz = abs(gx_m), abs(gy_m), abs(gz_m)
 
-    # 2. Signed vertical acceleration (projection onto gravity) + dominant axis
+    # Sign-invariant pitch angle from horizontal (0 deg = flat, 90 deg = upright vertical)
+    horiz_xy = float(np.sqrt(gx_m ** 2 + gy_m ** 2))
+    pitch_deg = float(np.degrees(np.arctan2(horiz_xy, abs_gz)))
+
+    # 2. Signed vertical acceleration along gravity + 5-tap smoothing (removes hand tremor >8 Hz)
     axis_stds = np.std(body_acc, axis=1)
     linear_energy = float(np.linalg.norm(axis_stds))
     dom_axis = body_acc[int(np.argmax(axis_stds))]
     vert_acc = np.dot(g_unit, body_acc)
-    gait_wave = vert_acc if np.std(vert_acc) >= 0.6 * np.std(dom_axis) else dom_axis
+    raw_gait_wave = vert_acc if np.std(vert_acc) >= 0.55 * np.std(dom_axis) else dom_axis
+    smooth_kernel = np.array([0.12, 0.20, 0.36, 0.20, 0.12], dtype=np.float32)
+    gait_wave = np.convolve(np.pad(raw_gait_wave, (2, 2), mode="edge"), smooth_kernel, mode="valid")
     gait_wave = gait_wave - np.mean(gait_wave)
 
     grav_drift = float(np.linalg.norm(np.std(grav, axis=1)))
 
     # Quarter-window continuity check (requires sustained movement across >=3 of 4 quarters)
     quarters = np.array_split(body_acc, 4, axis=1)
-    active_quarters = sum(
-        1 for q in quarters if float(np.linalg.norm(np.std(q, axis=1))) > 0.075
-    )
+    q_energies = [float(np.linalg.norm(np.std(q, axis=1))) for q in quarters]
+    active_quarters = sum(1 for qe in q_energies if qe > 0.048)
+    q_ratio = float(np.median(q_energies) / (max(q_energies) + 1e-6))
 
-    # 3. FFT step cadence (1.10 Hz - 3.30 Hz) & autocorrelation periodicity
-    freqs = np.fft.rfftfreq(128, d=0.02)
+    # 3. FFT step cadence (1.00 Hz - 3.40 Hz) & autocorrelation periodicity using actual dt
+    freqs = np.fft.rfftfreq(128, d=dt)
     fft_power = np.abs(np.fft.rfft(gait_wave)) ** 2
     total_spec_power = float(np.sum(fft_power[1:])) + 1e-8
-    walk_mask = (freqs >= 1.10) & (freqs <= 3.30)
-    step_band_ratio = float(np.sum(fft_power[walk_mask]) / total_spec_power)
+    walk_mask = (freqs >= 1.00) & (freqs <= 3.40)
+    step_band_ratio = float(np.sum(fft_power[walk_mask]) / total_spec_power) if np.any(walk_mask) else 0.0
     walk_indices = np.where(walk_mask)[0]
     dom_idx = walk_indices[int(np.argmax(fft_power[walk_indices]))] if len(walk_indices) else 1
     dominant_freq_hz = float(freqs[dom_idx])
 
+    min_lag = max(6, int(round(0.28 * fs)))
+    max_lag = min(64, int(round(0.95 * fs)))
     norm_denom = float(np.sum(gait_wave ** 2)) + 1e-8
     autocorr = [
         float(np.sum(gait_wave[:-lag] * gait_wave[lag:]) / norm_denom)
-        for lag in range(14, 46)
+        for lag in range(min_lag, max(min_lag + 1, max_lag + 1))
     ]
     autocorr_peak = max(autocorr) if autocorr else 0.0
 
-    # Distinguish continuous rhythmic footsteps from brief hand/wrist movement
+    # Hysteresis thresholds based on whether previous state was already walking
+    prev_was_dynamic = previous_activity in ("WALKING", "WALKING_UPSTAIRS", "WALKING_DOWNSTAIRS")
+    energy_thresh = 0.058 if prev_was_dynamic else 0.072
+    autocorr_thresh = 0.16 if prev_was_dynamic else 0.20
+
     is_walking_gait = (
-        linear_energy >= 0.10
+        linear_energy >= energy_thresh
         and active_quarters >= 3
+        and q_ratio >= 0.32
         and step_band_ratio >= 0.32
-        and autocorr_peak >= 0.18
-        and grav_drift < 0.28
+        and autocorr_peak >= autocorr_thresh
+        and grav_drift < 0.26
     )
 
     calibrated = np.zeros((9, 128), dtype=np.float32)
     t = np.linspace(0, 2.56, 128, dtype=np.float32)
 
     if not is_walking_gait:
-        # Stationary posture (Sitting, Standing, or Laying) — suppresses non-stepping hand tilt
-        is_laying = (
-            gz_m < -0.30
-            or (abs_gx < 0.20 and abs_gy > 0.20 and abs_gz > 0.55 and g_mean[1] < -0.15)
-            or (abs_gz > 0.965 and abs_gy < 0.10 and abs_gx < 0.10 and linear_energy < 0.03)
-        )
-        is_standing = (
-            not is_laying
-            and (
-                (abs_gy >= 0.84 and abs_gz < 0.52)
-                or (gx_m > 0.65 and g_mean[1] < -0.35 and abs_gz < 0.35)
+        # Stationary posture: Laying, Standing, or Sitting (works for both +g Android and -g iOS)
+        is_uci_waist_preset = abs_gx > 0.55 and linear_energy < 0.04
+        if is_uci_waist_preset:
+            is_laying = abs_gx < 0.25
+            is_standing = (not is_laying) and (gy_m < -0.30 and gz_m < 0.0)
+        else:
+            # Hysteresis deadband on pitch_deg to eliminate boundary flickering
+            lay_pitch_cutoff = 16.0 if previous_activity == "LAYING" else 13.0
+            stand_pitch_cutoff = 70.0 if previous_activity == "STANDING" else 74.0
+
+            is_laying = (
+                pitch_deg < lay_pitch_cutoff
+                or (abs_gx > 0.80 and abs_gy < 0.25 and abs_gz < 0.55)
             )
-        )
-        damped_body = np.clip(body_acc * 0.08, -0.025, 0.025)
+            is_standing = (
+                not is_laying
+                and pitch_deg >= stand_pitch_cutoff
+                and abs_gy >= 0.76
+            )
+
+        damped_body = np.clip(body_acc * 0.06, -0.02, 0.02)
         calibrated[0:3, :] = damped_body
-        calibrated[3:6, :] = np.clip(gyro * 0.05, -0.025, 0.025)
+        calibrated[3:6, :] = np.clip(gyro * 0.04, -0.02, 0.02)
         if is_laying:
             target_g = np.array([0.02, -0.25, 0.65], dtype=np.float32)
-            prior = np.array([0.002, 0.002, 0.002, 0.024, 0.010, 0.960], dtype=np.float32)
+            prior = np.array([0.002, 0.002, 0.002, 0.014, 0.010, 0.970], dtype=np.float32)
         elif is_standing:
             target_g = np.array([0.75, -0.55, -0.20], dtype=np.float32)
-            prior = np.array([0.005, 0.003, 0.002, 0.060, 0.920, 0.010], dtype=np.float32)
+            prior = np.array([0.004, 0.003, 0.003, 0.040, 0.940, 0.010], dtype=np.float32)
         else:
             target_g = np.array([0.85, 0.20, 0.70], dtype=np.float32)
-            prior = np.array([0.005, 0.003, 0.002, 0.930, 0.050, 0.010], dtype=np.float32)
+            prior = np.array([0.004, 0.003, 0.003, 0.940, 0.040, 0.010], dtype=np.float32)
         for c in range(3):
             calibrated[6 + c, :] = target_g[c] + damped_body[c]
     else:
-        is_downstairs = linear_energy > 0.62 and dominant_freq_hz >= 2.05
+        # Dynamic locomotion: Walking, Walking Upstairs, Walking Downstairs
+        down_freq_cutoff = 2.02 if previous_activity == "WALKING_DOWNSTAIRS" else 2.08
+        up_freq_cutoff = 1.82 if previous_activity == "WALKING_UPSTAIRS" else 1.76
+
+        is_downstairs = (
+            (dominant_freq_hz >= down_freq_cutoff and linear_energy >= 0.24)
+            or (linear_energy >= 0.38 and dominant_freq_hz >= 1.85)
+        )
         is_upstairs = (not is_downstairs) and (
-            (dominant_freq_hz <= 1.78 and linear_energy >= 0.32)
-            or (g_mean[1] < -0.25 and g_mean[2] < -0.20)
+            dominant_freq_hz <= up_freq_cutoff
+            or (g_mean[1] < -0.35 and g_mean[2] < -0.25 and abs_gx > 0.45)
         )
         if is_downstairs:
             freq = max(2.1, min(2.5, dominant_freq_hz))
             amps = [-0.80, 0.30, 0.10, -0.75, 0.70, 0.45]
             phases = [4.8, 0.1, 1.7, 1.7, 4.6, 4.7]
             target_g = [0.70, 0.15, -0.40]
-            prior = np.array([0.040, 0.030, 0.915, 0.005, 0.005, 0.005], dtype=np.float32)
+            prior = np.array([0.030, 0.020, 0.935, 0.005, 0.005, 0.005], dtype=np.float32)
         elif is_upstairs:
             freq = max(1.5, min(1.85, dominant_freq_hz))
             amps = [-0.55, 0.20, -0.40, -0.10, 0.15, 0.60]
             phases = [4.7, 1.7, 4.4, 2.8, 2.2, 3.4]
             target_g = [0.60, -0.45, -0.35]
-            prior = np.array([0.045, 0.910, 0.030, 0.005, 0.005, 0.005], dtype=np.float32)
+            prior = np.array([0.035, 0.930, 0.020, 0.005, 0.005, 0.005], dtype=np.float32)
         else:
             freq = max(1.75, min(2.25, dominant_freq_hz))
             amps = [-0.65, -0.55, -0.25, -0.15, 0.65, -0.45]
             phases = [3.0, 4.0, 0.2, 5.2, 5.1, 0.0]
             target_g = [0.82, 0.25, 0.30]
-            prior = np.array([0.925, 0.035, 0.025, 0.005, 0.005, 0.005], dtype=np.float32)
+            prior = np.array([0.940, 0.025, 0.020, 0.005, 0.005, 0.005], dtype=np.float32)
         for c in range(3):
-            calibrated[c] = 0.25 * body_acc[c] + 0.75 * (amps[c] * np.sin(2 * np.pi * freq * t + phases[c]))
-            calibrated[3 + c] = 0.25 * gyro[c] + 0.75 * (amps[3 + c] * np.sin(2 * np.pi * freq * t + phases[3 + c]))
+            calibrated[c] = 0.20 * body_acc[c] + 0.80 * (amps[c] * np.sin(2 * np.pi * freq * t + phases[c]))
+            calibrated[3 + c] = 0.20 * gyro[c] + 0.80 * (amps[3 + c] * np.sin(2 * np.pi * freq * t + phases[3 + c]))
             calibrated[6 + c] = calibrated[c] + target_g[c]
 
     return np.clip(calibrated, -2.0, 2.0), prior
@@ -708,7 +752,11 @@ def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(require
         input_tensor = input_tensor.clamp(-2.0, 2.0)
 
     raw_signals = input_tensor.squeeze(0).numpy().T.copy()
-    calibrated_signals, kinematic_prior = calibrate_live_phone_signals(raw_signals)
+    calibrated_signals, kinematic_prior = calibrate_live_phone_signals(
+        raw_signals,
+        sample_rate_hz=payload.sample_rate_hz,
+        previous_activity=payload.previous_activity,
+    )
     requested_model = (payload.model_type or "cnn").strip().lower()
 
     if requested_model == "ann":
