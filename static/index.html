@@ -143,11 +143,12 @@
         <div>
           <span class="text-xs uppercase tracking-wider font-bold text-indigo-400">Real-Time Edge Telemetry</span>
           <h2 class="text-lg font-bold text-white mt-0.5">Smartphone Accelerometer & Gyroscope Stream</h2>
-          <p class="text-xs text-slate-400">Open this page on your phone, hold it at your waist or in hand, and tap Start to stream 128 readings (2.56s) directly into the 1D-CNN.</p>
+          <p class="text-xs text-slate-400">Open this page over HTTPS on your phone, hold it at your waist or in hand, and start tracking to stream 128 readings into the 1D-CNN.</p>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <span id="sensorConnectionBadge" class="rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-300">Sensors inactive</span>
           <button id="startSensorBtn" onclick="startMobileSensor()" class="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-sm shadow-lg shadow-emerald-500/20 transition">
-            ▶ Start Phone Sensor
+            ▶ Start Live Tracking
           </button>
           <button id="stopSensorBtn" onclick="stopMobileSensor()" class="hidden px-5 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm transition">
             ⏹ Stop
@@ -180,6 +181,18 @@
           <span class="text-[11px] text-slate-400 block">Acc Z (m/s²)</span>
           <span id="liveAccZ" class="text-sm sm:text-base font-mono font-bold text-rose-400">0.00</span>
         </div>
+      </div>
+
+      <div class="rounded-xl border border-indigo-400/30 bg-indigo-950/40 p-4 sm:p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-indigo-300">Live activity</span>
+          <span id="livePredictionConfidence" class="text-xs font-semibold text-indigo-200">Waiting for first window</span>
+        </div>
+        <div class="mt-2 flex items-center gap-3">
+          <span id="liveActivityIcon" class="text-3xl" aria-hidden="true">📱</span>
+          <strong id="livePredictedActivity" class="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">Not predicted yet</strong>
+        </div>
+        <p id="livePredictionStatus" role="status" aria-live="polite" class="mt-2 text-xs text-slate-300">Tap Start Live Tracking to connect the phone sensors.</p>
       </div>
     </section>
 
@@ -318,9 +331,39 @@
     let probChartInstance = null;
     let sensorBuffer = [];
     let isRecordingMobile = false;
+    let sensorPredictionInFlight = false;
+    let samplesSincePrediction = 0;
+    let lastSensorSampleAt = 0;
+    let sensorSessionId = 0;
+    let sensorStartupTimer = null;
     let chartsInitialized = false;
     let authMode = 'login';
     let presetRequestId = 0;
+    let sessionToken = '';
+
+    try {
+      sessionToken = localStorage.getItem('har_session_token') || '';
+    } catch (_) {}
+
+    function setSessionToken(token) {
+      sessionToken = token || '';
+      try {
+        if (sessionToken) {
+          localStorage.setItem('har_session_token', sessionToken);
+        } else {
+          localStorage.removeItem('har_session_token');
+        }
+      } catch (_) {}
+    }
+
+    function authHeaders(extraHeaders = {}) {
+      const headers = { ...extraHeaders };
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`;
+      }
+      return headers;
+    }
+
     const ACTIVITIES = ["WALKING", "WALKING_UPSTAIRS", "WALKING_DOWNSTAIRS", "SITTING", "STANDING", "LAYING"];
 
     function setAuthMessage(message, isError = true) {
@@ -365,7 +408,7 @@
 
     async function checkAuthentication() {
       try {
-        const response = await fetch('/api/auth/me');
+        const response = await fetch('/api/auth/me', { headers: authHeaders() });
         if (response.ok) {
           const user = await response.json();
           await showDashboard(user.username);
@@ -395,6 +438,9 @@
             : result.detail;
           throw new Error(detail || 'Sign-in failed.');
         }
+        if (result.token) {
+          setSessionToken(result.token);
+        }
         await showDashboard(result.username);
       } catch (error) {
         setAuthMessage(error.message || 'Could not reach the server. Please try again.');
@@ -405,19 +451,29 @@
 
     async function logout() {
       try {
-        const response = await fetch('/api/auth/logout', { method: 'POST' });
+        const response = await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: authHeaders()
+        });
         if (!response.ok) throw new Error('Sign out failed.');
+        setSessionToken('');
         if (isRecordingMobile) stopMobileSensor();
         showAuthGate();
         setAuthMessage('You have signed out.', false);
       } catch (error) {
+        setSessionToken('');
         showAuthGate(error.message || 'Could not reach the server.');
       }
     }
 
     async function apiFetch(url, options = {}) {
-      const response = await fetch(url, options);
+      const mergedOptions = {
+        ...options,
+        headers: authHeaders(options.headers || {})
+      };
+      const response = await fetch(url, mergedOptions);
       if (response.status === 401) {
+        setSessionToken('');
         if (isRecordingMobile) stopMobileSensor();
         showAuthGate('Your session expired. Sign in again to continue.');
         throw new Error('Authentication required.');
@@ -577,100 +633,184 @@
 
     // ----------------- Mobile Hardware Sensor Streaming -----------------
     async function startMobileSensor() {
+      const state = document.getElementById('sensorStateText');
+      if (window.isSecureContext === false && !['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+        state.textContent = 'HTTPS is required to access motion sensors. Open the secure site URL.';
+        document.getElementById('livePredictionStatus').textContent = state.textContent;
+        return;
+      }
+      if (typeof DeviceMotionEvent === 'undefined') {
+        state.textContent = 'This browser does not support device motion sensors.';
+        document.getElementById('livePredictionStatus').textContent = state.textContent;
+        return;
+      }
+
       if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
         try {
           const permission = await DeviceMotionEvent.requestPermission();
           if (permission !== 'granted') {
-            alert('Motion sensor permission denied.');
+            state.textContent = 'Motion permission was not granted. Allow access and try again.';
+            document.getElementById('livePredictionStatus').textContent = state.textContent;
             return;
           }
         } catch (err) {
-          alert('HTTPS is required on iOS for DeviceMotion.');
+          state.textContent = `Could not request motion permission: ${err.message || 'permission request failed.'}`;
+          document.getElementById('livePredictionStatus').textContent = state.textContent;
+          return;
         }
       }
 
       sensorBuffer = [];
+      samplesSincePrediction = 0;
+      lastSensorSampleAt = 0;
+      sensorPredictionInFlight = false;
+      sensorSessionId += 1;
       isRecordingMobile = true;
       document.getElementById('startSensorBtn').classList.add('hidden');
       document.getElementById('stopSensorBtn').classList.remove('hidden');
-      document.getElementById('sensorStateText').textContent = "Recording live smartphone motion...";
-
+      setSensorConnectionState('Connected', true);
+      state.textContent = 'Connected · collecting buffer (0/128)...';
+      document.getElementById('livePredictionStatus').textContent = 'Sensors connected. Collecting the first 128 samples.';
       window.addEventListener('devicemotion', handleDeviceMotion);
+      const activeSessionId = sensorSessionId;
+      sensorStartupTimer = window.setTimeout(() => {
+        if (isRecordingMobile && activeSessionId === sensorSessionId && sensorBuffer.length === 0) {
+          setSensorConnectionState('No sensor data', false);
+          state.textContent = 'No motion events received. Check browser sensor access and device settings.';
+          document.getElementById('livePredictionStatus').textContent = state.textContent;
+        }
+      }, 3000);
     }
 
     function stopMobileSensor() {
       isRecordingMobile = false;
+      sensorSessionId += 1;
+      window.clearTimeout(sensorStartupTimer);
       window.removeEventListener('devicemotion', handleDeviceMotion);
       document.getElementById('startSensorBtn').classList.remove('hidden');
       document.getElementById('stopSensorBtn').classList.add('hidden');
-      document.getElementById('sensorStateText').textContent = "Sensor stream paused.";
+      setSensorConnectionState('Sensors inactive', false);
+      document.getElementById('sensorStateText').textContent = 'Sensor stream paused.';
+      document.getElementById('livePredictionStatus').textContent = 'Tracking paused. Start live tracking to resume.';
     }
 
-    async function handleDeviceMotion(event) {
+    function setSensorConnectionState(label, active) {
+      const badge = document.getElementById('sensorConnectionBadge');
+      badge.textContent = label;
+      badge.className = active
+        ? 'rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300'
+        : 'rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-300';
+    }
+
+    function finiteAxis(value) {
+      return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+    }
+
+    function handleDeviceMotion(event) {
       if (!isRecordingMobile) return;
 
-      const acc = event.acceleration || { x: 0, y: 0, z: 0 };
-      const tot = event.accelerationIncludingGravity || { x: 0, y: 9.8, z: 0 };
-      const rot = event.rotationRate || { alpha: 0, beta: 0, gamma: 0 };
+      const totalAcceleration = event.accelerationIncludingGravity || {};
+      const linearAcceleration = event.acceleration || totalAcceleration;
+      const rotation = event.rotationRate || {};
+      const ax = finiteAxis(linearAcceleration.x);
+      const ay = finiteAxis(linearAcceleration.y);
+      const az = finiteAxis(linearAcceleration.z);
+      const tx = finiteAxis(totalAcceleration.x);
+      const ty = finiteAxis(totalAcceleration.y);
+      const tz = finiteAxis(totalAcceleration.z);
 
-      // Normalize to g units (~9.81 m/s^2)
-      const bx = (acc.x || 0) / 9.81;
-      const by = (acc.y || 0) / 9.81;
-      const bz = (acc.z || 0) / 9.81;
+      document.getElementById('liveAccX').textContent = ax.toFixed(2);
+      document.getElementById('liveAccY').textContent = ay.toFixed(2);
+      document.getElementById('liveAccZ').textContent = az.toFixed(2);
 
-      const gx = (rot.alpha || 0) * (Math.PI / 180);
-      const gy = (rot.beta || 0) * (Math.PI / 180);
-      const gz = (rot.gamma || 0) * (Math.PI / 180);
+      // Motion events are commonly delivered around 60 Hz; sample no faster than 50 Hz.
+      const now = performance.now();
+      if (now - lastSensorSampleAt < 20) return;
+      lastSensorSampleAt = now;
 
-      const tx = (tot.x || 0) / 9.81;
-      const ty = (tot.y || 0) / 9.81;
-      const tz = (tot.z || 0) / 9.81;
+      const sample = [
+        ax / 9.81, ay / 9.81, az / 9.81,
+        finiteAxis(rotation.alpha) * (Math.PI / 180),
+        finiteAxis(rotation.beta) * (Math.PI / 180),
+        finiteAxis(rotation.gamma) * (Math.PI / 180),
+        tx / 9.81, ty / 9.81, tz / 9.81
+      ];
+      if (sensorBuffer.length === 0) {
+        window.clearTimeout(sensorStartupTimer);
+        setSensorConnectionState('Sensors active', true);
+      }
+      sensorBuffer.push(sample);
+      if (sensorBuffer.length > 128) sensorBuffer.shift();
+      samplesSincePrediction += 1;
+      updateSensorBufferStatus();
 
-      document.getElementById('liveAccX').textContent = bx.toFixed(2);
-      document.getElementById('liveAccY').textContent = by.toFixed(2);
-      document.getElementById('liveAccZ').textContent = bz.toFixed(2);
+      if (sensorBuffer.length === 128 && samplesSincePrediction >= 64 && !sensorPredictionInFlight) {
+        requestLivePrediction();
+      }
+    }
 
-      sensorBuffer.push([bx, by, bz, gx, gy, gz, tx, ty, tz]);
-
+    function updateSensorBufferStatus(message) {
       const count = sensorBuffer.length;
       document.getElementById('bufferCountText').textContent = `${count} / 128 samples`;
       document.getElementById('bufferProgressBar').style.width = `${Math.min(100, (count / 128) * 100)}%`;
+      if (isRecordingMobile && message) {
+        document.getElementById('sensorStateText').textContent = message;
+      } else if (isRecordingMobile && !sensorPredictionInFlight) {
+        document.getElementById('sensorStateText').textContent = `Connected · collecting buffer (${count}/128)...`;
+      }
+    }
 
-      if (sensorBuffer.length === 128) {
-        const windowCopy = [...sensorBuffer];
-        sensorBuffer = sensorBuffer.slice(64); // 50% sliding overlap (64 readings)
+    async function requestLivePrediction() {
+      const requestSessionId = sensorSessionId;
+      sensorPredictionInFlight = true;
+      samplesSincePrediction = 0;
+      const windowCopy = sensorBuffer.map(sample => [...sample]);
+      document.getElementById('sensorStateText').textContent = 'Predicting...';
+      document.getElementById('livePredictionStatus').textContent = 'Predicting activity from the latest sensor window...';
+      try {
+        const result = await apiJson('/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ window: windowCopy })
+        });
+        if (!isRecordingMobile || requestSessionId !== sensorSessionId) return;
+        const activity = result.predicted_activity;
+        document.getElementById('livePredictedActivity').textContent = activity.replaceAll('_', ' ');
+        document.getElementById('liveActivityIcon').textContent = ({
+          WALKING: '🚶', WALKING_UPSTAIRS: '🧗', WALKING_DOWNSTAIRS: '🚶‍➡️',
+          SITTING: '🪑', STANDING: '🧍', LAYING: '🛌'
+        })[activity] || '🏃';
+        document.getElementById('livePredictionConfidence').textContent = `${(result.confidence * 100).toFixed(1)}% confidence · ${result.latency_ms} ms`;
+        document.getElementById('livePredictionStatus').textContent = 'Connected · prediction updated from live phone sensors.';
+        document.getElementById('cnnPredLabel').textContent = activity;
+        document.getElementById('cnnConf').textContent = `${(result.confidence * 100).toFixed(1)}%`;
+        document.getElementById('cnnLatency').textContent = `${result.latency_ms} ms`;
+        document.getElementById('annPredLabel').textContent = 'Not run';
+        document.getElementById('annConf').textContent = '--';
+        document.getElementById('annLatency').textContent = 'Not run';
+        document.getElementById('ensPredLabel').textContent = activity;
+        document.getElementById('ensConf').textContent = `${(result.confidence * 100).toFixed(1)}%`;
+        document.getElementById('ensembleMethod').textContent = 'Live sensor • CNN only';
 
-        // Transpose (128, 9) -> (9, 128)
-        const signals9x128 = Array.from({ length: 9 }, (_, ch) => windowCopy.map(step => step[ch]));
-
-        try {
-          const cnnResult = await apiJson('/predict/cnn', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ signals: signals9x128 })
-          });
-          document.getElementById('cnnPredLabel').textContent = cnnResult.predicted_activity;
-          document.getElementById('cnnConf').textContent = (cnnResult.confidence * 100).toFixed(1) + '%';
-          document.getElementById('cnnLatency').textContent = cnnResult.latency_ms + ' ms';
-          document.getElementById('annPredLabel').textContent = 'Not run';
-          document.getElementById('annConf').textContent = '--';
-          document.getElementById('annLatency').textContent = 'Not run';
-          document.getElementById('ensPredLabel').textContent = cnnResult.predicted_activity;
-          document.getElementById('ensConf').textContent = (cnnResult.confidence * 100).toFixed(1) + '%';
-          document.getElementById('ensembleMethod').textContent = 'Live sensor • CNN only';
-
-          waveChartInstance.data.datasets[0].data = signals9x128[0];
-          waveChartInstance.data.datasets[1].data = signals9x128[1];
-          waveChartInstance.data.datasets[2].data = signals9x128[2];
-          waveChartInstance.update();
-
-          const cnnProbs = ACTIVITIES.map(a => cnnResult.probabilities[a]);
-          probChartInstance.data.datasets[0].data = cnnProbs;
-          probChartInstance.data.datasets[1].data = ACTIVITIES.map(() => 0);
-          probChartInstance.update();
-        } catch (e) {
-          document.getElementById('sensorStateText').textContent = `Prediction failed: ${e.message}`;
-          console.error(e);
+        waveChartInstance.data.datasets[0].data = windowCopy.map(step => step[0]);
+        waveChartInstance.data.datasets[1].data = windowCopy.map(step => step[1]);
+        waveChartInstance.data.datasets[2].data = windowCopy.map(step => step[2]);
+        waveChartInstance.update();
+        probChartInstance.data.datasets[0].data = ACTIVITIES.map(name => result.probabilities[name]);
+        probChartInstance.data.datasets[1].data = ACTIVITIES.map(() => 0);
+        probChartInstance.update();
+      } catch (error) {
+        if (isRecordingMobile) {
+          document.getElementById('sensorStateText').textContent = `Prediction failed: ${error.message}`;
+          document.getElementById('livePredictionStatus').textContent = `Could not update prediction: ${error.message}`;
+          console.error('Live prediction error:', error);
+        }
+      } finally {
+        if (requestSessionId !== sensorSessionId) return;
+        sensorPredictionInFlight = false;
+        updateSensorBufferStatus();
+        if (isRecordingMobile && sensorBuffer.length === 128 && samplesSincePrediction >= 64) {
+          requestLivePrediction();
         }
       }
     }

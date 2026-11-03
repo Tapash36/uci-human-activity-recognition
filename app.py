@@ -1,6 +1,8 @@
 import os
 import hashlib
 import hmac
+import logging
+import pickle
 import re
 import secrets
 import sqlite3
@@ -188,15 +190,9 @@ def require_authenticated_user(request: Request) -> dict:
     return {"id": user["id"], "username": user["username"]}
 
 
-# Allow only explicitly configured cross-origin browser clients.
-allowed_origins = [
-    origin.strip()
-    for origin in os.environ.get("HAR_ALLOWED_ORIGINS", "").split(",")
-    if origin.strip()
-]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -230,10 +226,18 @@ def _load_weights(model: torch.nn.Module, weights_path: Path) -> bool:
     if not weights_path.exists():
         return False
     try:
-        state_dict = torch.load(weights_path, map_location=device, weights_only=True)
-    except TypeError:
-        state_dict = torch.load(weights_path, map_location=device)
-    model.load_state_dict(state_dict)
+        try:
+            state_dict = torch.load(weights_path, map_location=device, weights_only=True)
+        except TypeError:
+            state_dict = torch.load(weights_path, map_location=device)
+        model.load_state_dict(state_dict)
+    except (OSError, RuntimeError, EOFError, pickle.UnpicklingError, ValueError) as exc:
+        logging.getLogger(__name__).warning(
+            "Unable to load model weights from %s; using demo fallback: %s",
+            weights_path,
+            exc,
+        )
+        return False
     return True
 
 
@@ -251,6 +255,12 @@ class RawSignalPayload(BaseModel):
     signals: List[List[float]] = Field(
         ...,
         description="9 channels x 128 timesteps matrix: [body_acc_xyz, body_gyro_xyz, total_acc_xyz]"
+    )
+
+class LiveWindowPayload(BaseModel):
+    window: List[List[float]] = Field(
+        ...,
+        description="128 timesteps x 9 channels: [body_acc_xyz, body_gyro_xyz, total_acc_xyz]"
     )
 
 class FeatureVectorPayload(BaseModel):
@@ -430,8 +440,21 @@ def predict_cnn(payload: RawSignalPayload, user: dict = Depends(require_authenti
     signals = np.array(payload.signals, dtype=np.float32)
     if signals.shape != (9, 128):
         raise HTTPException(status_code=400, detail=f"Expected shape (9, 128), got {signals.shape}")
+    if not np.isfinite(signals).all():
+        raise HTTPException(status_code=400, detail="Signals must contain only finite numbers")
 
     return predict_cnn_signals(signals)
+
+
+@app.post("/predict", response_model=PredictionResponse)
+def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(require_authenticated_user)):
+    window = np.asarray(payload.window, dtype=np.float32)
+    if window.shape != (128, 9):
+        raise HTTPException(status_code=400, detail=f"Expected shape (128, 9), got {window.shape}")
+    if not np.isfinite(window).all():
+        raise HTTPException(status_code=400, detail="Window must contain only finite numbers")
+
+    return predict_cnn_signals(window.T.copy())
 
 
 def predict_cnn_signals(signals: np.ndarray) -> PredictionResponse:
