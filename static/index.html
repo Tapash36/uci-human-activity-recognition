@@ -553,6 +553,7 @@
     let waveChartInstance = null;
     let probChartInstance = null;
     let sensorBuffer = [];
+    let gravityEstimate = null;
     let isRecordingMobile = false;
     let sensorPredictionInFlight = false;
     let samplesSincePrediction = 0;
@@ -1004,6 +1005,7 @@
       }
 
       sensorBuffer = [];
+      gravityEstimate = null;
       samplesSincePrediction = 0;
       lastSensorSampleAt = 0;
       sensorPredictionInFlight = false;
@@ -1064,15 +1066,39 @@
       const scaleGyroscope = value => clampSensorValue(
         (finiteAxis(value) * (Math.PI / 180)) / Math.PI
       );
-      const ax = scaleAcceleration(linearAcceleration.x);
-      const ay = scaleAcceleration(linearAcceleration.y);
-      const az = scaleAcceleration(linearAcceleration.z);
-      const gx = scaleGyroscope(rotation.alpha);
-      const gy = scaleGyroscope(rotation.beta);
-      const gz = scaleGyroscope(rotation.gamma);
+
       const tx = scaleAcceleration(totalAcceleration.x);
       const ty = scaleAcceleration(totalAcceleration.y);
       const tz = scaleAcceleration(totalAcceleration.z);
+
+      // Low-pass filter (0.3 Hz equivalent) to separate smooth gravity from linear body acceleration
+      if (!gravityEstimate) {
+        gravityEstimate = [tx, ty, tz];
+      } else {
+        gravityEstimate[0] = 0.88 * gravityEstimate[0] + 0.12 * tx;
+        gravityEstimate[1] = 0.88 * gravityEstimate[1] + 0.12 * ty;
+        gravityEstimate[2] = 0.88 * gravityEstimate[2] + 0.12 * tz;
+      }
+
+      const hasHardwareLinear =
+        typeof linearAcceleration.x === 'number' &&
+        typeof linearAcceleration.y === 'number' &&
+        typeof linearAcceleration.z === 'number';
+
+      const ax = hasHardwareLinear
+        ? clampSensorValue(0.5 * scaleAcceleration(linearAcceleration.x) + 0.5 * (tx - gravityEstimate[0]))
+        : clampSensorValue(tx - gravityEstimate[0]);
+      const ay = hasHardwareLinear
+        ? clampSensorValue(0.5 * scaleAcceleration(linearAcceleration.y) + 0.5 * (ty - gravityEstimate[1]))
+        : clampSensorValue(ty - gravityEstimate[1]);
+      const az = hasHardwareLinear
+        ? clampSensorValue(0.5 * scaleAcceleration(linearAcceleration.z) + 0.5 * (tz - gravityEstimate[2]))
+        : clampSensorValue(tz - gravityEstimate[2]);
+
+      // W3C DeviceMotionEvent: beta = X-axis, gamma = Y-axis, alpha = Z-axis
+      const gx = scaleGyroscope(rotation.beta);
+      const gy = scaleGyroscope(rotation.gamma);
+      const gz = scaleGyroscope(rotation.alpha);
 
       document.getElementById('liveAccX').textContent = ax.toFixed(2);
       document.getElementById('liveAccY').textContent = ay.toFixed(2);
@@ -1096,7 +1122,7 @@
       samplesSincePrediction += 1;
       updateSensorBufferStatus();
 
-      if (sensorBuffer.length === 128 && samplesSincePrediction >= 64 && !sensorPredictionInFlight) {
+      if (sensorBuffer.length === 128 && samplesSincePrediction >= 32 && !sensorPredictionInFlight) {
         requestLivePrediction();
       }
     }
@@ -1169,7 +1195,7 @@
         if (requestSessionId !== sensorSessionId) return;
         sensorPredictionInFlight = false;
         updateSensorBufferStatus();
-        if (isRecordingMobile && sensorBuffer.length === 128 && samplesSincePrediction >= 64) {
+        if (isRecordingMobile && sensorBuffer.length === 128 && samplesSincePrediction >= 32) {
           requestLivePrediction();
         }
       }
