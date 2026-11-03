@@ -1,331 +1,810 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>HAR AI Studio | Mobile & Web Activity Recognition</title>
+  <title>HAR-01 // Inertial Telemetry &amp; Inference Instrument</title>
+
+  <!-- Google Fonts: Space Grotesk, Plus Jakarta Sans, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            surface: {
+              950: '#0c0d0e',
+              900: '#141517',
+              800: '#1c1e22',
+              700: '#26292e'
+            },
+            signal: {
+              lime: '#d4ff00',
+              emerald: '#10b981',
+              amber: '#f59e0b',
+              crimson: '#ef4444'
+            }
+          },
+          fontFamily: {
+            display: ['"Space Grotesk"', 'sans-serif'],
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Chart.js & Lucide Icons -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #0b0f19; color: #f1f5f9; }
-    .glass-card { background: rgba(30, 41, 59, 0.72); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
-    .pulse-ring { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+    :root {
+      color-scheme: dark;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #0c0d0e;
+      color: #f3f4f6;
+      background-image:
+        radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to right, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+      background-size: 24px 24px, 96px 96px, 96px 96px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1, "zero" 1;
+    }
+    .instrument-panel {
+      background-color: #141517;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .instrument-recessed {
+      background-color: #0c0d0e;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.65);
+    }
+    .instrument-key {
+      background-color: #1c1e22;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      box-shadow: 0 2px 0 rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      transition: transform 80ms cubic-bezier(0.2, 0, 0, 1), border-color 150ms ease, background-color 150ms ease;
+    }
+    .instrument-key:hover:not(:disabled) {
+      background-color: #22252a;
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+    .instrument-key:active:not(:disabled) {
+      transform: translateY(2px) scale(0.99);
+      box-shadow: 0 0 0 rgba(0, 0, 0, 0.6), inset 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+    .instrument-key.active-preset {
+      background-color: rgba(212, 255, 0, 0.07);
+      border-color: #d4ff00;
+      box-shadow: 0 0 0 1px rgba(212, 255, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.45);
+    }
+    .hairline-b {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .hairline-t {
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .hairline-r {
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    @keyframes radar-ping {
+      0% { transform: scale(1); opacity: 0.9; }
+      75%, 100% { transform: scale(2.4); opacity: 0; }
+    }
+    .radar-dot::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 9999px;
+      background-color: currentColor;
+      animation: radar-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+    @keyframes scan-progress {
+      0% { background-position: 0% 0%; }
+      100% { background-position: 200% 0%; }
+    }
+    .calibrating-bar {
+      background: linear-gradient(90deg, #10b981 0%, #d4ff00 50%, #10b981 100%);
+      background-size: 200% 100%;
+      animation: scan-progress 2s linear infinite;
+    }
+    /* Custom subtle scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0c0d0e; }
+    ::-webkit-scrollbar-thumb { background: #26292e; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3f444e; }
   </style>
 </head>
-<body class="min-h-screen pb-12">
+<body class="min-h-screen text-[#f3f4f6] selection:bg-[#d4ff00] selection:text-[#0c0d0e] pb-16">
 
-  <section id="authGate" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950 px-4">
-    <div class="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl sm:p-8">
-      <div class="mb-6 text-center">
-        <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-lg font-bold">AI</div>
-        <h1 id="authTitle" class="text-2xl font-bold text-white">Sign in</h1>
-        <p id="authDescription" class="mt-2 text-sm text-slate-400">Sign in to access the HAR Inference Studio.</p>
+  <!-- ==================== AUTHENTICATION GATE ==================== -->
+  <section id="authGate" class="fixed inset-0 z-[100] flex items-center justify-center bg-[#0c0d0e]/95 px-4">
+    <div class="w-full max-w-md instrument-panel rounded-none sm:rounded-md overflow-hidden">
+      <!-- Top Instrument Strip -->
+      <div class="flex items-center justify-between px-5 py-3 bg-[#1c1e22] hairline-b">
+        <div class="flex items-center gap-2.5">
+          <span class="inline-block w-2 h-2 rounded-full bg-[#d4ff00]"></span>
+          <span class="font-mono text-[11px] uppercase tracking-widest text-[#9ca3af]">SYS.AUTH // HAR-01</span>
+        </div>
+        <span class="font-mono text-[11px] text-[#4b5563] tabular-nums">SEC-PBKDF2-600K</span>
       </div>
-      <form id="authForm" onsubmit="submitAuth(event)" class="space-y-4">
-        <label class="block text-sm font-medium text-slate-300">
-          Username
-          <input id="authUsername" name="username" type="text" required minlength="3" maxlength="32" autocomplete="username"
-            class="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-white outline-none focus:border-blue-500">
-        </label>
-        <label class="block text-sm font-medium text-slate-300">
-          Password
-          <input id="authPassword" name="password" type="password" required maxlength="128" autocomplete="current-password"
-            class="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-white outline-none focus:border-blue-500">
-        </label>
-        <p id="authHint" class="hidden text-xs text-slate-400">Use at least 12 characters for your password.</p>
-        <p id="authMessage" role="status" aria-live="polite" class="hidden text-sm text-rose-300"></p>
-        <button id="authSubmit" type="submit" class="w-full rounded-lg bg-blue-600 px-4 py-2.5 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60">
-          Sign in
-        </button>
-      </form>
-      <p class="mt-5 text-center text-sm text-slate-400">
-        <span id="authSwitchPrompt">New here?</span>
-        <button id="authSwitch" type="button" onclick="toggleAuthMode()" class="ml-1 font-semibold text-blue-400 hover:text-blue-300">Create an account</button>
-      </p>
+
+      <div class="p-6 sm:p-7">
+        <div class="mb-6">
+          <div class="inline-flex items-center gap-2 px-2 py-1 bg-[#1c1e22] border border-white/10 rounded text-[11px] font-mono uppercase tracking-wider text-[#d4ff00] mb-3">
+            <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+            <span>Inertial Telemetry Console</span>
+          </div>
+          <h1 id="authTitle" class="font-display text-2xl font-bold tracking-tight text-[#f3f4f6]">Operator Sign In</h1>
+          <p id="authDescription" class="mt-1.5 text-xs text-[#9ca3af] leading-relaxed">
+            Authenticate to unlock real-time 50Hz IMU telemetry &amp; dual-model PyTorch inference.
+          </p>
+        </div>
+
+        <form id="authForm" onsubmit="submitAuth(event)" class="space-y-4">
+          <div>
+            <label for="authUsername" class="block text-xs font-mono uppercase tracking-wider text-[#9ca3af] mb-1.5">
+              Operator ID (Username)
+            </label>
+            <div class="relative">
+              <input id="authUsername" name="username" type="text" required minlength="3" maxlength="32" autocomplete="username"
+                placeholder="e.g. tapash_scu"
+                class="w-full instrument-recessed rounded px-3.5 py-2.5 text-sm font-mono text-[#f3f4f6] placeholder-[#4b5563] outline-none focus:border-[#d4ff00] transition">
+            </div>
+          </div>
+
+          <div>
+            <label for="authPassword" class="block text-xs font-mono uppercase tracking-wider text-[#9ca3af] mb-1.5">
+              Access Key (Password)
+            </label>
+            <div class="relative">
+              <input id="authPassword" name="password" type="password" required maxlength="128" autocomplete="current-password"
+                placeholder="••••••••••••"
+                class="w-full instrument-recessed rounded px-3.5 py-2.5 text-sm font-mono text-[#f3f4f6] placeholder-[#4b5563] outline-none focus:border-[#d4ff00] transition">
+            </div>
+          </div>
+
+          <p id="authHint" class="hidden text-[11px] font-mono text-[#9ca3af] bg-[#1c1e22] px-3 py-2 rounded border border-white/5">
+            REQ: Minimum 12 characters for cryptographic key derivation.
+          </p>
+          <p id="authMessage" role="status" aria-live="polite" class="hidden text-xs font-mono px-3 py-2 rounded border border-red-500/30 bg-red-500/10 text-red-300"></p>
+
+          <button id="authSubmit" type="submit"
+            class="w-full flex items-center justify-center gap-2 rounded bg-[#d4ff00] hover:bg-[#dfeb2f] text-[#0c0d0e] font-display font-bold text-sm px-4 py-2.5 tracking-wide transition active:translate-y-0.5 active:scale-[0.99] disabled:cursor-wait disabled:opacity-60">
+            <span>Initialize Session</span>
+            <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+          </button>
+        </form>
+
+        <div class="mt-6 pt-4 hairline-t flex items-center justify-between text-xs">
+          <span id="authSwitchPrompt" class="text-[#9ca3af] font-mono">Unregistered operator?</span>
+          <button id="authSwitch" type="button" onclick="toggleAuthMode()"
+            class="font-mono uppercase tracking-wider text-[#d4ff00] hover:underline font-semibold">
+            Create Account →
+          </button>
+        </div>
+      </div>
     </div>
   </section>
 
+  <!-- ==================== MAIN ENGINEERING CONSOLE ==================== -->
   <div id="appContent" class="hidden">
-  <!-- Top Navigation Header -->
-  <header class="sticky top-0 z-50 glass-card border-b border-slate-800 px-4 py-3 sm:px-8">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25 font-bold text-lg">
-          AI
+
+    <!-- Top Hardware Status Bar -->
+    <header class="sticky top-0 z-50 bg-[#0c0d0e]/95 backdrop-blur-sm hairline-b">
+      <div class="max-w-[1400px] mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
+
+        <!-- Left: Instrument Identity -->
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 rounded bg-[#1c1e22] border border-white/15 flex items-center justify-center shrink-0">
+            <span class="font-mono font-bold text-xs text-[#d4ff00]">H1</span>
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <h1 class="font-display font-bold text-sm sm:text-base tracking-tight text-[#f3f4f6] truncate">
+                UCI-HAR // TELEMETRY LAB
+              </h1>
+              <span class="hidden md:inline-flex items-center px-1.5 py-0.5 bg-[#1c1e22] border border-white/10 rounded font-mono text-[10px] uppercase tracking-wider text-[#9ca3af]">
+                REV 2.4 · SCU AI-BIGDATA
+              </span>
+            </div>
+            <p class="text-[11px] font-mono text-[#4b5563] truncate hidden sm:block">
+              T. PRADHAN (20240301067) · P. RAMTEL · S. DHITAL
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 class="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
-            UCI HAR Inference Studio
-            <span class="hidden md:inline-block text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2.5 py-0.5 rounded-full font-medium">
-              SCU Capstone Project
-            </span>
-          </h1>
-          <p class="text-xs text-slate-400">Tapash Pradhan • Pushpa Ramtel • Shova Dhital</p>
-        </div>
-      </div>
 
-      <div class="flex items-center gap-3">
-        <div id="statusBadge" class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-3 py-1.5 rounded-full text-xs font-semibold">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-ring"></span>
-          <span>API Online</span>
-        </div>
-        <a href="/docs" target="_blank" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg font-medium transition">
-          Swagger Docs ↗
-        </a>
-        <span id="signedInUser" class="text-xs text-slate-400"></span>
-        <button onclick="logout()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg font-medium transition">
-          Sign out
-        </button>
-      </div>
-    </div>
-  </header>
+        <!-- Center/Right: Telemetry Bus Indicators & Controls -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Model Weights Status Pill -->
+          <div class="hidden lg:flex items-center gap-2 px-2.5 py-1 bg-[#141517] border border-white/10 rounded text-[11px] font-mono text-[#9ca3af]">
+            <i data-lucide="cpu" class="w-3.5 h-3.5 text-[#d4ff00]"></i>
+            <span id="weightsIndicator" class="tabular-nums">VERIFYING WEIGHTS...</span>
+          </div>
 
-  <!-- Main Content Container -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-8 mt-6 space-y-6">
+          <!-- API Bus Live Status -->
+          <div id="statusBadge" class="flex items-center gap-2 bg-[#141517] border border-emerald-500/30 text-[#10b981] px-2.5 py-1 rounded text-[11px] font-mono uppercase tracking-wider">
+            <span class="relative w-2 h-2 rounded-full bg-[#10b981] radar-dot"></span>
+            <span class="hidden xs:inline">BUS:</span>
+            <span>ONLINE</span>
+          </div>
 
-    <!-- Mode Switcher Tabs (Mobile Sensor vs Preset Simulator) -->
-    <div class="grid grid-cols-2 sm:flex sm:w-fit gap-2 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800">
-      <button id="tabSimBtn" onclick="switchTab('sim')" class="px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition bg-blue-600 text-white shadow">
-        ⚡ Preset Activity Simulator
-      </button>
-      <button id="tabMobileBtn" onclick="switchTab('mobile')" class="px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white">
-        📱 Live Mobile Sensor Stream
-      </button>
-    </div>
+          <!-- Open Standalone Link (helpful when embedded in HF Space iframe on mobile) -->
+          <a href="/static/index.html" target="_blank" rel="noopener" title="Open direct HTTPS window for mobile sensors"
+            class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#1c1e22] hover:bg-[#26292e] border border-white/10 rounded text-[11px] font-mono text-[#9ca3af] hover:text-[#f3f4f6] transition active:translate-y-0.5">
+            <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+            <span>Direct Link</span>
+          </a>
 
-    <!-- SECTION 1: PRESET ACTIVITY SIMULATOR -->
-    <section id="simSection" class="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div>
-          <h2 class="text-base sm:text-lg font-bold text-white">Test Activity Telemetry Presets</h2>
-          <p class="text-xs text-slate-400">Select any of the 6 UCI HAR activities to stream a 2.56s (128x9) window into both models simultaneously.</p>
-        </div>
-        <span id="weightsIndicator" class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-md self-start sm:self-auto">
-          Checking model weights...
-        </span>
-      </div>
+          <a href="/docs" target="_blank"
+            class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#1c1e22] hover:bg-[#26292e] border border-white/10 rounded text-[11px] font-mono text-[#9ca3af] hover:text-[#f3f4f6] transition active:translate-y-0.5">
+            <span>API</span>
+            <i data-lucide="arrow-up-right" class="w-3 h-3"></i>
+          </a>
 
-      <!-- 6 Activity Buttons Grid (Mobile Touch Friendly) -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-1">
-        <button onclick="runPreset('WALKING')" class="act-btn flex flex-col items-center justify-center p-4 rounded-xl bg-slate-800/80 hover:bg-blue-600/20 border border-slate-700 hover:border-blue-500 transition group">
-          <span class="text-2xl mb-1 group-hover:scale-110 transition">🚶</span>
-          <span class="text-xs font-bold text-slate-200">WALKING</span>
-        </button>
-        <button onclick="runPreset('WALKING_UPSTAIRS')" class="act-btn flex flex-col items-center justify-center p-4 rounded-xl bg-slate-800/80 hover:bg-blue-600/20 border border-slate-700 hover:border-blue-500 transition group">
-          <span class="text-2xl mb-1 group-hover:scale-110 transition">🧗</span>
-          <span class="text-xs font-bold text-slate-200">UPSTAIRS</span>
-        </button>
-        <button onclick="runPreset('WALKING_DOWNSTAIRS')" class="act-btn flex flex-col items-center justify-center p-4 rounded-xl bg-slate-800/80 hover:bg-blue-600/20 border border-slate-700 hover:border-blue-500 transition group">
-          <span class="text-2xl mb-1 group-hover:scale-110 transition">⛷️</span>
-          <span class="text-xs font-bold text-slate-200">DOWNSTAIRS</span>
-        </button>
-        <button onclick="runPreset('SITTING')" class="act-btn flex flex-col items-center justify-center p-4 rounded-xl bg-slate-800/80 hover:bg-blue-600/20 border border-slate-700 hover:border-blue-500 transition group">
-          <span class="text-2xl mb-1 group-hover:scale-110 transition">🪑</span>
-          <span class="text-xs font-bold text-slate-200">SITTING</span>
-        </button>
-        <button onclick="runPreset('STANDING')" class="act-btn flex flex-col items-center justify-center p-4 rounded-xl bg-slate-800/80 hover:bg-blue-600/20 border border-slate-700 hover:border-blue-500 transition group">
-          <span class="text-2xl mb-1 group-hover:scale-110 transition">🧍</span>
-          <span class="text-xs font-bold text-slate-200">STANDING</span>
-        </button>
-        <button onclick="runPreset('LAYING')" class="act-btn flex flex-col items-center justify-center p-4 rounded-xl bg-slate-800/80 hover:bg-blue-600/20 border border-slate-700 hover:border-blue-500 transition group">
-          <span class="text-2xl mb-1 group-hover:scale-110 transition">🛌</span>
-          <span class="text-xs font-bold text-slate-200">LAYING</span>
-        </button>
-      </div>
-      <p id="predictionStatus" role="status" aria-live="polite" class="min-h-5 text-xs text-slate-400">Choose an activity to see its prediction.</p>
-    </section>
+          <div class="h-4 w-[1px] bg-white/10 hidden sm:block"></div>
 
-    <!-- SECTION 2: LIVE MOBILE HARDWARE SENSOR RECORDING (Hidden by default) -->
-    <section id="mobileSection" class="hidden glass-card rounded-2xl p-5 sm:p-6 space-y-4 border border-indigo-500/30">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <span class="text-xs uppercase tracking-wider font-bold text-indigo-400">Real-Time Edge Telemetry</span>
-          <h2 class="text-lg font-bold text-white mt-0.5">Smartphone Accelerometer & Gyroscope Stream</h2>
-          <p class="text-xs text-slate-400">Open this page over HTTPS on your phone, hold it at your waist or in hand, and start tracking to stream 128 readings into the 1D-CNN.</p>
-        </div>
-        <div class="flex flex-wrap items-center gap-3">
-          <span id="sensorConnectionBadge" class="rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-300">Sensors inactive</span>
-          <button id="startSensorBtn" onclick="startMobileSensor()" class="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-sm shadow-lg shadow-emerald-500/20 transition">
-            ▶ Start Live Tracking
-          </button>
-          <button id="stopSensorBtn" onclick="stopMobileSensor()" class="hidden px-5 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm transition">
-            ⏹ Stop
+          <span id="signedInUser" class="hidden md:inline-block font-mono text-xs text-[#9ca3af] tabular-nums"></span>
+
+          <button onclick="logout()" title="Terminate Session"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#1c1e22] hover:bg-red-500/15 border border-white/10 hover:border-red-500/40 rounded text-[11px] font-mono text-[#9ca3af] hover:text-red-300 transition active:translate-y-0.5">
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">EXIT</span>
           </button>
         </div>
-      </div>
 
-      <!-- Progress bar for 128 samples -->
-      <div class="space-y-1.5">
-        <div class="flex justify-between text-xs text-slate-300 font-medium">
-          <span id="sensorStateText">Waiting for device motion permission...</span>
-          <span id="bufferCountText">0 / 128 samples</span>
-        </div>
-        <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
-          <div id="bufferProgressBar" class="h-full bg-indigo-500 transition-all duration-150" style="width: 0%"></div>
-        </div>
       </div>
+    </header>
 
-      <!-- Live XYZ Readout -->
-      <div class="grid grid-cols-3 gap-2 sm:gap-4 pt-2 text-center">
-        <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
-          <span class="text-[11px] text-slate-400 block">Acc X (m/s²)</span>
-          <span id="liveAccX" class="text-sm sm:text-base font-mono font-bold text-blue-400">0.00</span>
-        </div>
-        <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
-          <span class="text-[11px] text-slate-400 block">Acc Y (m/s²)</span>
-          <span id="liveAccY" class="text-sm sm:text-base font-mono font-bold text-emerald-400">0.00</span>
-        </div>
-        <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
-          <span class="text-[11px] text-slate-400 block">Acc Z (m/s²)</span>
-          <span id="liveAccZ" class="text-sm sm:text-base font-mono font-bold text-rose-400">0.00</span>
-        </div>
-      </div>
+    <!-- Main Workbench Grid -->
+    <main class="max-w-[1400px] mx-auto px-4 sm:px-6 pt-5 space-y-5">
 
-      <div class="rounded-xl border border-indigo-400/30 bg-indigo-950/40 p-4 sm:p-5">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <span class="text-xs font-bold uppercase tracking-wider text-indigo-300">Live activity</span>
-          <span id="livePredictionConfidence" class="text-xs font-semibold text-indigo-200">Waiting for first window</span>
-        </div>
-        <div class="mt-2 flex items-center gap-3">
-          <span id="liveActivityIcon" class="text-3xl" aria-hidden="true">📱</span>
-          <strong id="livePredictedActivity" class="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">Not predicted yet</strong>
-        </div>
-        <p id="livePredictionStatus" role="status" aria-live="polite" class="mt-2 text-xs text-slate-300">Tap Start Live Tracking to connect the phone sensors.</p>
-      </div>
-    </section>
+      <!-- ==================== TOP CONTROL DECK ==================== -->
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 instrument-panel rounded-md p-3 sm:p-4">
 
-    <!-- PREDICTION RESULTS CARDS (1D-CNN vs ANN vs Ensemble) -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      
-      <!-- Card 1: 1D-CNN (Raw Signals) -->
-      <div class="glass-card rounded-2xl p-5 border-t-4 border-t-blue-500 flex flex-col justify-between">
-        <div>
-          <div class="flex justify-between items-center mb-2">
-            <span class="text-xs font-bold uppercase tracking-wider text-blue-400">Pipeline B • Raw Signals</span>
-            <span id="cnnLatency" class="text-xs font-mono bg-blue-500/10 text-blue-300 px-2 py-0.5 rounded">-- ms</span>
-          </div>
-          <h3 class="text-sm font-semibold text-slate-300">1D-CNN Architecture (128×9)</h3>
-          <div class="mt-4 flex items-baseline gap-3">
-            <span id="cnnPredLabel" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">WALKING</span>
+        <!-- Left: Tactile Segmented Mode Switcher -->
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+          <span class="text-xs font-mono uppercase tracking-wider text-neutral-400 px-1 flex items-center gap-1.5">
+            <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-[#d4ff00]"></i>
+            <span>INPUT SOURCE</span>
+          </span>
+
+          <div class="relative grid grid-cols-2 bg-[#0c0d0e] p-1 rounded border border-white/10 w-full sm:w-auto">
+            <!-- Sliding Active Background Pill -->
+            <div id="modeSegmentIndicator"
+              class="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-[#1c1e22] border border-[#d4ff00]/50 rounded-sm transition-transform duration-200 ease-out pointer-events-none"></div>
+
+            <button id="tabSimBtn" type="button" onclick="switchTab('sim')"
+              class="relative z-10 flex items-center justify-center gap-2 px-4 py-1.5 rounded-sm text-xs font-mono uppercase tracking-wider text-[#d4ff00] font-semibold transition active:scale-[0.99]">
+              <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+              <span>[01] Synth Presets</span>
+            </button>
+
+            <button id="tabMobileBtn" type="button" onclick="switchTab('mobile')"
+              class="relative z-10 flex items-center justify-center gap-2 px-4 py-1.5 rounded-sm text-xs font-mono uppercase tracking-wider text-[#9ca3af] hover:text-[#f3f4f6] font-semibold transition active:scale-[0.99]">
+              <i data-lucide="radio" class="w-3.5 h-3.5"></i>
+              <span>[02] Live Phone IMU</span>
+            </button>
           </div>
         </div>
-        <div class="mt-4 pt-3 border-t border-slate-800/80 flex justify-between items-center text-xs">
-          <span class="text-slate-400">Confidence: <strong id="cnnConf" class="text-emerald-400">98.4%</strong></span>
-          <span class="text-slate-500">Benchmark: 94.03%</span>
+
+        <!-- Right: Tactile Pipeline Focus Selector (1D-CNN vs ANN vs Ensemble) -->
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+          <span class="text-xs font-mono uppercase tracking-wider text-neutral-400 px-1 flex items-center gap-1.5">
+            <i data-lucide="cpu" class="w-3.5 h-3.5 text-[#10b981]"></i>
+            <span>ACTIVE PIPELINE</span>
+          </span>
+
+          <div class="relative grid grid-cols-3 bg-[#0c0d0e] p-1 rounded border border-white/10 w-full sm:w-[360px]">
+            <div id="pipelineSegmentIndicator"
+              class="absolute top-1 bottom-1 left-1 w-[calc(33.333%-3px)] bg-[#1c1e22] border border-white/20 rounded-sm transition-transform duration-200 ease-out pointer-events-none"></div>
+
+            <button type="button" id="pipeBtnEnsemble" onclick="selectPipelineView('ensemble')"
+              class="relative z-10 py-1.5 px-2 text-[11px] font-mono uppercase tracking-wider font-semibold text-[#f3f4f6] transition text-center">
+              Ensemble
+            </button>
+            <button type="button" id="pipeBtnCnn" onclick="selectPipelineView('cnn')"
+              class="relative z-10 py-1.5 px-2 text-[11px] font-mono uppercase tracking-wider font-semibold text-[#9ca3af] hover:text-[#f3f4f6] transition text-center">
+              1D-CNN (9×128)
+            </button>
+            <button type="button" id="pipeBtnAnn" onclick="selectPipelineView('ann')"
+              class="relative z-10 py-1.5 px-2 text-[11px] font-mono uppercase tracking-wider font-semibold text-[#9ca3af] hover:text-[#f3f4f6] transition text-center">
+              ANN (561-F)
+            </button>
+          </div>
         </div>
+
       </div>
 
-      <!-- Card 2: Regularized ANN (561 Features) -->
-      <div class="glass-card rounded-2xl p-5 border-t-4 border-t-purple-500 flex flex-col justify-between">
-        <div>
-          <div class="flex justify-between items-center mb-2">
-            <span class="text-xs font-bold uppercase tracking-wider text-purple-400">Pipeline A • 561 Features</span>
-            <span id="annLatency" class="text-xs font-mono bg-purple-500/10 text-purple-300 px-2 py-0.5 rounded">-- ms</span>
-          </div>
-          <h3 class="text-sm font-semibold text-slate-300">Regularized ANN / MLP</h3>
-          <p class="mt-1 text-[11px] text-slate-500">Preset input is synthetic; a real 561-feature vector is required for ANN results.</p>
-          <div class="mt-4 flex items-baseline gap-3">
-            <span id="annPredLabel" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">WALKING</span>
-          </div>
+      <!-- ==================== WORKBENCH SPLIT: LEFT INPUT/BLACKBOX · RIGHT PRIMARY READOUT ==================== -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+        <!-- LEFT COLUMN (7 cols): Input Deck (Preset Synth OR Live IMU Stream) + Blackbox Terminal -->
+        <div class="lg:col-span-7 space-y-5">
+
+          <!-- MODE 1: PRESET SYNTHESIZER MATRIX -->
+          <section id="simSection" class="instrument-panel rounded-md overflow-hidden">
+            <div class="flex items-center justify-between px-4 py-3 bg-[#1c1e22] hairline-b">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-[11px] uppercase tracking-wider text-[#d4ff00]">[CH.SYNTH]</span>
+                <h2 class="font-display text-sm font-semibold text-[#f3f4f6]">Kinematic Waveform Synthesizer</h2>
+              </div>
+              <span class="font-mono text-[11px] text-[#9ca3af] tabular-nums">128 SAMPLES @ 50Hz (2.56s)</span>
+            </div>
+
+            <div class="p-4 sm:p-5 space-y-4">
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+
+                <button onclick="runPreset('WALKING')" data-activity="WALKING"
+                  class="act-btn instrument-key active-preset rounded p-3.5 text-left flex flex-col justify-between h-24 group">
+                  <div class="flex items-center justify-between w-full">
+                    <span class="font-mono text-[10px] text-[#9ca3af] group-hover:text-[#d4ff00] tabular-nums">KEY // 01</span>
+                    <i data-lucide="footprints" class="w-4 h-4 text-[#d4ff00]"></i>
+                  </div>
+                  <div>
+                    <div class="font-display font-bold text-xs tracking-wide text-[#f3f4f6]">WALKING</div>
+                    <div class="font-mono text-[10px] text-[#4b5563] tabular-nums">2.0 Hz Harmonic</div>
+                  </div>
+                </button>
+
+                <button onclick="runPreset('WALKING_UPSTAIRS')" data-activity="WALKING_UPSTAIRS"
+                  class="act-btn instrument-key rounded p-3.5 text-left flex flex-col justify-between h-24 group">
+                  <div class="flex items-center justify-between w-full">
+                    <span class="font-mono text-[10px] text-[#9ca3af] group-hover:text-[#d4ff00] tabular-nums">KEY // 02</span>
+                    <i data-lucide="arrow-up-right" class="w-4 h-4 text-[#9ca3af] group-hover:text-[#d4ff00] transition"></i>
+                  </div>
+                  <div>
+                    <div class="font-display font-bold text-xs tracking-wide text-[#f3f4f6]">UPSTAIRS</div>
+                    <div class="font-mono text-[10px] text-[#4b5563] tabular-nums">1.6 Hz Ascent</div>
+                  </div>
+                </button>
+
+                <button onclick="runPreset('WALKING_DOWNSTAIRS')" data-activity="WALKING_DOWNSTAIRS"
+                  class="act-btn instrument-key rounded p-3.5 text-left flex flex-col justify-between h-24 group">
+                  <div class="flex items-center justify-between w-full">
+                    <span class="font-mono text-[10px] text-[#9ca3af] group-hover:text-[#d4ff00] tabular-nums">KEY // 03</span>
+                    <i data-lucide="arrow-down-right" class="w-4 h-4 text-[#9ca3af] group-hover:text-[#d4ff00] transition"></i>
+                  </div>
+                  <div>
+                    <div class="font-display font-bold text-xs tracking-wide text-[#f3f4f6]">DOWNSTAIRS</div>
+                    <div class="font-mono text-[10px] text-[#4b5563] tabular-nums">2.3 Hz Impact</div>
+                  </div>
+                </button>
+
+                <button onclick="runPreset('SITTING')" data-activity="SITTING"
+                  class="act-btn instrument-key rounded p-3.5 text-left flex flex-col justify-between h-24 group">
+                  <div class="flex items-center justify-between w-full">
+                    <span class="font-mono text-[10px] text-[#9ca3af] group-hover:text-[#d4ff00] tabular-nums">KEY // 04</span>
+                    <i data-lucide="user-check" class="w-4 h-4 text-[#9ca3af] group-hover:text-[#d4ff00] transition"></i>
+                  </div>
+                  <div>
+                    <div class="font-display font-bold text-xs tracking-wide text-[#f3f4f6]">SITTING</div>
+                    <div class="font-mono text-[10px] text-[#4b5563] tabular-nums">Static Pitch -0.22g</div>
+                  </div>
+                </button>
+
+                <button onclick="runPreset('STANDING')" data-activity="STANDING"
+                  class="act-btn instrument-key rounded p-3.5 text-left flex flex-col justify-between h-24 group">
+                  <div class="flex items-center justify-between w-full">
+                    <span class="font-mono text-[10px] text-[#9ca3af] group-hover:text-[#d4ff00] tabular-nums">KEY // 05</span>
+                    <i data-lucide="shield-check" class="w-4 h-4 text-[#9ca3af] group-hover:text-[#d4ff00] transition"></i>
+                  </div>
+                  <div>
+                    <div class="font-display font-bold text-xs tracking-wide text-[#f3f4f6]">STANDING</div>
+                    <div class="font-mono text-[10px] text-[#4b5563] tabular-nums">Vertical +0.99g</div>
+                  </div>
+                </button>
+
+                <button onclick="runPreset('LAYING')" data-activity="LAYING"
+                  class="act-btn instrument-key rounded p-3.5 text-left flex flex-col justify-between h-24 group">
+                  <div class="flex items-center justify-between w-full">
+                    <span class="font-mono text-[10px] text-[#9ca3af] group-hover:text-[#d4ff00] tabular-nums">KEY // 06</span>
+                    <i data-lucide="moon" class="w-4 h-4 text-[#9ca3af] group-hover:text-[#d4ff00] transition"></i>
+                  </div>
+                  <div>
+                    <div class="font-display font-bold text-xs tracking-wide text-[#f3f4f6]">LAYING</div>
+                    <div class="font-mono text-[10px] text-[#4b5563] tabular-nums">Horizontal Transverse</div>
+                  </div>
+                </button>
+
+              </div>
+
+              <!-- Synth Status Line -->
+              <div class="flex items-center justify-between px-3 py-2 instrument-recessed rounded text-xs font-mono">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="w-1.5 h-1.5 rounded-full bg-[#d4ff00] shrink-0"></span>
+                  <p id="predictionStatus" role="status" aria-live="polite" class="text-[#9ca3af] truncate">
+                    Select a kinematic keycap to inject a 128×9 frame.
+                  </p>
+                </div>
+                <span class="text-[10px] text-[#4b5563] uppercase shrink-0 ml-2">CRC32-DET</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- MODE 2: LIVE HARDWARE IMU SENSOR STREAM -->
+          <section id="mobileSection" class="hidden instrument-panel rounded-md overflow-hidden">
+            <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-[#1c1e22] hairline-b">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-[11px] uppercase tracking-wider text-[#10b981]">[CH.IMU]</span>
+                <h2 class="font-display text-sm font-semibold text-[#f3f4f6]">Hardware Accelerometer &amp; Gyroscope Bus</h2>
+              </div>
+
+              <!-- Connection Badge -->
+              <span id="sensorConnectionBadge"
+                class="inline-flex items-center gap-1.5 rounded px-2.5 py-0.5 bg-[#0c0d0e] border border-white/10 text-[11px] font-mono uppercase tracking-wider text-[#9ca3af]">
+                <span id="sensorDot" class="w-1.5 h-1.5 rounded-full bg-[#4b5563]"></span>
+                <span id="sensorBadgeLabel">Sensors Inactive</span>
+              </span>
+            </div>
+
+            <div class="p-4 sm:p-5 space-y-4">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 hairline-b">
+                <div class="space-y-1">
+                  <div class="text-xs font-mono uppercase tracking-wider text-neutral-400">DeviceMotionEvent Stream (50Hz)</div>
+                  <p class="text-xs text-[#9ca3af] leading-relaxed">
+                    Open over HTTPS on your smartphone. Captures 128-sample sliding windows (50% overlap) and dispatches to <code class="font-mono text-[#d4ff00]">POST /predict</code>.
+                  </p>
+                </div>
+
+                <div class="flex items-center gap-2.5 shrink-0">
+                  <button id="startSensorBtn" type="button" onclick="startMobileSensor()"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 rounded bg-[#d4ff00] hover:bg-[#dfeb2f] text-[#0c0d0e] font-display font-bold text-xs uppercase tracking-wider border border-[#d4ff00] shadow transition active:translate-y-0.5 active:scale-[0.99]">
+                    <span class="relative flex h-2 w-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0c0d0e] opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-[#0c0d0e]"></span>
+                    </span>
+                    <span>Start Live Tracking</span>
+                  </button>
+
+                  <button id="stopSensorBtn" type="button" onclick="stopMobileSensor()"
+                    class="hidden inline-flex items-center gap-2 px-4 py-2.5 rounded bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 font-display font-bold text-xs uppercase tracking-wider transition active:translate-y-0.5 active:scale-[0.99]">
+                    <i data-lucide="square" class="w-3.5 h-3.5"></i>
+                    <span>Halt Stream</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Sliding Window Calibration Progress Line -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs font-mono">
+                  <span id="sensorStateText" class="text-[#9ca3af]">Standby · awaiting hardware trigger...</span>
+                  <span id="bufferCountText" class="text-[#d4ff00] tabular-nums font-semibold">000 / 128 SAMPLES</span>
+                </div>
+                <div class="w-full h-2 instrument-recessed rounded-sm overflow-hidden p-[1px]">
+                  <div id="bufferProgressBar" class="h-full bg-[#d4ff00] transition-all duration-150" style="width: 0%"></div>
+                </div>
+              </div>
+
+              <!-- Live Detected Readout Banner -->
+              <div class="instrument-recessed rounded p-3.5 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded bg-[#1c1e22] border border-white/10 flex items-center justify-center text-[#d4ff00]">
+                    <i id="liveActivityIcon" data-lucide="smartphone" class="w-5 h-5"></i>
+                  </div>
+                  <div>
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-[#9ca3af]">LIVE EDGE CLASSIFICATION</div>
+                    <strong id="livePredictedActivity" class="font-display text-lg sm:text-xl font-bold tracking-tight text-[#f3f4f6] tabular-nums">
+                      AWAITING WINDOW
+                    </strong>
+                  </div>
+                </div>
+                <div class="text-right font-mono">
+                  <div id="livePredictionConfidence" class="text-xs text-[#10b981] tabular-nums font-semibold">CONF // --%</div>
+                  <p id="livePredictionStatus" role="status" aria-live="polite" class="text-[11px] text-[#4b5563] mt-0.5">
+                    Press Start Live Tracking to calibrate 128-sample buffer.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- RAW TELEMETRY BLACKBOX TERMINAL (6-Axis + Live Sparklines & Micro-Bars) -->
+          <section class="instrument-panel rounded-md overflow-hidden">
+            <div class="flex items-center justify-between px-4 py-2.5 bg-[#1c1e22] hairline-b">
+              <div class="flex items-center gap-2">
+                <i data-lucide="terminal" class="w-3.5 h-3.5 text-[#d4ff00]"></i>
+                <span class="text-xs font-mono uppercase tracking-wider text-neutral-400">BLACKBOX // 6-AXIS INERTIAL TELEMETRY</span>
+              </div>
+              <div class="flex items-center gap-3 font-mono text-[11px] text-[#4b5563] tabular-nums">
+                <span id="telemetryRateReadout">FS: 50.0 Hz</span>
+                <span>•</span>
+                <span id="telemetryRmsReadout">RMS: 0.000g</span>
+              </div>
+            </div>
+
+            <div class="p-4 instrument-recessed m-3 rounded space-y-3">
+              <!-- 3-Axis Linear Acceleration Row -->
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <!-- ACC X -->
+                <div class="bg-[#141517] border border-white/5 rounded p-2.5">
+                  <div class="flex items-center justify-between text-[11px] font-mono mb-1">
+                    <span class="text-[#9ca3af]">ACC.X <span class="text-[#4b5563]">(m/s²)</span></span>
+                    <span id="liveAccX" class="text-[#d4ff00] font-semibold tabular-nums">+0.00</span>
+                  </div>
+                  <div class="h-1 w-full bg-[#0c0d0e] rounded-full overflow-hidden mb-1.5">
+                    <div id="barAccX" class="h-full bg-[#d4ff00] transition-all duration-100" style="width: 50%"></div>
+                  </div>
+                  <svg class="w-full h-5 overflow-visible" viewBox="0 0 120 20" preserveAspectRatio="none">
+                    <polyline id="sparkAccX" fill="none" stroke="#d4ff00" stroke-width="1.2" points="0,10 120,10" />
+                  </svg>
+                </div>
+
+                <!-- ACC Y -->
+                <div class="bg-[#141517] border border-white/5 rounded p-2.5">
+                  <div class="flex items-center justify-between text-[11px] font-mono mb-1">
+                    <span class="text-[#9ca3af]">ACC.Y <span class="text-[#4b5563]">(m/s²)</span></span>
+                    <span id="liveAccY" class="text-[#10b981] font-semibold tabular-nums">+0.00</span>
+                  </div>
+                  <div class="h-1 w-full bg-[#0c0d0e] rounded-full overflow-hidden mb-1.5">
+                    <div id="barAccY" class="h-full bg-[#10b981] transition-all duration-100" style="width: 50%"></div>
+                  </div>
+                  <svg class="w-full h-5 overflow-visible" viewBox="0 0 120 20" preserveAspectRatio="none">
+                    <polyline id="sparkAccY" fill="none" stroke="#10b981" stroke-width="1.2" points="0,10 120,10" />
+                  </svg>
+                </div>
+
+                <!-- ACC Z -->
+                <div class="bg-[#141517] border border-white/5 rounded p-2.5">
+                  <div class="flex items-center justify-between text-[11px] font-mono mb-1">
+                    <span class="text-[#9ca3af]">ACC.Z <span class="text-[#4b5563]">(m/s²)</span></span>
+                    <span id="liveAccZ" class="text-[#f59e0b] font-semibold tabular-nums">+0.00</span>
+                  </div>
+                  <div class="h-1 w-full bg-[#0c0d0e] rounded-full overflow-hidden mb-1.5">
+                    <div id="barAccZ" class="h-full bg-[#f59e0b] transition-all duration-100" style="width: 50%"></div>
+                  </div>
+                  <svg class="w-full h-5 overflow-visible" viewBox="0 0 120 20" preserveAspectRatio="none">
+                    <polyline id="sparkAccZ" fill="none" stroke="#f59e0b" stroke-width="1.2" points="0,10 120,10" />
+                  </svg>
+                </div>
+              </div>
+
+              <!-- 3-Axis Gyroscope Row -->
+              <div class="grid grid-cols-3 gap-2.5 pt-1">
+                <div class="bg-[#141517] border border-white/5 rounded px-2.5 py-1.5 flex items-center justify-between font-mono text-[11px]">
+                  <span class="text-[#4b5563]">GYR.α</span>
+                  <span id="liveGyroX" class="text-[#9ca3af] tabular-nums">+0.00 rad/s</span>
+                </div>
+                <div class="bg-[#141517] border border-white/5 rounded px-2.5 py-1.5 flex items-center justify-between font-mono text-[11px]">
+                  <span class="text-[#4b5563]">GYR.β</span>
+                  <span id="liveGyroY" class="text-[#9ca3af] tabular-nums">+0.00 rad/s</span>
+                </div>
+                <div class="bg-[#141517] border border-white/5 rounded px-2.5 py-1.5 flex items-center justify-between font-mono text-[11px]">
+                  <span class="text-[#4b5563]">GYR.γ</span>
+                  <span id="liveGyroZ" class="text-[#9ca3af] tabular-nums">+0.00 rad/s</span>
+                </div>
+              </div>
+
+              <!-- Raw Hex/Vector Stream Ticker -->
+              <div class="pt-2 hairline-t flex items-center justify-between font-mono text-[11px] text-[#4b5563] overflow-hidden">
+                <span id="blackboxLogLine" class="truncate tabular-nums">
+                  SYS.READY // WAITING FOR INERTIAL FRAME [CH0..8 × 128]
+                </span>
+                <span class="text-[#10b981] shrink-0 ml-2">● LOCK</span>
+              </div>
+            </div>
+          </section>
+
         </div>
-        <div class="mt-4 pt-3 border-t border-slate-800/80 flex justify-between items-center text-xs">
-          <span class="text-slate-400">Confidence: <strong id="annConf" class="text-emerald-400">99.1%</strong></span>
-          <span class="text-slate-500">Benchmark: 95.72%</span>
+
+        <!-- RIGHT COLUMN (5 cols): Primary Classification Readout & Pipeline Telemetry -->
+        <div class="lg:col-span-5 flex flex-col justify-between space-y-5">
+
+          <!-- PRIMARY INSTRUMENT CLASSIFICATION DISPLAY -->
+          <section class="instrument-panel rounded-md overflow-hidden flex-1 flex flex-col justify-between">
+            <div class="flex items-center justify-between px-4 py-3 bg-[#1c1e22] hairline-b">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-[#d4ff00]"></span>
+                <span class="text-xs font-mono uppercase tracking-wider text-neutral-400">PRIMARY VERDICT // ENGINE OUT</span>
+              </div>
+              <span id="ensembleMethod" class="font-mono text-[11px] text-[#d4ff00] bg-[#0c0d0e] px-2 py-0.5 rounded border border-white/10">
+                50/50 SOFTMAX ENSEMBLE
+              </span>
+            </div>
+
+            <div class="p-5 space-y-5 flex-1 flex flex-col justify-between">
+              <!-- High-Contrast Detected Activity Display -->
+              <div class="instrument-recessed rounded p-4 flex items-center justify-between gap-4 border-l-2 border-l-[#d4ff00]">
+                <div class="space-y-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="font-mono text-[10px] uppercase tracking-widest px-1.5 py-0.5 bg-[#d4ff00] text-[#0c0d0e] font-bold rounded-sm">
+                      DETECTED
+                    </span>
+                    <span id="activeFocusBadge" class="font-mono text-[11px] text-[#9ca3af]">COMBINED DECISION</span>
+                  </div>
+                  <div id="ensPredLabel" class="font-display text-2xl sm:text-3xl font-bold tracking-tight text-[#f3f4f6] truncate tabular-nums pt-1">
+                    WALKING
+                  </div>
+                </div>
+
+                <div class=" flex flex-col items-end shrink-0">
+                  <div id="primaryActivityIconWrap" class="w-12 h-12 rounded bg-[#1c1e22] border border-white/10 flex items-center justify-center text-[#d4ff00] mb-1">
+                    <i id="primaryActivityIcon" data-lucide="footprints" class="w-6 h-6"></i>
+                  </div>
+                  <div class="font-mono text-xs text-[#9ca3af] tabular-nums">
+                    CONF <strong id="ensConf" class="text-[#d4ff00] text-sm">98.8%</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dual Pipeline Telemetry Matrix (Replaces generic 3-column cards with compact engineering rows) -->
+              <div class="space-y-2">
+                <div class="text-xs font-mono uppercase tracking-wider text-neutral-400 flex items-center justify-between">
+                  <span>SUB-PIPELINE DIAGNOSTICS</span>
+                  <span class="text-[10px] text-[#4b5563]">PYTORCH INFERENCE</span>
+                </div>
+
+                <!-- Pipeline B: 1D-CNN Row -->
+                <div id="cardCnn" onclick="selectPipelineView('cnn')"
+                  class="cursor-pointer bg-[#1c1e22]/80 hover:bg-[#1c1e22] border border-white/10 rounded p-3 transition">
+                  <div class="flex items-center justify-between text-xs font-mono mb-1.5">
+                    <div class="flex items-center gap-2">
+                      <span class="w-2 h-2 rounded-xs bg-[#d4ff00]"></span>
+                      <span class="font-semibold text-[#f3f4f6]">PIPELINE B · 1D-CNN</span>
+                      <span class="text-[10px] text-[#9ca3af] px-1.5 py-0.2 bg-[#0c0d0e] rounded">RAW 9×128</span>
+                    </div>
+                    <div class="flex items-center gap-1 text-[#9ca3af] tabular-nums">
+                      <i data-lucide="zap" class="w-3 h-3 text-[#d4ff00]"></i>
+                      <span id="cnnLatency">-- ms</span>
+                    </div>
+                  </div>
+                  <div class="flex items-baseline justify-between font-mono">
+                    <span id="cnnPredLabel" class="font-display text-base font-bold text-[#f3f4f6] tabular-nums">WALKING</span>
+                    <div class="text-xs tabular-nums">
+                      <span class="text-[#9ca3af]">P(y):</span>
+                      <strong id="cnnConf" class="text-[#10b981] ml-1">98.4%</strong>
+                      <span class="text-[#4b5563] text-[10px] ml-2">BENCH 94.03%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Pipeline A: Regularized ANN Row -->
+                <div id="cardAnn" onclick="selectPipelineView('ann')"
+                  class="cursor-pointer bg-[#1c1e22]/80 hover:bg-[#1c1e22] border border-white/10 rounded p-3 transition">
+                  <div class="flex items-center justify-between text-xs font-mono mb-1.5">
+                    <div class="flex items-center gap-2">
+                      <span class="w-2 h-2 rounded-xs bg-[#10b981]"></span>
+                      <span class="font-semibold text-[#f3f4f6]">PIPELINE A · REG-ANN</span>
+                      <span class="text-[10px] text-[#9ca3af] px-1.5 py-0.2 bg-[#0c0d0e] rounded">561 FEAT</span>
+                    </div>
+                    <div class="flex items-center gap-1 text-[#9ca3af] tabular-nums">
+                      <i data-lucide="zap" class="w-3 h-3 text-[#10b981]"></i>
+                      <span id="annLatency">-- ms</span>
+                    </div>
+                  </div>
+                  <div class="flex items-baseline justify-between font-mono">
+                    <span id="annPredLabel" class="font-display text-base font-bold text-[#f3f4f6] tabular-nums">WALKING</span>
+                    <div class="text-xs tabular-nums">
+                      <span class="text-[#9ca3af]">P(y):</span>
+                      <strong id="annConf" class="text-[#10b981] ml-1">99.1%</strong>
+                      <span class="text-[#4b5563] text-[10px] ml-2">BENCH 95.72%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Live Animated Class Probability LED Bars -->
+              <div class="space-y-2 pt-1 hairline-t">
+                <div class="flex items-center justify-between text-xs font-mono uppercase tracking-wider text-neutral-400">
+                  <span>SOFTMAX DISTRIBUTION</span>
+                  <span id="probMatrixModeLabel" class="text-[10px] text-[#d4ff00]">ENSEMBLE WEIGHTED</span>
+                </div>
+                <div id="customProbBars" class="space-y-1.5 font-mono text-[11px] tabular-nums">
+                  <!-- Dynamically populated 6-class precision progress bars -->
+                </div>
+              </div>
+
+            </div>
+          </section>
+
         </div>
+
       </div>
 
-      <!-- Card 3: Blended Ensemble Verdict -->
-      <div class="glass-card rounded-2xl p-5 border-t-4 border-t-emerald-500 bg-gradient-to-b from-emerald-950/20 to-slate-900/60 flex flex-col justify-between">
-        <div>
-          <div class="flex justify-between items-center mb-2">
-            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Combined Decision</span>
-            <span class="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-semibold">Ensemble</span>
+      <!-- ==================== OSCILLOSCOPE & COMPARATIVE ANALYTICS DECK ==================== -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+        <!-- Left (7 cols): 128-Sample Inertial Oscilloscope -->
+        <section class="lg:col-span-7 instrument-panel rounded-md overflow-hidden">
+          <div class="flex items-center justify-between px-4 py-3 bg-[#1c1e22] hairline-b">
+            <div class="flex items-center gap-2">
+              <i data-lucide="activity" class="w-3.5 h-3.5 text-[#d4ff00]"></i>
+              <h3 class="text-xs font-mono uppercase tracking-wider text-[#f3f4f6]">
+                OSCILLOSCOPE // 128-SAMPLE BODY ACCELERATION (X, Y, Z)
+              </h3>
+            </div>
+            <div class="flex items-center gap-3 font-mono text-[11px]">
+              <span class="inline-flex items-center gap-1 text-[#d4ff00]"><span class="w-2 h-0.5 bg-[#d4ff00]"></span>X</span>
+              <span class="inline-flex items-center gap-1 text-[#10b981]"><span class="w-2 h-0.5 bg-[#10b981]"></span>Y</span>
+              <span class="inline-flex items-center gap-1 text-[#f59e0b]"><span class="w-2 h-0.5 bg-[#f59e0b]"></span>Z</span>
+              <span class="text-[#4b5563] border-l border-white/10 pl-2">T=2.56s</span>
+            </div>
           </div>
-          <h3 id="ensembleMethod" class="text-sm font-semibold text-slate-300">50% CNN + 50% ANN Softmax</h3>
-          <div class="mt-4 flex items-baseline gap-3">
-            <span id="ensPredLabel" class="text-2xl sm:text-3xl font-extrabold text-emerald-400 tracking-tight">WALKING</span>
+          <div class="p-4 h-64 bg-[#0c0d0e]/60">
+            <canvas id="waveformChart"></canvas>
           </div>
-        </div>
-        <div class="mt-4 pt-3 border-t border-slate-800/80 flex justify-between items-center text-xs">
-          <span class="text-slate-400">Combined Score: <strong id="ensConf" class="text-white">98.8%</strong></span>
-          <span class="text-emerald-400 font-medium">✓ Verified Match</span>
-        </div>
+        </section>
+
+        <!-- Right (5 cols): Dual-Model Softmax Comparison Chart -->
+        <section class="lg:col-span-5 instrument-panel rounded-md overflow-hidden">
+          <div class="flex items-center justify-between px-4 py-3 bg-[#1c1e22] hairline-b">
+            <div class="flex items-center gap-2">
+              <i data-lucide="cpu" class="w-3.5 h-3.5 text-[#10b981]"></i>
+              <h3 class="text-xs font-mono uppercase tracking-wider text-[#f3f4f6]">
+                PIPELINE DELTA // 1D-CNN vs REG-ANN
+              </h3>
+            </div>
+            <span class="font-mono text-[11px] text-[#4b5563]">6-CLASS LOGITS</span>
+          </div>
+          <div class="p-4 h-64 bg-[#0c0d0e]/60">
+            <canvas id="probChart"></canvas>
+          </div>
+        </section>
+
       </div>
 
-    </div>
-
-    <!-- CHARTS SECTION: Waveform Viewer & Class Probability Distribution -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      
-      <!-- Left: 128-Timestep Sensor Waveform Chart -->
-      <div class="glass-card rounded-2xl p-5">
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <h3 class="text-sm sm:text-base font-bold text-white">Raw Inertial Waveform (128 Timesteps = 2.56s)</h3>
-            <p class="text-xs text-slate-400">Body Acceleration X, Y, Z axes fed into <code>nn.Conv1d</code></p>
+      <!-- ==================== HARDWARE & ARCHITECTURE SPECIFICATION TABLE ==================== -->
+      <section class="instrument-panel rounded-md overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-3 bg-[#1c1e22] hairline-b">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono uppercase tracking-wider text-neutral-400">SPECIFICATION // BENCHMARK VERIFICATION (N = 2,947 TEST WINDOWS)</span>
           </div>
-          <span class="text-xs font-mono text-slate-400 bg-slate-800 px-2.5 py-1 rounded">50 Hz</span>
+          <span class="font-mono text-[11px] text-[#4b5563]">UCI HAR DATASET V1.0</span>
         </div>
-        <div class="h-64">
-          <canvas id="waveformChart"></canvas>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse font-mono text-xs tabular-nums">
+            <thead>
+              <tr class="hairline-b bg-[#0c0d0e] text-[#9ca3af] text-[11px] uppercase tracking-wider">
+                <th class="py-3 px-4">Pipeline ID</th>
+                <th class="py-3 px-4">Input Tensor</th>
+                <th class="py-3 px-4">Test Acc</th>
+                <th class="py-3 px-4">Macro F1</th>
+                <th class="py-3 px-4">Topology &amp; Regularization</th>
+                <th class="py-3 px-4">Edge Deployment Profile</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 text-[#f3f4f6]">
+              <tr class="hover:bg-[#1c1e22]/50 transition">
+                <td class="py-3 px-4 font-semibold text-[#d4ff00]">PIPELINE B // 1D-CNN</td>
+                <td class="py-3 px-4 text-[#9ca3af]">(B, 9, 128)</td>
+                <td class="py-3 px-4 font-bold">94.03%</td>
+                <td class="py-3 px-4">0.9412</td>
+                <td class="py-3 px-4 text-[#9ca3af]">3×Conv1d(64→128→256) + BatchNorm1d + Dropout(0.3, 0.5)</td>
+                <td class="py-3 px-4 text-[#10b981]">PRIMARY EDGE · Zero Feature Extraction Overhead</td>
+              </tr>
+              <tr class="hover:bg-[#1c1e22]/50 transition">
+                <td class="py-3 px-4 font-semibold text-[#10b981]">PIPELINE A // REG-ANN</td>
+                <td class="py-3 px-4 text-[#9ca3af]">(B, 561)</td>
+                <td class="py-3 px-4 font-bold">95.72%</td>
+                <td class="py-3 px-4">0.9573</td>
+                <td class="py-3 px-4 text-[#9ca3af]">Dense(561→256→128→64→6) + AdamW + EarlyStopping</td>
+                <td class="py-3 px-4 text-[#9ca3af]">BENCHMARK REF · Requires 561 Engineered Features</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-      </div>
+      </section>
 
-      <!-- Right: Per-Class Softmax Probability Bar Chart -->
-      <div class="glass-card rounded-2xl p-5">
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <h3 class="text-sm sm:text-base font-bold text-white">Class Probability Breakdown</h3>
-            <p class="text-xs text-slate-400">Side-by-side Softmax confidence across all 6 activities</p>
-          </div>
-        </div>
-        <div class="h-64">
-          <canvas id="probChart"></canvas>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- CAPSTONE BENCHMARK SUMMARY FOOTER TABLE -->
-    <section class="glass-card rounded-2xl p-5 sm:p-6 overflow-x-auto">
-      <h3 class="text-sm sm:text-base font-bold text-white mb-3">Experimental Benchmark Summary (2,947 Unseen Test Samples)</h3>
-      <table class="w-full text-left border-collapse text-xs sm:text-sm">
-        <thead>
-          <tr class="border-b border-slate-700 text-slate-400">
-            <th class="py-2.5 px-3">Pipeline Architecture</th>
-            <th class="py-2.5 px-3">Input Tensor Shape</th>
-            <th class="py-2.5 px-3">Test Accuracy</th>
-            <th class="py-2.5 px-3">Macro F1</th>
-            <th class="py-2.5 px-3">Regularization & Convergence</th>
-            <th class="py-2.5 px-3">Mobile Edge Suitability</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-800 text-slate-200">
-          <tr>
-            <td class="py-3 px-3 font-semibold text-blue-400">1D-CNN (End-to-End DL)</td>
-            <td class="py-3 px-3 font-mono text-xs">(Batch, 9, 128)</td>
-            <td class="py-3 px-3 font-bold">94.03%</td>
-            <td class="py-3 px-3">0.9412</td>
-            <td class="py-3 px-3">BatchNorm1d + Dropout(0.3, 0.5), 30 Epochs</td>
-            <td class="py-3 px-3 text-emerald-400 font-medium">★ Best (Zero Manual Math, Low Battery)</td>
-          </tr>
-          <tr>
-            <td class="py-3 px-3 font-semibold text-purple-400">Regularized ANN / MLP</td>
-            <td class="py-3 px-3 font-mono text-xs">(Batch, 561)</td>
-            <td class="py-3 px-3 font-bold">95.72%</td>
-            <td class="py-3 px-3">0.9573</td>
-            <td class="py-3 px-3">AdamW + EarlyStopping (Epoch 8 Restored)</td>
-            <td class="py-3 px-3 text-amber-400">High Accuracy, Heavy Feature Extraction</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-  </main>
+    </main>
   </div>
 
+  <!-- ==================== APPLICATION TELEMETRY & API LOGIC ==================== -->
   <script>
     let waveChartInstance = null;
     let probChartInstance = null;
@@ -339,7 +818,16 @@
     let chartsInitialized = false;
     let authMode = 'login';
     let presetRequestId = 0;
+    let activePipelineView = 'ensemble'; // 'ensemble' | 'cnn' | 'ann'
+    let lastComparisonResult = null;
     let sessionToken = '';
+
+    // Rolling 30-point buffers for the SVG sparklines in the Blackbox terminal
+    const sparkHistory = {
+      x: Array(30).fill(0),
+      y: Array(30).fill(0),
+      z: Array(30).fill(0)
+    };
 
     try {
       sessionToken = localStorage.getItem('har_session_token') || '';
@@ -364,49 +852,88 @@
       return headers;
     }
 
-    const ACTIVITIES = ["WALKING", "WALKING_UPSTAIRS", "WALKING_DOWNSTAIRS", "SITTING", "STANDING", "LAYING"];
+    const ACTIVITIES = [
+      "WALKING",
+      "WALKING_UPSTAIRS",
+      "WALKING_DOWNSTAIRS",
+      "SITTING",
+      "STANDING",
+      "LAYING"
+    ];
+
+    const ACTIVITY_LUCIDE_ICON = {
+      WALKING: 'footprints',
+      WALKING_UPSTAIRS: 'arrow-up-right',
+      WALKING_DOWNSTAIRS: 'arrow-down-right',
+      SITTING: 'user-check',
+      STANDING: 'shield-check',
+      LAYING: 'moon'
+    };
+
+    function refreshIcons() {
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+    }
+
+    function setIconOnElement(elementId, iconName) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      el.setAttribute('data-lucide', iconName || 'activity');
+      refreshIcons();
+    }
 
     function setAuthMessage(message, isError = true) {
       const el = document.getElementById('authMessage');
       el.textContent = message;
       el.classList.toggle('hidden', !message);
-      el.classList.toggle('text-rose-300', isError);
-      el.classList.toggle('text-emerald-300', !isError);
+      if (isError) {
+        el.className = 'text-xs font-mono px-3 py-2 rounded border border-red-500/30 bg-red-500/10 text-red-300';
+      } else {
+        el.className = 'text-xs font-mono px-3 py-2 rounded border border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
+      }
     }
 
     function toggleAuthMode() {
       authMode = authMode === 'login' ? 'register' : 'login';
       const registering = authMode === 'register';
-      document.getElementById('authTitle').textContent = registering ? 'Create account' : 'Sign in';
+      document.getElementById('authTitle').textContent = registering ? 'Register Operator' : 'Operator Sign In';
       document.getElementById('authDescription').textContent = registering
-        ? 'Create an account to access the HAR Inference Studio.'
-        : 'Sign in to access the HAR Inference Studio.';
-      document.getElementById('authSubmit').textContent = registering ? 'Create account' : 'Sign in';
-      document.getElementById('authSwitchPrompt').textContent = registering ? 'Already registered?' : 'New here?';
-      document.getElementById('authSwitch').textContent = registering ? 'Sign in' : 'Create an account';
+        ? 'Provision a new operator credential for the HAR-01 Telemetry Console.'
+        : 'Authenticate to unlock real-time 50Hz IMU telemetry & dual-model PyTorch inference.';
+      document.getElementById('authSubmit').innerHTML = registering
+        ? '<span>Provision Account</span><i data-lucide="arrow-up-right" class="w-4 h-4"></i>'
+        : '<span>Initialize Session</span><i data-lucide="arrow-up-right" class="w-4 h-4"></i>';
+      document.getElementById('authSwitchPrompt').textContent = registering ? 'Existing operator?' : 'Unregistered operator?';
+      document.getElementById('authSwitch').textContent = registering ? 'Sign In →' : 'Create Account →';
       document.getElementById('authHint').classList.toggle('hidden', !registering);
       document.getElementById('authPassword').setAttribute('autocomplete', registering ? 'new-password' : 'current-password');
       setAuthMessage('');
+      refreshIcons();
     }
 
     function showAuthGate(message = '') {
       document.getElementById('appContent').classList.add('hidden');
       document.getElementById('authGate').classList.remove('hidden');
       if (message) setAuthMessage(message);
+      refreshIcons();
     }
 
     async function showDashboard(username) {
-      document.getElementById('signedInUser').textContent = username;
+      document.getElementById('signedInUser').textContent = `OP // ${username.toUpperCase()}`;
       document.getElementById('authGate').classList.add('hidden');
       document.getElementById('appContent').classList.remove('hidden');
       if (!chartsInitialized) {
         initCharts();
+        renderCustomProbBars({});
         chartsInitialized = true;
       }
+      refreshIcons();
       await Promise.all([checkServerStatus(), runPreset('WALKING')]);
     }
 
     async function checkAuthentication() {
+      refreshIcons();
       try {
         const response = await fetch('/api/auth/me', { headers: authHeaders() });
         if (response.ok) {
@@ -414,7 +941,7 @@
           await showDashboard(user.username);
         }
       } catch (error) {
-        setAuthMessage('Could not reach the server. Check that the API is running, then try again.');
+        setAuthMessage('ERR_BUS_UNREACHABLE: Verify API server status.');
       }
     }
 
@@ -436,14 +963,14 @@
           const detail = Array.isArray(result.detail)
             ? result.detail.map(error => error.msg).join(' ')
             : result.detail;
-          throw new Error(detail || 'Sign-in failed.');
+          throw new Error(detail || 'Authentication rejected.');
         }
         if (result.token) {
           setSessionToken(result.token);
         }
         await showDashboard(result.username);
       } catch (error) {
-        setAuthMessage(error.message || 'Could not reach the server. Please try again.');
+        setAuthMessage(error.message || 'Could not reach server.');
       } finally {
         button.disabled = false;
       }
@@ -455,14 +982,14 @@
           method: 'POST',
           headers: authHeaders()
         });
-        if (!response.ok) throw new Error('Sign out failed.');
+        if (!response.ok) throw new Error('Session termination failed.');
         setSessionToken('');
         if (isRecordingMobile) stopMobileSensor();
         showAuthGate();
-        setAuthMessage('You have signed out.', false);
+        setAuthMessage('SESSION TERMINATED CLEANLY.', false);
       } catch (error) {
         setSessionToken('');
-        showAuthGate(error.message || 'Could not reach the server.');
+        showAuthGate(error.message || 'Connection closed.');
       }
     }
 
@@ -475,7 +1002,7 @@
       if (response.status === 401) {
         setSessionToken('');
         if (isRecordingMobile) stopMobileSensor();
-        showAuthGate('Your session expired. Sign in again to continue.');
+        showAuthGate('SESSION EXPIRED: Re-authenticate to continue.');
         throw new Error('Authentication required.');
       }
       return response;
@@ -488,32 +1015,45 @@
         const detail = Array.isArray(result.detail)
           ? result.detail.map(error => error.msg).join(' ')
           : result.detail;
-        throw new Error(detail || `Request failed (${response.status}).`);
+        throw new Error(detail || `HTTP ${response.status}`);
       }
       return result;
     }
 
-    // Initialize Charts
+    // ==================== CHARTS INITIALIZATION ====================
     function initCharts() {
+      Chart.defaults.font.family = '"JetBrains Mono", monospace';
+      Chart.defaults.color = '#9ca3af';
+
       const ctxWave = document.getElementById('waveformChart').getContext('2d');
       waveChartInstance = new Chart(ctxWave, {
         type: 'line',
         data: {
-          labels: Array.from({length: 128}, (_, i) => i + 1),
+          labels: Array.from({ length: 128 }, (_, i) => i + 1),
           datasets: [
-            { label: 'Body Acc X', data: [], borderColor: '#3b82f6', borderWidth: 1.8, pointRadius: 0, tension: 0.25 },
-            { label: 'Body Acc Y', data: [], borderColor: '#10b981', borderWidth: 1.8, pointRadius: 0, tension: 0.25 },
-            { label: 'Body Acc Z', data: [], borderColor: '#f43f5e', borderWidth: 1.8, pointRadius: 0, tension: 0.25 }
+            { label: 'ACC.X', data: [], borderColor: '#d4ff00', borderWidth: 1.5, pointRadius: 0, tension: 0.2 },
+            { label: 'ACC.Y', data: [], borderColor: '#10b981', borderWidth: 1.5, pointRadius: 0, tension: 0.2 },
+            { label: 'ACC.Z', data: [], borderColor: '#f59e0b', borderWidth: 1.5, pointRadius: 0, tension: 0.2 }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          animation: { duration: 300 },
-          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+          animation: { duration: 220 },
+          plugins: {
+            legend: { display: false }
+          },
           scales: {
-            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', maxTicksLimit: 8 } },
-            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' }, suggestedMin: -1, suggestedMax: 1 }
+            x: {
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              ticks: { color: '#4b5563', font: { size: 10 }, maxTicksLimit: 8 }
+            },
+            y: {
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              ticks: { color: '#4b5563', font: { size: 10 } },
+              suggestedMin: -1.0,
+              suggestedMax: 1.0
+            }
           }
         }
       });
@@ -522,41 +1062,158 @@
       probChartInstance = new Chart(ctxProb, {
         type: 'bar',
         data: {
-          labels: ["WALK", "UPSTAIRS", "DOWNSTAIRS", "SITTING", "STANDING", "LAYING"],
+          labels: ["WALK", "UP", "DOWN", "SIT", "STAND", "LAY"],
           datasets: [
-            { label: '1D-CNN Prob', data: [0,0,0,0,0,0], backgroundColor: '#3b82f6', borderRadius: 6 },
-            { label: 'ANN Prob', data: [0,0,0,0,0,0], backgroundColor: '#a855f7', borderRadius: 6 }
+            { label: '1D-CNN', data: [0, 0, 0, 0, 0, 0], backgroundColor: '#d4ff00', borderRadius: 2, barPercentage: 0.75 },
+            { label: 'REG-ANN', data: [0, 0, 0, 0, 0, 0], backgroundColor: '#10b981', borderRadius: 2, barPercentage: 0.75 }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+          animation: { duration: 220 },
+          plugins: {
+            legend: {
+              labels: { color: '#9ca3af', font: { size: 10 }, boxWidth: 10, boxHeight: 10 }
+            }
+          },
           scales: {
-            x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } },
-            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' }, min: 0, max: 1.0 }
+            x: {
+              grid: { display: false },
+              ticks: { color: '#9ca3af', font: { size: 10 } }
+            },
+            y: {
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              ticks: { color: '#4b5563', font: { size: 10 } },
+              min: 0,
+              max: 1.0
+            }
           }
         }
       });
     }
 
+    // ==================== TACTILE SEGMENTED CONTROLS ====================
     function switchTab(mode) {
       const simSec = document.getElementById('simSection');
       const mobSec = document.getElementById('mobileSection');
       const simBtn = document.getElementById('tabSimBtn');
       const mobBtn = document.getElementById('tabMobileBtn');
+      const indicator = document.getElementById('modeSegmentIndicator');
 
       if (mode === 'sim') {
         simSec.classList.remove('hidden');
         mobSec.classList.add('hidden');
-        simBtn.className = "px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition bg-blue-600 text-white shadow";
-        mobBtn.className = "px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white";
+        indicator.style.transform = 'translateX(0%)';
+        simBtn.classList.replace('text-[#9ca3af]', 'text-[#d4ff00]');
+        mobBtn.classList.replace('text-[#d4ff00]', 'text-[#9ca3af]');
       } else {
         simSec.classList.add('hidden');
         mobSec.classList.remove('hidden');
-        mobBtn.className = "px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition bg-indigo-600 text-white shadow";
-        simBtn.className = "px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white";
+        indicator.style.transform = 'translateX(100%)';
+        mobBtn.classList.replace('text-[#9ca3af]', 'text-[#d4ff00]');
+        simBtn.classList.replace('text-[#d4ff00]', 'text-[#9ca3af]');
       }
+    }
+
+    function selectPipelineView(view) {
+      activePipelineView = view;
+      const indicator = document.getElementById('pipelineSegmentIndicator');
+      const btnEns = document.getElementById('pipeBtnEnsemble');
+      const btnCnn = document.getElementById('pipeBtnCnn');
+      const btnAnn = document.getElementById('pipeBtnAnn');
+
+      [btnEns, btnCnn, btnAnn].forEach(btn => {
+        btn.classList.remove('text-[#d4ff00]', 'text-[#f3f4f6]');
+        btn.classList.add('text-[#9ca3af]');
+      });
+
+      if (view === 'ensemble') {
+        indicator.style.transform = 'translateX(0%)';
+        btnEns.classList.replace('text-[#9ca3af]', 'text-[#d4ff00]');
+      } else if (view === 'cnn') {
+        indicator.style.transform = 'translateX(100%)';
+        btnCnn.classList.replace('text-[#9ca3af]', 'text-[#d4ff00]');
+      } else {
+        indicator.style.transform = 'translateX(200%)';
+        btnAnn.classList.replace('text-[#9ca3af]', 'text-[#d4ff00]');
+      }
+
+      if (lastComparisonResult) {
+        applyPrimaryViewFromResult(lastComparisonResult);
+      }
+    }
+
+    function renderCustomProbBars(probabilities) {
+      const container = document.getElementById('customProbBars');
+      if (!container) return;
+
+      const entries = ACTIVITIES.map(act => ({
+        name: act,
+        val: typeof probabilities[act] === 'number' ? probabilities[act] : 0
+      }));
+      const maxVal = Math.max(...entries.map(e => e.val), 0.01);
+
+      container.innerHTML = entries.map(entry => {
+        const pct = (entry.val * 100).toFixed(1);
+        const isTop = entry.val === maxVal && entry.val > 0;
+        const barColor = isTop ? 'bg-[#d4ff00]' : 'bg-[#10b981]/60';
+        const textColor = isTop ? 'text-[#d4ff00] font-bold' : 'text-[#9ca3af]';
+        return `
+          <div class="grid grid-cols-12 items-center gap-2">
+            <span class="col-span-4 truncate ${textColor}">${entry.name.replace('WALKING_', '')}</span>
+            <div class="col-span-6 h-1.5 bg-[#0c0d0e] rounded-sm overflow-hidden border border-white/5">
+              <div class="h-full ${barColor} transition-all duration-300" style="width: ${Math.max(1, entry.val * 100)}%"></div>
+            </div>
+            <span class="col-span-2 text-right ${textColor}">${pct}%</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updateBlackboxFromFrame(ax, ay, az, gx, gy, gz, sourceTag = 'SYNTH') {
+      // Convert g-units to m/s^2 for display if needed
+      const mx = ax * 9.81;
+      const my = ay * 9.81;
+      const mz = az * 9.81;
+
+      const fmt = v => (v >= 0 ? `+${v.toFixed(2)}` : v.toFixed(2));
+      document.getElementById('liveAccX').textContent = fmt(mx);
+      document.getElementById('liveAccY').textContent = fmt(my);
+      document.getElementById('liveAccZ').textContent = fmt(mz);
+
+      document.getElementById('liveGyroX').textContent = `${fmt(gx)} rad/s`;
+      document.getElementById('liveGyroY').textContent = `${fmt(gy)} rad/s`;
+      document.getElementById('liveGyroZ').textContent = `${fmt(gz)} rad/s`;
+
+      // Micro-bars clamped to [-15, +15] m/s^2 -> [0, 100]%
+      const toPct = v => Math.min(100, Math.max(4, ((v + 12) / 24) * 100));
+      document.getElementById('barAccX').style.width = `${toPct(mx)}%`;
+      document.getElementById('barAccY').style.width = `${toPct(my)}%`;
+      document.getElementById('barAccZ').style.width = `${toPct(mz)}%`;
+
+      // Update rolling SVG sparklines
+      sparkHistory.x.push(ax);
+      sparkHistory.x.shift();
+      sparkHistory.y.push(ay);
+      sparkHistory.y.shift();
+      sparkHistory.z.push(az);
+      sparkHistory.z.shift();
+
+      const buildPoints = arr => arr.map((v, idx) => {
+        const x = (idx / (arr.length - 1)) * 120;
+        const y = Math.min(19, Math.max(1, 10 - v * 7));
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+
+      document.getElementById('sparkAccX').setAttribute('points', buildPoints(sparkHistory.x));
+      document.getElementById('sparkAccY').setAttribute('points', buildPoints(sparkHistory.y));
+      document.getElementById('sparkAccZ').setAttribute('points', buildPoints(sparkHistory.z));
+
+      const rms = Math.sqrt((ax * ax + ay * ay + az * az) / 3);
+      document.getElementById('telemetryRmsReadout').textContent = `RMS: ${rms.toFixed(3)}g`;
+      document.getElementById('blackboxLogLine').textContent =
+        `${sourceTag} // A=[${fmt(ax)}g, ${fmt(ay)}g, ${fmt(az)}g] G=[${fmt(gx)}, ${fmt(gy)}, ${fmt(gz)}]`;
     }
 
     async function checkServerStatus() {
@@ -564,10 +1221,11 @@
         const data = await apiJson('/api/status');
         const el = document.getElementById('weightsIndicator');
         if (data.cnn_weights_loaded && data.ann_weights_loaded) {
-          el.textContent = "✓ Trained PyTorch Weights (.pth) Active";
-          el.className = "text-xs text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-md";
+          el.textContent = `WEIGHTS: CNN+ANN (.PTH) · ${data.device.toUpperCase()}`;
+          el.className = "tabular-nums text-[#10b981]";
         } else {
-          el.textContent = "Demo mode · add trained .pth weights for model predictions";
+          el.textContent = "MODE: KINEMATIC FALLBACK";
+          el.className = "tabular-nums text-[#f59e0b]";
         }
       } catch (e) {
         console.error(e);
@@ -578,18 +1236,27 @@
       const requestId = ++presetRequestId;
       const buttons = document.querySelectorAll('.act-btn');
       const status = document.getElementById('predictionStatus');
-      buttons.forEach(button => { button.disabled = true; });
-      status.textContent = `Generating ${activityName.replaceAll('_', ' ').toLowerCase()} prediction...`;
+
+      buttons.forEach(button => {
+        button.disabled = true;
+        if (button.getAttribute('data-activity') === activityName) {
+          button.classList.add('active-preset');
+        } else {
+          button.classList.remove('active-preset');
+        }
+      });
+
+      status.textContent = `SYNTH // Injecting 128×9 ${activityName} tensor into pipeline...`;
       try {
         const result = await apiJson(`/api/demo/${encodeURIComponent(activityName)}`);
         if (requestId !== presetRequestId) return;
         updateDashboardUI(result.signals, result);
         status.textContent = result.ann_result.weights_status.startsWith('Preset demo')
-          ? `${result.activity.replaceAll('_', ' ')} synthetic preset ready; ANN skipped without real 561-feature input.`
-          : `${result.activity.replaceAll('_', ' ')} prediction ready.`;
+          ? `READY // ${result.activity} frame processed (1D-CNN active · ANN requires 561-feature vector).`
+          : `READY // ${result.activity} dual-pipeline inference complete.`;
       } catch (err) {
         if (requestId !== presetRequestId) return;
-        status.textContent = `Could not load prediction: ${err.message}`;
+        status.textContent = `ERR // ${err.message}`;
         console.error("Prediction error:", err);
       } finally {
         if (requestId === presetRequestId) {
@@ -598,8 +1265,42 @@
       }
     }
 
+    function applyPrimaryViewFromResult(result) {
+      const presetFallback = result.ann_result.weights_status.startsWith('Preset demo');
+      let chosenActivity = result.ensemble_activity;
+      let chosenConf = result.ensemble_confidence;
+      let chosenProbs = result.ensemble_probabilities;
+      let focusLabel = 'COMBINED DECISION';
+      let modeBadge = presetFallback ? 'SYNTH PRESET · CNN ESTIMATE' : '50/50 SOFTMAX ENSEMBLE';
+
+      if (activePipelineView === 'cnn') {
+        chosenActivity = result.cnn_result.predicted_activity;
+        chosenConf = result.cnn_result.confidence;
+        chosenProbs = result.cnn_result.probabilities;
+        focusLabel = 'PIPELINE B · 1D-CNN (RAW 9×128)';
+        modeBadge = '1D-CNN DIRECT';
+      } else if (activePipelineView === 'ann') {
+        chosenActivity = result.ann_result.predicted_activity;
+        chosenConf = result.ann_result.confidence;
+        chosenProbs = result.ann_result.probabilities;
+        focusLabel = 'PIPELINE A · REGULARIZED ANN';
+        modeBadge = presetFallback ? 'ANN FALLBACK' : 'REG-ANN (561-F)';
+      }
+
+      document.getElementById('ensPredLabel').textContent = chosenActivity;
+      document.getElementById('ensConf').textContent = (chosenConf * 100).toFixed(1) + '%';
+      document.getElementById('ensembleMethod').textContent = modeBadge;
+      document.getElementById('activeFocusBadge').textContent = focusLabel;
+      document.getElementById('probMatrixModeLabel').textContent = modeBadge;
+
+      setIconOnElement('primaryActivityIcon', ACTIVITY_LUCIDE_ICON[chosenActivity] || 'activity');
+      renderCustomProbBars(chosenProbs);
+    }
+
     function updateDashboardUI(signals, result) {
-      // Update cards
+      lastComparisonResult = result;
+
+      // Sub-pipeline diagnostic rows
       document.getElementById('cnnPredLabel').textContent = result.cnn_result.predicted_activity;
       document.getElementById('cnnConf').textContent = (result.cnn_result.confidence * 100).toFixed(1) + '%';
       document.getElementById('cnnLatency').textContent = result.cnn_result.latency_ms + ' ms';
@@ -608,22 +1309,31 @@
       document.getElementById('annConf').textContent = (result.ann_result.confidence * 100).toFixed(1) + '%';
       const presetFallback = result.ann_result.weights_status.startsWith('Preset demo');
       document.getElementById('annLatency').textContent = presetFallback
-        ? 'Not run'
+        ? 'SKIPPED'
         : result.ann_result.latency_ms + ' ms';
 
-      document.getElementById('ensPredLabel').textContent = result.ensemble_activity;
-      document.getElementById('ensConf').textContent = (result.ensemble_confidence * 100).toFixed(1) + '%';
-      document.getElementById('ensembleMethod').textContent = presetFallback
-        ? 'Synthetic preset • CNN estimate'
-        : '50% CNN + 50% ANN Softmax';
+      applyPrimaryViewFromResult(result);
 
-      // Update waveform chart
+      // Feed last few samples of the synthetic window into the Blackbox terminal & sparklines
+      if (Array.isArray(signals) && signals.length >= 6) {
+        const len = signals[0].length;
+        const startIdx = Math.max(0, len - 15);
+        for (let i = startIdx; i < len; i++) {
+          updateBlackboxFromFrame(
+            signals[0][i], signals[1][i], signals[2][i],
+            signals[3][i], signals[4][i], signals[5][i],
+            'SYNTH.FRAME'
+          );
+        }
+      }
+
+      // Update Oscilloscope waveform chart
       waveChartInstance.data.datasets[0].data = signals[0];
       waveChartInstance.data.datasets[1].data = signals[1];
       waveChartInstance.data.datasets[2].data = signals[2];
       waveChartInstance.update();
 
-      // Update probability chart
+      // Update comparative probability chart
       const cnnProbs = ACTIVITIES.map(a => result.cnn_result.probabilities[a]);
       const annProbs = ACTIVITIES.map(a => result.ann_result.probabilities[a]);
       probChartInstance.data.datasets[0].data = cnnProbs;
@@ -631,16 +1341,16 @@
       probChartInstance.update();
     }
 
-    // ----------------- Mobile Hardware Sensor Streaming -----------------
+    // ==================== LIVE HARDWARE IMU SENSOR STREAMING ====================
     async function startMobileSensor() {
       const state = document.getElementById('sensorStateText');
       if (window.isSecureContext === false && !['localhost', '127.0.0.1'].includes(window.location.hostname)) {
-        state.textContent = 'HTTPS is required to access motion sensors. Open the secure site URL.';
+        state.textContent = 'ERR_TLS_REQUIRED: Open direct HTTPS link for hardware IMU access.';
         document.getElementById('livePredictionStatus').textContent = state.textContent;
         return;
       }
       if (typeof DeviceMotionEvent === 'undefined') {
-        state.textContent = 'This browser does not support device motion sensors.';
+        state.textContent = 'ERR_NO_IMU: DeviceMotionEvent unsupported on this browser.';
         document.getElementById('livePredictionStatus').textContent = state.textContent;
         return;
       }
@@ -649,12 +1359,12 @@
         try {
           const permission = await DeviceMotionEvent.requestPermission();
           if (permission !== 'granted') {
-            state.textContent = 'Motion permission was not granted. Allow access and try again.';
+            state.textContent = 'ERR_PERMISSION_DENIED: Motion sensor access rejected.';
             document.getElementById('livePredictionStatus').textContent = state.textContent;
             return;
           }
         } catch (err) {
-          state.textContent = `Could not request motion permission: ${err.message || 'permission request failed.'}`;
+          state.textContent = `ERR_PERMISSION: ${err.message || 'Use Direct Link in top bar on iOS.'}`;
           document.getElementById('livePredictionStatus').textContent = state.textContent;
           return;
         }
@@ -668,15 +1378,17 @@
       isRecordingMobile = true;
       document.getElementById('startSensorBtn').classList.add('hidden');
       document.getElementById('stopSensorBtn').classList.remove('hidden');
-      setSensorConnectionState('Connected', true);
-      state.textContent = 'Connected · collecting buffer (0/128)...';
-      document.getElementById('livePredictionStatus').textContent = 'Sensors connected. Collecting the first 128 samples.';
+      setSensorConnectionState('Calibrating', true);
+      document.getElementById('bufferProgressBar').classList.add('calibrating-bar');
+      state.textContent = 'Calibrating 128-sample window (0/128)...';
+      document.getElementById('livePredictionStatus').textContent = 'IMU bus locked. Filling initial 128-sample sliding window...';
       window.addEventListener('devicemotion', handleDeviceMotion);
+
       const activeSessionId = sensorSessionId;
       sensorStartupTimer = window.setTimeout(() => {
         if (isRecordingMobile && activeSessionId === sensorSessionId && sensorBuffer.length === 0) {
-          setSensorConnectionState('No sensor data', false);
-          state.textContent = 'No motion events received. Check browser sensor access and device settings.';
+          setSensorConnectionState('No IMU Events', false);
+          state.textContent = 'No motion events received. Open on a smartphone over HTTPS.';
           document.getElementById('livePredictionStatus').textContent = state.textContent;
         }
       }, 3000);
@@ -689,17 +1401,20 @@
       window.removeEventListener('devicemotion', handleDeviceMotion);
       document.getElementById('startSensorBtn').classList.remove('hidden');
       document.getElementById('stopSensorBtn').classList.add('hidden');
-      setSensorConnectionState('Sensors inactive', false);
-      document.getElementById('sensorStateText').textContent = 'Sensor stream paused.';
-      document.getElementById('livePredictionStatus').textContent = 'Tracking paused. Start live tracking to resume.';
+      document.getElementById('bufferProgressBar').classList.remove('calibrating-bar');
+      setSensorConnectionState('Sensors Inactive', false);
+      document.getElementById('sensorStateText').textContent = 'Stream halted by operator.';
+      document.getElementById('livePredictionStatus').textContent = 'IMU bus paused. Press Start Live Tracking to resume.';
     }
 
     function setSensorConnectionState(label, active) {
       const badge = document.getElementById('sensorConnectionBadge');
-      badge.textContent = label;
+      badge.innerHTML = active
+        ? `<span class="relative w-2 h-2 rounded-full bg-[#10b981] radar-dot"></span><span>${label}</span>`
+        : `<span class="w-1.5 h-1.5 rounded-full bg-[#4b5563]"></span><span>${label}</span>`;
       badge.className = active
-        ? 'rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300'
-        : 'rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-300';
+        ? 'inline-flex items-center gap-2 rounded px-2.5 py-0.5 bg-[#0c0d0e] border border-emerald-500/40 text-[11px] font-mono uppercase tracking-wider text-[#10b981]'
+        : 'inline-flex items-center gap-1.5 rounded px-2.5 py-0.5 bg-[#0c0d0e] border border-white/10 text-[11px] font-mono uppercase tracking-wider text-[#9ca3af]';
     }
 
     function finiteAxis(value) {
@@ -719,25 +1434,26 @@
       const ty = finiteAxis(totalAcceleration.y);
       const tz = finiteAxis(totalAcceleration.z);
 
-      document.getElementById('liveAccX').textContent = ax.toFixed(2);
-      document.getElementById('liveAccY').textContent = ay.toFixed(2);
-      document.getElementById('liveAccZ').textContent = az.toFixed(2);
-
-      // Motion events are commonly delivered around 60 Hz; sample no faster than 50 Hz.
+      // Throttle sampling to 50 Hz (20ms interval)
       const now = performance.now();
       if (now - lastSensorSampleAt < 20) return;
       lastSensorSampleAt = now;
 
+      const gx = finiteAxis(rotation.alpha) * (Math.PI / 180);
+      const gy = finiteAxis(rotation.beta) * (Math.PI / 180);
+      const gz = finiteAxis(rotation.gamma) * (Math.PI / 180);
+
       const sample = [
         ax / 9.81, ay / 9.81, az / 9.81,
-        finiteAxis(rotation.alpha) * (Math.PI / 180),
-        finiteAxis(rotation.beta) * (Math.PI / 180),
-        finiteAxis(rotation.gamma) * (Math.PI / 180),
+        gx, gy, gz,
         tx / 9.81, ty / 9.81, tz / 9.81
       ];
+
+      updateBlackboxFromFrame(sample[0], sample[1], sample[2], gx, gy, gz, 'IMU.LIVE');
+
       if (sensorBuffer.length === 0) {
         window.clearTimeout(sensorStartupTimer);
-        setSensorConnectionState('Sensors active', true);
+        setSensorConnectionState('Stream Warm · 50Hz', true);
       }
       sensorBuffer.push(sample);
       if (sensorBuffer.length > 128) sensorBuffer.shift();
@@ -751,12 +1467,18 @@
 
     function updateSensorBufferStatus(message) {
       const count = sensorBuffer.length;
-      document.getElementById('bufferCountText').textContent = `${count} / 128 samples`;
+      const padded = String(count).padStart(3, '0');
+      document.getElementById('bufferCountText').textContent = `${padded} / 128 SAMPLES`;
       document.getElementById('bufferProgressBar').style.width = `${Math.min(100, (count / 128) * 100)}%`;
+      if (count >= 128) {
+        document.getElementById('bufferProgressBar').classList.remove('calibrating-bar');
+      }
       if (isRecordingMobile && message) {
         document.getElementById('sensorStateText').textContent = message;
       } else if (isRecordingMobile && !sensorPredictionInFlight) {
-        document.getElementById('sensorStateText').textContent = `Connected · collecting buffer (${count}/128)...`;
+        document.getElementById('sensorStateText').textContent = count < 128
+          ? `Calibrating 128-sample window (${count}/128)...`
+          : `Window locked (${count}/128) · streaming 64-sample stride`;
       }
     }
 
@@ -765,8 +1487,8 @@
       sensorPredictionInFlight = true;
       samplesSincePrediction = 0;
       const windowCopy = sensorBuffer.map(sample => [...sample]);
-      document.getElementById('sensorStateText').textContent = 'Predicting...';
-      document.getElementById('livePredictionStatus').textContent = 'Predicting activity from the latest sensor window...';
+      document.getElementById('sensorStateText').textContent = 'Running 1D-CNN inference on 128×9 window...';
+      document.getElementById('livePredictionStatus').textContent = 'Dispatching window to POST /predict...';
       try {
         const result = await apiJson('/predict', {
           method: 'POST',
@@ -774,35 +1496,41 @@
           body: JSON.stringify({ window: windowCopy })
         });
         if (!isRecordingMobile || requestSessionId !== sensorSessionId) return;
+
         const activity = result.predicted_activity;
         document.getElementById('livePredictedActivity').textContent = activity.replaceAll('_', ' ');
-        document.getElementById('liveActivityIcon').textContent = ({
-          WALKING: '🚶', WALKING_UPSTAIRS: '🧗', WALKING_DOWNSTAIRS: '🚶‍➡️',
-          SITTING: '🪑', STANDING: '🧍', LAYING: '🛌'
-        })[activity] || '🏃';
-        document.getElementById('livePredictionConfidence').textContent = `${(result.confidence * 100).toFixed(1)}% confidence · ${result.latency_ms} ms`;
-        document.getElementById('livePredictionStatus').textContent = 'Connected · prediction updated from live phone sensors.';
+        setIconOnElement('liveActivityIcon', ACTIVITY_LUCIDE_ICON[activity] || 'activity');
+        setIconOnElement('primaryActivityIcon', ACTIVITY_LUCIDE_ICON[activity] || 'activity');
+
+        document.getElementById('livePredictionConfidence').textContent =
+          `CONF // ${(result.confidence * 100).toFixed(1)}% · ${result.latency_ms}ms`;
+        document.getElementById('livePredictionStatus').textContent =
+          'Live IMU telemetry synchronized with 1D-CNN engine.';
+
         document.getElementById('cnnPredLabel').textContent = activity;
         document.getElementById('cnnConf').textContent = `${(result.confidence * 100).toFixed(1)}%`;
         document.getElementById('cnnLatency').textContent = `${result.latency_ms} ms`;
-        document.getElementById('annPredLabel').textContent = 'Not run';
+        document.getElementById('annPredLabel').textContent = 'STANDBY';
         document.getElementById('annConf').textContent = '--';
-        document.getElementById('annLatency').textContent = 'Not run';
+        document.getElementById('annLatency').textContent = 'SKIPPED';
         document.getElementById('ensPredLabel').textContent = activity;
         document.getElementById('ensConf').textContent = `${(result.confidence * 100).toFixed(1)}%`;
-        document.getElementById('ensembleMethod').textContent = 'Live sensor • CNN only';
+        document.getElementById('ensembleMethod').textContent = 'LIVE IMU · 1D-CNN';
+
+        renderCustomProbBars(result.probabilities);
 
         waveChartInstance.data.datasets[0].data = windowCopy.map(step => step[0]);
         waveChartInstance.data.datasets[1].data = windowCopy.map(step => step[1]);
         waveChartInstance.data.datasets[2].data = windowCopy.map(step => step[2]);
         waveChartInstance.update();
+
         probChartInstance.data.datasets[0].data = ACTIVITIES.map(name => result.probabilities[name]);
         probChartInstance.data.datasets[1].data = ACTIVITIES.map(() => 0);
         probChartInstance.update();
       } catch (error) {
         if (isRecordingMobile) {
-          document.getElementById('sensorStateText').textContent = `Prediction failed: ${error.message}`;
-          document.getElementById('livePredictionStatus').textContent = `Could not update prediction: ${error.message}`;
+          document.getElementById('sensorStateText').textContent = `ERR_PREDICT: ${error.message}`;
+          document.getElementById('livePredictionStatus').textContent = `Inference failed: ${error.message}`;
           console.error('Live prediction error:', error);
         }
       } finally {
