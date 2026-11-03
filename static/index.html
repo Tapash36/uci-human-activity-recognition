@@ -323,14 +323,14 @@
         <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
           <div class="flex justify-between text-xs sm:text-sm font-medium text-slate-700">
             <span id="sensorStateText">Ready to connect phone motion sensors...</span>
-            <span id="bufferCountText" class="tabular-nums font-semibold text-blue-600">0 / 128 readings</span>
+            <span id="bufferCountText" class="tabular-nums font-semibold text-blue-600">[0 / 128]</span>
           </div>
           <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
             <div id="bufferProgressBar" class="h-full bg-blue-600 transition-all duration-150 rounded-full" style="width: 0%"></div>
           </div>
         </div>
 
-        <!-- Live Detected Activity Banner + Live XYZ Numbers -->
+        <!-- Live Detected Activity Banner + Scaled Sensor Values -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
           <!-- Detected Activity Banner -->
           <div class="lg:col-span-7 bg-blue-50/70 border border-blue-200 rounded-xl p-4 flex items-center justify-between gap-4">
@@ -356,21 +356,36 @@
           </div>
 
           <!-- Live X, Y, Z Sensor Readout -->
-          <div class="lg:col-span-5 grid grid-cols-3 gap-2.5 text-center">
+          <div class="lg:col-span-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 text-center">
             <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl flex flex-col justify-center">
-              <span class="text-xs text-slate-500 font-medium">Accel X</span>
+              <span class="text-xs text-slate-500 font-medium">Acc X</span>
               <span id="liveAccX" class="text-base sm:text-lg font-bold text-blue-600 tabular-nums mt-0.5">0.00</span>
-              <span class="text-[10px] text-slate-400">m/s²</span>
+              <span class="text-[10px] text-slate-400">scaled [-1, 1]</span>
             </div>
             <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl flex flex-col justify-center">
-              <span class="text-xs text-slate-500 font-medium">Accel Y</span>
+              <span class="text-xs text-slate-500 font-medium">Acc Y</span>
               <span id="liveAccY" class="text-base sm:text-lg font-bold text-emerald-600 tabular-nums mt-0.5">0.00</span>
-              <span class="text-[10px] text-slate-400">m/s²</span>
+              <span class="text-[10px] text-slate-400">scaled [-1, 1]</span>
             </div>
             <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl flex flex-col justify-center">
-              <span class="text-xs text-slate-500 font-medium">Accel Z</span>
+              <span class="text-xs text-slate-500 font-medium">Acc Z</span>
               <span id="liveAccZ" class="text-base sm:text-lg font-bold text-amber-600 tabular-nums mt-0.5">0.00</span>
-              <span class="text-[10px] text-slate-400">m/s²</span>
+              <span class="text-[10px] text-slate-400">scaled [-1, 1]</span>
+            </div>
+            <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl flex flex-col justify-center">
+              <span class="text-xs text-slate-500 font-medium">Gyro X</span>
+              <span id="liveGyroX" class="text-base sm:text-lg font-bold text-blue-600 tabular-nums mt-0.5">0.00</span>
+              <span class="text-[10px] text-slate-400">scaled [-1, 1]</span>
+            </div>
+            <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl flex flex-col justify-center">
+              <span class="text-xs text-slate-500 font-medium">Gyro Y</span>
+              <span id="liveGyroY" class="text-base sm:text-lg font-bold text-emerald-600 tabular-nums mt-0.5">0.00</span>
+              <span class="text-[10px] text-slate-400">scaled [-1, 1]</span>
+            </div>
+            <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl flex flex-col justify-center">
+              <span class="text-xs text-slate-500 font-medium">Gyro Z</span>
+              <span id="liveGyroZ" class="text-base sm:text-lg font-bold text-amber-600 tabular-nums mt-0.5">0.00</span>
+              <span class="text-[10px] text-slate-400">scaled [-1, 1]</span>
             </div>
           </div>
         </div>
@@ -1035,34 +1050,42 @@
       return typeof value === 'number' && Number.isFinite(value) ? value : 0;
     }
 
+    function clampSensorValue(value) {
+      return Math.max(-1, Math.min(1, value));
+    }
+
     function handleDeviceMotion(event) {
       if (!isRecordingMobile) return;
 
-      const totalAcceleration = event.accelerationIncludingGravity || {};
-      const linearAcceleration = event.acceleration || totalAcceleration;
+      const totalAcceleration = event.accelerationIncludingGravity || event.acceleration || {};
+      const linearAcceleration = event.acceleration || {};
       const rotation = event.rotationRate || {};
-      const ax = finiteAxis(linearAcceleration.x);
-      const ay = finiteAxis(linearAcceleration.y);
-      const az = finiteAxis(linearAcceleration.z);
-      const tx = finiteAxis(totalAcceleration.x);
-      const ty = finiteAxis(totalAcceleration.y);
-      const tz = finiteAxis(totalAcceleration.z);
+      const scaleAcceleration = value => clampSensorValue(finiteAxis(value) / 9.80665);
+      const scaleGyroscope = value => clampSensorValue(
+        (finiteAxis(value) * (Math.PI / 180)) / Math.PI
+      );
+      const ax = scaleAcceleration(linearAcceleration.x);
+      const ay = scaleAcceleration(linearAcceleration.y);
+      const az = scaleAcceleration(linearAcceleration.z);
+      const gx = scaleGyroscope(rotation.alpha);
+      const gy = scaleGyroscope(rotation.beta);
+      const gz = scaleGyroscope(rotation.gamma);
+      const tx = scaleAcceleration(totalAcceleration.x);
+      const ty = scaleAcceleration(totalAcceleration.y);
+      const tz = scaleAcceleration(totalAcceleration.z);
 
       document.getElementById('liveAccX').textContent = ax.toFixed(2);
       document.getElementById('liveAccY').textContent = ay.toFixed(2);
       document.getElementById('liveAccZ').textContent = az.toFixed(2);
+      document.getElementById('liveGyroX').textContent = gx.toFixed(2);
+      document.getElementById('liveGyroY').textContent = gy.toFixed(2);
+      document.getElementById('liveGyroZ').textContent = gz.toFixed(2);
 
       const now = performance.now();
       if (now - lastSensorSampleAt < 20) return;
       lastSensorSampleAt = now;
 
-      const sample = [
-        ax / 9.81, ay / 9.81, az / 9.81,
-        finiteAxis(rotation.alpha) * (Math.PI / 180),
-        finiteAxis(rotation.beta) * (Math.PI / 180),
-        finiteAxis(rotation.gamma) * (Math.PI / 180),
-        tx / 9.81, ty / 9.81, tz / 9.81
-      ];
+      const sample = [ax, ay, az, gx, gy, gz, tx, ty, tz];
 
       if (sensorBuffer.length === 0) {
         window.clearTimeout(sensorStartupTimer);
@@ -1080,7 +1103,7 @@
 
     function updateSensorBufferStatus(message) {
       const count = sensorBuffer.length;
-      document.getElementById('bufferCountText').textContent = `${count} / 128 readings`;
+      document.getElementById('bufferCountText').textContent = `[${count} / 128]`;
       document.getElementById('bufferProgressBar').style.width = `${Math.min(100, (count / 128) * 100)}%`;
       if (isRecordingMobile && message) {
         document.getElementById('sensorStateText').textContent = message;

@@ -454,13 +454,37 @@ def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(require
     if not np.isfinite(window).all():
         raise HTTPException(status_code=400, detail="Window must contain only finite numbers")
 
-    return predict_cnn_signals(window.T.copy())
+    input_tensor = torch.as_tensor(window, dtype=torch.float32).unsqueeze(0)
+    if tuple(input_tensor.shape) != (1, 128, 9):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Expected input tensor shape (1, 128, 9), got {tuple(input_tensor.shape)}",
+        )
+    assert tuple(input_tensor.shape) == (1, 128, 9)
+
+    min_value = float(input_tensor.min().item())
+    max_value = float(input_tensor.max().item())
+    print(
+        "Live /predict tensor diagnostics: "
+        f"shape={tuple(input_tensor.shape)}, dtype={input_tensor.dtype}, "
+        f"min={min_value:.6f}, max={max_value:.6f}",
+        flush=True,
+    )
+    if min_value < -2.0 or max_value > 2.0:
+        logging.getLogger(__name__).warning(
+            "Live /predict values outside [-2.0, 2.0]; clamping before inference"
+        )
+        input_tensor = input_tensor.clamp(-2.0, 2.0)
+
+    return predict_cnn_signals(input_tensor.squeeze(0).numpy().T.copy())
 
 
 def predict_cnn_signals(signals: np.ndarray) -> PredictionResponse:
     start = time.perf_counter()
-    tensor_in = torch.from_numpy(signals).unsqueeze(0).to(device)
-    with torch.inference_mode():
+    tensor_in = torch.as_tensor(signals, dtype=torch.float32, device=device).unsqueeze(0)
+    assert tuple(tensor_in.shape) == (1, 9, 128)
+    cnn_model.eval()
+    with torch.no_grad():
         logits = cnn_model(tensor_in)
         probs = F.softmax(logits, dim=1).squeeze(0).cpu().numpy()
         if not cnn_weights_loaded:
