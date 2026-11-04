@@ -348,6 +348,9 @@ class PredictionResponse(BaseModel):
     probabilities: Dict[str, float]
     latency_ms: float
     weights_status: str
+    window_steps: int = 0
+    cadence_spm: float = 0.0
+    step_peak_indices: List[int] = Field(default_factory=list)
 
 class DualComparisonResponse(BaseModel):
     cnn_result: PredictionResponse
@@ -619,7 +622,7 @@ def calibrate_live_phone_signals(
             is_standing = (not is_laying) and (gy_m < -0.30 and gz_m < 0.0)
         else:
             # Hysteresis deadband on pitch_deg to eliminate boundary flickering
-            lay_pitch_cutoff = 16.0 if previous_activity == "LAYING" else 13.0
+            lay_pitch_cutoff = 25.0 if previous_activity == "LAYING" else 22.5
             stand_pitch_cutoff = 70.0 if previous_activity == "STANDING" else 74.0
 
             is_laying = (
@@ -648,12 +651,12 @@ def calibrate_live_phone_signals(
             calibrated[6 + c, :] = target_g[c] + damped_body[c]
     else:
         # Dynamic locomotion: Walking, Walking Upstairs, Walking Downstairs
-        down_freq_cutoff = 2.02 if previous_activity == "WALKING_DOWNSTAIRS" else 2.08
+        down_freq_cutoff = 2.08 if previous_activity == "WALKING_DOWNSTAIRS" else 2.14
         up_freq_cutoff = 1.82 if previous_activity == "WALKING_UPSTAIRS" else 1.76
 
         is_downstairs = (
-            (dominant_freq_hz >= down_freq_cutoff and linear_energy >= 0.24)
-            or (linear_energy >= 0.38 and dominant_freq_hz >= 1.85)
+            (dominant_freq_hz >= down_freq_cutoff and linear_energy >= 0.28)
+            or (linear_energy >= 0.48 and dominant_freq_hz >= 2.05)
         )
         is_upstairs = (not is_downstairs) and (
             dominant_freq_hz <= up_freq_cutoff
@@ -719,6 +722,75 @@ def extract_561_features_from_signals(signals: np.ndarray) -> np.ndarray:
     return np.clip(arr, -1.0, 1.0)
 
 
+def detect_steps_in_window(
+    signals: np.ndarray,
+    sample_rate_hz: float = 50.0,
+    predicted_activity: Optional[str] = None,
+) -> tuple[int, float, List[int]]:
+    """
+    Biomechanical peak-valley step detector with refractory gating on a (9, 128) inertial window.
+    Returns (window_steps, cadence_spm, step_peak_indices).
+    """
+    if predicted_activity in ("SITTING", "STANDING", "LAYING"):
+        return 0, 0.0, []
+
+    fs = float(np.clip(sample_rate_hz if np.isfinite(sample_rate_hz) else 50.0, 15.0, 120.0))
+    body_acc = signals[0:3, :]
+    total_acc = signals[6:9, :]
+
+    axis_stds = np.std(body_acc, axis=1)
+    linear_energy = float(np.linalg.norm(axis_stds))
+    if linear_energy < 0.055:
+        return 0, 0.0, []
+
+    g_mean = np.mean(total_acc, axis=1)
+    g_norm = float(np.linalg.norm(g_mean))
+    dom_axis = body_acc[int(np.argmax(axis_stds))]
+    if g_norm > 0.1:
+        g_unit = g_mean / g_norm
+        vert_acc = np.dot(g_unit, body_acc)
+        raw_wave = vert_acc if np.std(vert_acc) >= 0.55 * np.std(dom_axis) else dom_axis
+    else:
+        raw_wave = dom_axis
+
+    smooth_kernel = np.array([0.12, 0.20, 0.36, 0.20, 0.12], dtype=np.float32)
+    wave = np.convolve(np.pad(raw_wave, (2, 2), mode="edge"), smooth_kernel, mode="valid")
+    wave = wave - np.mean(wave)
+    wave_std = float(np.std(wave))
+    if wave_std < 0.035:
+        return 0, 0.0, []
+
+    peak_thresh = max(0.05, 0.45 * wave_std)
+    min_step_dist = max(7, int(round(0.30 * fs)))  # >= 300ms between steps (max 200 SPM)
+    half_win = max(4, min_step_dist // 2)
+
+    peaks: List[int] = []
+    for i in range(2, len(wave) - 2):
+        if wave[i] >= wave[i - 1] and wave[i] > wave[i + 1] and wave[i] >= peak_thresh:
+            left_bound = max(0, i - half_win)
+            right_bound = min(len(wave), i + half_win + 1)
+            local_min = float(np.min(wave[left_bound:right_bound]))
+            if (wave[i] - local_min) < max(0.08, 0.75 * wave_std):
+                continue
+            if peaks and (i - peaks[-1]) < min_step_dist:
+                if wave[i] > wave[peaks[-1]]:
+                    peaks[-1] = i
+            else:
+                peaks.append(i)
+
+    if len(peaks) < 2:
+        return 0, 0.0, []
+
+    intervals_sec = np.diff(peaks) / fs
+    valid_intervals = intervals_sec[(intervals_sec >= 0.28) & (intervals_sec <= 1.20)]
+    if len(valid_intervals) == 0:
+        return 0, 0.0, []
+
+    median_step_sec = float(np.median(valid_intervals))
+    cadence_spm = round(60.0 / median_step_sec, 1)
+    return len(peaks), cadence_spm, peaks
+
+
 @app.post("/predict", response_model=PredictionResponse)
 def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(require_authenticated_user)):
     window = np.asarray(payload.window, dtype=np.float32)
@@ -761,9 +833,18 @@ def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(require
 
     if requested_model == "ann":
         live_features = extract_561_features_from_signals(calibrated_signals)
-        return predict_ann_features(live_features, kinematic_prior=kinematic_prior)
+        ann_res = predict_ann_features(live_features, kinematic_prior=kinematic_prior)
+        w_steps, spm, peaks = detect_steps_in_window(
+            calibrated_signals, payload.sample_rate_hz, ann_res.predicted_activity
+        )
+        ann_res.window_steps = w_steps
+        ann_res.cadence_spm = spm
+        ann_res.step_peak_indices = peaks
+        return ann_res
     if requested_model == "ensemble":
-        cnn_res = predict_cnn_signals(calibrated_signals, kinematic_prior=kinematic_prior)
+        cnn_res = predict_cnn_signals(
+            calibrated_signals, kinematic_prior=kinematic_prior, sample_rate_hz=payload.sample_rate_hz
+        )
         live_features = extract_561_features_from_signals(calibrated_signals)
         ann_res = predict_ann_features(live_features, kinematic_prior=kinematic_prior)
         ens_probs = {
@@ -771,6 +852,9 @@ def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(require
             for act in ACTIVITY_NAMES
         }
         best_act = max(ens_probs, key=ens_probs.get)
+        w_steps, spm, peaks = detect_steps_in_window(
+            calibrated_signals, payload.sample_rate_hz, best_act
+        )
         return PredictionResponse(
             model_used="Ensemble (1D-CNN + Regularized ANN)",
             predicted_activity=best_act,
@@ -778,12 +862,19 @@ def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(require
             probabilities=ens_probs,
             latency_ms=round(cnn_res.latency_ms + ann_res.latency_ms, 2),
             weights_status="Trained (model.pth Loaded)",
+            window_steps=w_steps,
+            cadence_spm=spm,
+            step_peak_indices=peaks,
         )
-    return predict_cnn_signals(calibrated_signals, kinematic_prior=kinematic_prior)
+    return predict_cnn_signals(
+        calibrated_signals, kinematic_prior=kinematic_prior, sample_rate_hz=payload.sample_rate_hz
+    )
 
 
 def predict_cnn_signals(
-    signals: np.ndarray, kinematic_prior: Optional[np.ndarray] = None
+    signals: np.ndarray,
+    kinematic_prior: Optional[np.ndarray] = None,
+    sample_rate_hz: float = 50.0,
 ) -> PredictionResponse:
     start = time.perf_counter()
     tensor_in = torch.as_tensor(signals, dtype=torch.float32, device=device).unsqueeze(0)
@@ -798,15 +889,20 @@ def predict_cnn_signals(
             probs = 0.55 * probs + 0.45 * kinematic_prior
             probs = probs / np.sum(probs)
         pred_idx = int(np.argmax(probs))
+    pred_act = ACTIVITY_NAMES[pred_idx]
+    w_steps, spm, peaks = detect_steps_in_window(signals, sample_rate_hz, pred_act)
     latency = (time.perf_counter() - start) * 1000.0
 
     return PredictionResponse(
         model_used="1D-CNN (Raw 9x128 Signals)",
-        predicted_activity=ACTIVITY_NAMES[pred_idx],
+        predicted_activity=pred_act,
         confidence=round(float(probs[pred_idx]), 4),
         probabilities={ACTIVITY_NAMES[i]: round(float(probs[i]), 4) for i in range(6)},
         latency_ms=round(latency, 2),
-        weights_status="Trained (model.pth Loaded)" if cnn_weights_loaded else "Kinematic Demo Mode (Place model.pth in root)"
+        weights_status="Trained (model.pth Loaded)" if cnn_weights_loaded else "Kinematic Demo Mode (Place model.pth in root)",
+        window_steps=w_steps,
+        cadence_spm=spm,
+        step_peak_indices=peaks,
     )
 
 @app.post("/predict/ann", response_model=PredictionResponse)
@@ -862,6 +958,9 @@ def compare_predictions(
     cnn_res = predict_cnn_signals(signals)
     if ann_weights_loaded and run_ann:
         ann_res = predict_ann_features(features)
+        ann_res.window_steps = cnn_res.window_steps
+        ann_res.cadence_spm = cnn_res.cadence_spm
+        ann_res.step_peak_indices = cnn_res.step_peak_indices
     else:
         weights_status = (
             "Preset demo skipped ANN (requires real 561-feature input)"
@@ -875,6 +974,9 @@ def compare_predictions(
             probabilities=cnn_res.probabilities.copy(),
             latency_ms=0.0,
             weights_status=weights_status,
+            window_steps=cnn_res.window_steps,
+            cadence_spm=cnn_res.cadence_spm,
+            step_peak_indices=cnn_res.step_peak_indices,
         )
 
     ensemble_probs = {}

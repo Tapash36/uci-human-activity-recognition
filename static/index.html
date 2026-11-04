@@ -424,6 +424,122 @@
         </div>
       </section>
 
+      <!-- ==================== STEP COUNTER & BIOMECHANICAL PEDOMETER ==================== -->
+      <section class="card p-5 sm:p-6 space-y-4 border-l-4 border-l-emerald-500">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-sm shrink-0">
+              <i data-lucide="footprints" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <div class="flex flex-wrap items-center gap-2">
+                <h2 class="text-base sm:text-lg font-bold text-slate-900">Biomechanical Step Counter &amp; Gait Tracker</h2>
+                <span id="stepPulseBadge" class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 transition-all duration-200">
+                  <span id="stepPulseDot" class="w-2 h-2 rounded-full bg-slate-400"></span>
+                  <span id="stepPulseText">Standby</span>
+                </span>
+              </div>
+              <p class="text-xs text-slate-500 mt-0.5">
+                Gravity-projected peak-valley step detection with 3-step rhythmic gait confirmation &amp; HAR activity breakdown
+              </p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <span id="windowStepBadge" class="text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-xl tabular-nums">
+              Window: 5 steps · 120 SPM
+            </span>
+            <button type="button" onclick="addCurrentWindowStepsToTotal()"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition"
+              title="Add the detected steps from the current 2.56s sample window to your session total">
+              <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+              <span>+ Add Window Steps</span>
+            </button>
+            <button type="button" onclick="resetStepCounter()"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-rose-600 bg-slate-100 hover:bg-rose-50 border border-slate-200 transition">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+              <span>Reset Steps</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Primary Step Metrics Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <!-- Total Steps -->
+          <div class="col-span-2 sm:col-span-1 bg-gradient-to-br from-emerald-50 via-white to-white border-2 border-emerald-500 rounded-xl p-3.5 flex flex-col justify-between">
+            <span class="text-xs font-bold uppercase tracking-wide text-emerald-700">Total Steps</span>
+            <div class="flex items-baseline gap-1.5 mt-1">
+              <span id="totalStepCount" class="text-3xl font-extrabold text-slate-900 tabular-nums">0</span>
+              <span class="text-xs font-medium text-slate-500">steps</span>
+            </div>
+            <span id="stepGaitLockNote" class="text-[11px] text-emerald-700 font-medium mt-1">Ready to count</span>
+          </div>
+
+          <!-- Walking Steps (Flat) -->
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-xs text-slate-500 font-medium">
+              <span>Flat Walking</span>
+              <i data-lucide="footprints" class="w-3.5 h-3.5 text-blue-600"></i>
+            </div>
+            <div class="text-xl font-bold text-slate-900 tabular-nums mt-1" id="walkStepCount">0</div>
+            <span class="text-[11px] text-slate-400">Level ground</span>
+          </div>
+
+          <!-- Upstairs Steps -->
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-xs text-slate-500 font-medium">
+              <span>Upstairs</span>
+              <i data-lucide="trending-up" class="w-3.5 h-3.5 text-indigo-600"></i>
+            </div>
+            <div class="text-xl font-bold text-slate-900 tabular-nums mt-1" id="upstairsStepCount">0</div>
+            <span class="text-[11px] text-slate-400">Stair climb</span>
+          </div>
+
+          <!-- Downstairs Steps -->
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-xs text-slate-500 font-medium">
+              <span>Downstairs</span>
+              <i data-lucide="trending-down" class="w-3.5 h-3.5 text-cyan-600"></i>
+            </div>
+            <div class="text-xl font-bold text-slate-900 tabular-nums mt-1" id="downstairsStepCount">0</div>
+            <span class="text-[11px] text-slate-400">Stair descent</span>
+          </div>
+
+          <!-- Live Cadence (SPM) -->
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-xs text-slate-500 font-medium">
+              <span>Step Cadence</span>
+              <i data-lucide="gauge" class="w-3.5 h-3.5 text-amber-600"></i>
+            </div>
+            <div class="flex items-baseline gap-1 mt-1">
+              <span class="text-xl font-bold text-slate-900 tabular-nums" id="liveCadenceSpm">0</span>
+              <span class="text-xs text-slate-500 font-medium">SPM</span>
+            </div>
+            <span class="text-[11px] text-slate-400">Steps / minute</span>
+          </div>
+
+          <!-- Distance & Calories -->
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-xs text-slate-500 font-medium">
+              <span>Distance &amp; Burn</span>
+              <i data-lucide="flame" class="w-3.5 h-3.5 text-rose-500"></i>
+            </div>
+            <div class="text-lg font-bold text-slate-900 tabular-nums mt-1" id="liveDistanceText">0.0 m</div>
+            <span class="text-[11px] text-emerald-700 font-semibold tabular-nums" id="liveCaloriesText">0.0 kcal burned</span>
+          </div>
+        </div>
+
+        <!-- Session Step Goal Progress -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div class="flex items-center justify-between sm:justify-start gap-3 text-xs font-medium text-slate-600 shrink-0">
+            <span>Session Step Goal: <strong id="stepGoalLabel" class="text-slate-900 tabular-nums">0 / 100 steps (0%)</strong></span>
+          </div>
+          <div class="w-full sm:max-w-md h-2 bg-slate-200 rounded-full overflow-hidden">
+            <div id="stepGoalProgressBar" class="h-full bg-emerald-600 transition-all duration-300 rounded-full" style="width: 0%"></div>
+          </div>
+        </div>
+      </section>
+
       <!-- ==================== PREDICTION RESULTS (3 CLEAR CARDS) ==================== -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 
@@ -595,6 +711,34 @@
     let candidateActivity = null;
     let candidateStreak = 0;
     let isRecordingMobile = false;
+
+    // Step Counter & Real-Time Pedometer State
+    const STEP_GOAL = 100;
+    let stepStats = {
+      total: 0,
+      walking: 0,
+      upstairs: 0,
+      downstairs: 0,
+      cadenceSpm: 0,
+      lastWindowSteps: 5,
+      lastWindowSpm: 120
+    };
+    let stepVertHistory = [];
+    let stepFilterHistory = [];
+    let lastStepPeakTime = 0;
+    let pendingStepTimes = [];
+    let gaitStepLocked = false;
+    let stepWaveState = 'below';
+    let currentStepPeakVal = 0;
+    let currentStepValleyVal = 0;
+    let stepPulseTimeout = null;
+
+    try {
+      const savedSteps = JSON.parse(localStorage.getItem('har_step_stats') || 'null');
+      if (savedSteps && typeof savedSteps.total === 'number') {
+        stepStats = { ...stepStats, ...savedSteps };
+      }
+    } catch (_) {}
     let sensorPredictionInFlight = false;
     let samplesSincePrediction = 0;
     let lastSensorSampleAt = 0;
@@ -820,7 +964,17 @@
           datasets: [
             { label: 'Accel X', data: [], borderColor: '#2563eb', borderWidth: 2, pointRadius: 0, tension: 0.25 },
             { label: 'Accel Y', data: [], borderColor: '#059669', borderWidth: 2, pointRadius: 0, tension: 0.25 },
-            { label: 'Accel Z', data: [], borderColor: '#d97706', borderWidth: 2, pointRadius: 0, tension: 0.25 }
+            { label: 'Accel Z', data: [], borderColor: '#d97706', borderWidth: 2, pointRadius: 0, tension: 0.25 },
+            {
+              label: 'Step Peaks',
+              data: [],
+              borderColor: '#e11d48',
+              backgroundColor: '#e11d48',
+              borderWidth: 0,
+              pointRadius: 5,
+              pointHoverRadius: 7,
+              showLine: false
+            }
           ]
         },
         options: {
@@ -994,6 +1148,188 @@
       }
     }
 
+    function buildStepPeakDataset(waveData, peakIndices) {
+      const arr = new Array(128).fill(null);
+      if (Array.isArray(peakIndices) && Array.isArray(waveData)) {
+        peakIndices.forEach(idx => {
+          if (typeof idx === 'number' && idx >= 0 && idx < waveData.length) {
+            arr[idx] = waveData[idx];
+          }
+        });
+      }
+      return arr;
+    }
+
+    function saveStepStats() {
+      try {
+        localStorage.setItem('har_step_stats', JSON.stringify(stepStats));
+      } catch (_) {}
+    }
+
+    function renderStepCounterUI() {
+      const totalEl = document.getElementById('totalStepCount');
+      if (!totalEl) return;
+      totalEl.textContent = stepStats.total.toLocaleString();
+      document.getElementById('walkStepCount').textContent = stepStats.walking.toLocaleString();
+      document.getElementById('upstairsStepCount').textContent = stepStats.upstairs.toLocaleString();
+      document.getElementById('downstairsStepCount').textContent = stepStats.downstairs.toLocaleString();
+      document.getElementById('liveCadenceSpm').textContent = Math.round(stepStats.cadenceSpm || 0);
+
+      // Estimate distance (0.74m stride) and active calories (~0.045 kcal/step)
+      const distMeters = stepStats.total * 0.74;
+      const distText = distMeters >= 1000
+        ? `${(distMeters / 1000).toFixed(2)} km`
+        : `${Math.round(distMeters)} m`;
+      document.getElementById('liveDistanceText').textContent = distText;
+      document.getElementById('liveCaloriesText').textContent = `${(stepStats.total * 0.045).toFixed(1)} kcal`;
+
+      const pct = Math.min(100, (stepStats.total / STEP_GOAL) * 100);
+      document.getElementById('stepGoalLabel').textContent = `${stepStats.total} / ${STEP_GOAL} steps (${Math.round(pct)}%)`;
+      document.getElementById('stepGoalProgressBar').style.width = `${pct}%`;
+
+      const winSteps = stepStats.lastWindowSteps || 0;
+      const winSpm = Math.round(stepStats.lastWindowSpm || 0);
+      const badgeEl = document.getElementById('windowStepBadge');
+      if (badgeEl) {
+        badgeEl.textContent = `Window: ${winSteps} ${winSteps === 1 ? 'step' : 'steps'} (${winSpm} SPM)`;
+      }
+    }
+
+    function triggerStepPulse(label = 'STEP +1') {
+      const badge = document.getElementById('stepPulseBadge');
+      if (!badge) return;
+      badge.textContent = label;
+      badge.className = 'inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2.5 py-0.5 text-[11px] font-bold text-white shadow-sm transition-all scale-105';
+      window.clearTimeout(stepPulseTimeout);
+      stepPulseTimeout = window.setTimeout(() => {
+        badge.textContent = 'GAIT READY';
+        badge.className = 'inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-[11px] font-bold text-slate-500 transition-all';
+      }, 650);
+    }
+
+    function registerConfirmedSteps(count, spm, activityHint) {
+      if (count <= 0) return;
+      const act = activityHint || stableActivity || 'WALKING';
+      stepStats.total += count;
+      if (act === 'WALKING_UPSTAIRS') {
+        stepStats.upstairs += count;
+      } else if (act === 'WALKING_DOWNSTAIRS') {
+        stepStats.downstairs += count;
+      } else {
+        stepStats.walking += count;
+      }
+      if (spm > 0) {
+        stepStats.cadenceSpm = stepStats.cadenceSpm > 0
+          ? 0.65 * stepStats.cadenceSpm + 0.35 * spm
+          : spm;
+      }
+      saveStepStats();
+      renderStepCounterUI();
+      triggerStepPulse(count > 1 ? `GAIT LOCK +${count}` : 'STEP +1');
+    }
+
+    function addCurrentWindowStepsToTotal() {
+      const stepsToAdd = stepStats.lastWindowSteps > 0 ? stepStats.lastWindowSteps : 5;
+      const spm = stepStats.lastWindowSpm > 0 ? stepStats.lastWindowSpm : 118;
+      const currentMainLabel = document.getElementById('ensPredLabel')?.textContent || 'Walking';
+      let actKey = 'WALKING';
+      if (currentMainLabel.includes('Upstairs')) actKey = 'WALKING_UPSTAIRS';
+      else if (currentMainLabel.includes('Downstairs')) actKey = 'WALKING_DOWNSTAIRS';
+      registerConfirmedSteps(stepsToAdd, spm, actKey);
+    }
+
+    function resetStepCounter() {
+      stepStats = {
+        total: 0,
+        walking: 0,
+        upstairs: 0,
+        downstairs: 0,
+        cadenceSpm: 0,
+        lastWindowSteps: stepStats.lastWindowSteps || 0,
+        lastWindowSpm: stepStats.lastWindowSpm || 0
+      };
+      pendingStepTimes = [];
+      gaitStepLocked = false;
+      saveStepStats();
+      renderStepCounterUI();
+      triggerStepPulse('RESET');
+    }
+
+    function processRealtimeStepSample(sample, nowMs) {
+      const [ax, ay, az] = sample;
+      const gVec = gravityEstimate || [0, 0, 1];
+      const gNorm = Math.hypot(gVec[0], gVec[1], gVec[2]) || 1;
+      // Project 3D linear acceleration onto vertical gravity axis (orientation-independent)
+      const vertAcc = (ax * gVec[0] + ay * gVec[1] + az * gVec[2]) / gNorm;
+
+      stepVertHistory.push(vertAcc);
+      if (stepVertHistory.length > 5) stepVertHistory.shift();
+      const filteredVert = stepVertHistory.reduce((acc, v) => acc + v, 0) / stepVertHistory.length;
+
+      stepFilterHistory.push(filteredVert);
+      if (stepFilterHistory.length > 50) stepFilterHistory.shift();
+      if (stepFilterHistory.length < 15) return;
+
+      const mean = stepFilterHistory.reduce((a, b) => a + b, 0) / stepFilterHistory.length;
+      const std = Math.sqrt(stepFilterHistory.reduce((a, b) => a + (b - mean) ** 2, 0) / stepFilterHistory.length);
+
+      // Reset gait lock if no step has occurred for > 2.2 seconds
+      if (lastStepPeakTime > 0 && (nowMs - lastStepPeakTime) > 2200) {
+        gaitStepLocked = false;
+        pendingStepTimes = [];
+        stepStats.cadenceSpm = 0;
+        renderStepCounterUI();
+      }
+
+      // Stationary guard: ignore tiny hand tremors or desk vibrations
+      if (std < 0.038) return;
+
+      const upperThresh = mean + Math.max(0.042, 0.42 * std);
+      const lowerThresh = mean - Math.max(0.030, 0.30 * std);
+
+      if (stepWaveState === 'below') {
+        if (filteredVert < currentStepValleyVal) {
+          currentStepValleyVal = filteredVert;
+        }
+        if (filteredVert > upperThresh) {
+          stepWaveState = 'above';
+          currentStepPeakVal = filteredVert;
+        }
+      } else {
+        if (filteredVert > currentStepPeakVal) {
+          currentStepPeakVal = filteredVert;
+        }
+        if (filteredVert < lowerThresh) {
+          const prominence = currentStepPeakVal - currentStepValleyVal;
+          const dt = lastStepPeakTime > 0 ? (nowMs - lastStepPeakTime) : 600;
+
+          if (prominence >= 0.085 && dt >= 290) {
+            if (dt <= 1350) {
+              const instantSpm = Math.min(205, Math.max(48, 60000 / dt));
+              lastStepPeakTime = nowMs;
+              if (gaitStepLocked) {
+                registerConfirmedSteps(1, instantSpm, stableActivity);
+              } else {
+                pendingStepTimes.push(nowMs);
+                if (pendingStepTimes.length >= 3) {
+                  gaitStepLocked = true;
+                  registerConfirmedSteps(pendingStepTimes.length, instantSpm, stableActivity);
+                  pendingStepTimes = [];
+                }
+              }
+            } else {
+              // First step of a potential new walking bout
+              lastStepPeakTime = nowMs;
+              pendingStepTimes = [nowMs];
+              gaitStepLocked = false;
+            }
+          }
+          stepWaveState = 'below';
+          currentStepValleyVal = filteredVert;
+        }
+      }
+    }
+
     function updateDashboardUI(signals, result) {
       const presetFallback = result.ann_result.weights_status.startsWith('Preset demo');
 
@@ -1018,9 +1354,22 @@
       setIconOnElement('primaryActivityIcon', ACTIVITY_ICONS[result.ensemble_activity] || 'activity');
       renderCustomProbBars(result.ensemble_probabilities);
 
+      const winSteps = result.cnn_result.window_steps || 0;
+      const winCadence = result.cnn_result.cadence_spm || 0;
+      const peakIndices = result.cnn_result.step_peak_indices || [];
+      stepStats.lastWindowSteps = winSteps;
+      stepStats.lastWindowSpm = winCadence;
+      if (!isRecordingMobile) {
+        stepStats.cadenceSpm = winCadence;
+      }
+      renderStepCounterUI();
+
       waveChartInstance.data.datasets[0].data = signals[0];
       waveChartInstance.data.datasets[1].data = signals[1];
       waveChartInstance.data.datasets[2].data = signals[2];
+      if (waveChartInstance.data.datasets[3]) {
+        waveChartInstance.data.datasets[3].data = buildStepPeakDataset(signals[0], peakIndices);
+      }
       waveChartInstance.update();
 
       const cnnProbs = ACTIVITIES.map(a => result.cnn_result.probabilities[a]);
@@ -1067,6 +1416,14 @@
       stableActivity = null;
       candidateActivity = null;
       candidateStreak = 0;
+      stepVertHistory = [];
+      stepFilterHistory = [];
+      lastStepPeakTime = 0;
+      pendingStepTimes = [];
+      gaitStepLocked = false;
+      stepWaveState = 'below';
+      currentStepPeakVal = 0;
+      currentStepValleyVal = 0;
       samplesSincePrediction = 0;
       lastSensorSampleAt = 0;
       sensorPredictionInFlight = false;
@@ -1201,6 +1558,8 @@
         window.clearTimeout(sensorStartupTimer);
         setSensorConnectionState('Sensors active (50 Hz)', true);
       }
+
+      processRealtimeStepSample(latestSensorSample, now);
 
       sensorBuffer.push([...latestSensorSample]);
       sensorTimestamps.push(now);
@@ -1363,9 +1722,27 @@
 
         renderCustomProbBars(smoothedProbs);
 
-        waveChartInstance.data.datasets[0].data = windowCopy.map(step => step[0]);
+        const winSteps = result.window_steps || 0;
+        const winCadence = result.cadence_spm || 0;
+        const peakIndices = result.step_peak_indices || [];
+        stepStats.lastWindowSteps = winSteps;
+        stepStats.lastWindowSpm = winCadence;
+        if (winCadence > 0 && activity.startsWith('WALKING')) {
+          stepStats.cadenceSpm = stepStats.cadenceSpm > 0
+            ? 0.6 * stepStats.cadenceSpm + 0.4 * winCadence
+            : winCadence;
+        } else if (!activity.startsWith('WALKING')) {
+          stepStats.cadenceSpm = 0;
+        }
+        renderStepCounterUI();
+
+        const accXSeries = windowCopy.map(step => step[0]);
+        waveChartInstance.data.datasets[0].data = accXSeries;
         waveChartInstance.data.datasets[1].data = windowCopy.map(step => step[1]);
         waveChartInstance.data.datasets[2].data = windowCopy.map(step => step[2]);
+        if (waveChartInstance.data.datasets[3]) {
+          waveChartInstance.data.datasets[3].data = buildStepPeakDataset(accXSeries, peakIndices);
+        }
         waveChartInstance.update('none');
 
         const probsArray = ACTIVITIES.map(name => smoothedProbs[name]);
@@ -1388,7 +1765,10 @@
       }
     }
 
-    window.addEventListener('DOMContentLoaded', checkAuthentication);
+    window.addEventListener('DOMContentLoaded', () => {
+      renderStepCounterUI();
+      checkAuthentication();
+    });
   </script>
 </body>
 </html>
