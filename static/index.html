@@ -12,6 +12,7 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
   <script id="tailwind-config">
     tailwind.config = {
       darkMode: 'class',
@@ -187,7 +188,7 @@
               <span class="bg-tertiary-container text-on-tertiary-container font-mono-tech text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase">iOS &amp; Android Ready</span>
             </div>
             <p class="text-xs text-on-surface-variant mt-0.5 leading-relaxed">
-              For peak UCI HAR accuracy, clip or pocket your phone securely at your waist, then tap <strong>Start Live Tracking</strong>. On desktop without sensors, use <strong>Demo Walk</strong> or the Simulator tab.
+              Clip or pocket your phone securely at your waist and tap <strong>Start Live Tracking</strong>. Since you cannot see your waist phone while walking, use <strong>Watch Waist Phone on PC</strong> below to mirror live readings on your laptop in milliseconds.
             </p>
           </div>
         </div>
@@ -223,6 +224,130 @@
               <option value="ann">Regularized ANN (561 Features · 95.72%)</option>
               <option value="ensemble">Ensemble Fusion (50% CNN + 50% ANN)</option>
             </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Multi-Device Live Sync Panel (Waist Phone -> PC Monitor) -->
+      <div class="bg-surface-container-lowest rounded-xl p-3.5 shadow-sm border border-outline-variant/25 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <div class="w-8 h-8 rounded-lg bg-secondary/10 text-secondary flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[19px]">devices</span>
+            </div>
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <h3 class="font-display text-sm font-bold text-on-surface">Watch Waist Phone Live on PC</h3>
+                <span id="relayStatusPill" class="font-mono-tech text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant uppercase">Sync Standby</span>
+              </div>
+              <p class="text-[11px] text-on-surface-variant truncate">Low-latency WebSocket mirror (~30–60 ms) for monitoring live readings from another device</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <span id="relayLatencyPill" class="font-mono-tech text-[11px] font-semibold bg-surface-container-low text-primary px-2.5 py-1 rounded-lg">Link: -- ms</span>
+            <button id="toggleRelayQrBtn" type="button" onclick="toggleRelayQrDrawer()"
+              class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-colors">
+              <span class="material-symbols-outlined text-[15px] text-primary">qr_code_2</span>
+              <span id="toggleRelayQrLabel">QR &amp; Link</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Active PC Live Monitor Banner (visible while watching remote waist phone) -->
+        <div id="pcViewerBanner" class="hidden bg-tertiary-fixed/35 border border-tertiary/35 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="w-2.5 h-2.5 rounded-full bg-tertiary animate-ping shrink-0"></span>
+            <div class="min-w-0">
+              <div class="font-display text-xs sm:text-sm font-bold text-on-tertiary-fixed truncate" id="pcViewerTitle">PC Monitor Connected · Waiting for Phone...</div>
+              <div class="font-mono-tech text-[11px] text-on-tertiary-fixed/85 truncate" id="pcViewerSubtext">Paired to Waist Phone · Switch AI Engine above to control remotely</div>
+            </div>
+          </div>
+          <button type="button" onclick="disconnectRelayViewer()"
+            class="px-3 py-1.5 rounded-lg bg-surface-container-lowest hover:bg-error-container hover:text-error text-on-surface text-xs font-semibold shadow-xs transition-colors shrink-0">
+            Disconnect PC
+          </button>
+        </div>
+
+        <!-- Account Auto-Detect Phone Banner (for personal logged-in accounts) -->
+        <div id="accountAutoPhoneBanner" class="hidden bg-primary-fixed/40 border border-primary/25 rounded-lg px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2 text-xs text-on-primary-fixed">
+            <span class="material-symbols-outlined text-[17px] text-primary">sensors</span>
+            <span>Your account's phone is streaming live on code <strong id="accountAutoPhoneCode" class="font-mono-tech">------</strong>!</span>
+          </div>
+          <button type="button" onclick="connectDetectedAccountPhone()"
+            class="px-3 py-1 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary-container transition-colors">
+            Watch Now on PC
+          </button>
+        </div>
+
+        <!-- Dual Pairing Controls: Phone Code vs PC Receiver -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+          <!-- Phone Broadcaster Box -->
+          <div class="bg-surface-container-low rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2">
+            <div class="min-w-0">
+              <span class="font-mono-tech text-[10px] uppercase font-bold text-primary block">1. Waist Phone Broadcast Code</span>
+              <div class="flex items-center gap-2 mt-0.5">
+                <span id="relayMyCodeText" class="font-mono-tech text-lg font-bold tracking-widest text-on-surface">------</span>
+                <span id="relayTargetNote" class="text-[11px] text-on-surface-variant truncate">Auto-sends on Start Live Tracking</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button type="button" onclick="copyRelayPairCode()" title="Copy 6-digit code"
+                class="px-2.5 py-1.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container text-on-surface text-xs font-semibold border border-outline-variant/25 flex items-center gap-1 transition-colors">
+                <span class="material-symbols-outlined text-[15px] text-primary">content_copy</span>
+                <span>Copy</span>
+              </button>
+              <button type="button" onclick="regenerateRelayRoomCode()" title="Generate fresh code"
+                class="px-2.5 py-1.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container text-on-surface text-xs font-semibold border border-outline-variant/25 flex items-center gap-1 transition-colors">
+                <span class="material-symbols-outlined text-[15px] text-secondary">refresh</span>
+                <span>New</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- PC Receiver Box -->
+          <div class="bg-surface-container-low rounded-xl p-2.5 flex flex-wrap items-center gap-2">
+            <div class="flex-1 min-w-[140px]">
+              <label for="relayViewerCodeInput" class="font-mono-tech text-[10px] uppercase font-bold text-secondary block mb-0.5">2. Watch Any Code on This PC</label>
+              <input id="relayViewerCodeInput" type="text" inputmode="numeric" maxlength="12" placeholder="Enter phone code (e.g. 482915)"
+                class="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg px-2.5 py-1.5 font-mono-tech text-xs font-bold tracking-wider text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 uppercase" />
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0 self-end">
+              <button id="watchPcBtn" type="button" onclick="connectRelayViewer()"
+                class="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary-container text-on-secondary text-xs font-bold flex items-center gap-1 shadow-xs transition-colors">
+                <span class="material-symbols-outlined text-[16px]">cast</span>
+                <span>Watch on PC</span>
+              </button>
+              <button type="button" onclick="openPcHostQrMode()" title="Generate a PC Monitor code & QR to scan from your phone"
+                class="px-2.5 py-2 rounded-lg bg-surface-container-lowest hover:bg-surface-container text-on-surface text-xs font-semibold border border-outline-variant/25 flex items-center gap-1 transition-colors">
+                <span class="material-symbols-outlined text-[16px] text-tertiary">qr_code_scanner</span>
+                <span class="hidden sm:inline">Phone QR</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Expandable QR Code & Direct Pair Link Drawer -->
+        <div id="relayQrPanel" class="hidden bg-surface-container-low rounded-xl p-3 border border-outline-variant/25">
+          <div class="flex flex-col sm:flex-row items-center gap-3.5">
+            <div id="relayQrBox" class="w-28 h-28 bg-white rounded-xl p-2 flex items-center justify-center shadow-xs shrink-0 border border-outline-variant/20">
+              <span class="font-mono-tech text-[10px] text-on-surface-variant text-center">Generating QR...</span>
+            </div>
+            <div class="flex-1 min-w-0 space-y-1.5 text-center sm:text-left">
+              <span class="font-display text-xs sm:text-sm font-bold text-on-surface block">Scan From Phone Camera to Link Immediately</span>
+              <p class="text-xs text-on-surface-variant leading-relaxed">
+                Point your phone camera at this QR code (or open the link below on your phone). It pre-links to code <strong id="relayQrCodeEcho" class="font-mono-tech text-primary">------</strong> so when you tap <strong>Start Live Tracking</strong> and pocket the phone at your waist, this PC updates in real time!
+              </p>
+              <div class="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                <code id="relayPairLinkText" class="px-2 py-1 rounded bg-surface-container-lowest text-[11px] font-mono-tech text-primary border border-outline-variant/20 max-w-full truncate">https://...</code>
+                <button type="button" onclick="copyRelayPairLink()"
+                  class="px-2.5 py-1 rounded-lg bg-primary text-on-primary text-[11px] font-semibold hover:bg-primary-container transition-colors flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[14px]">link</span>
+                  <span>Copy Phone Link</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -945,6 +1070,9 @@
           <span class="font-mono-tech text-[11px] text-primary font-semibold">Instant Response</span>
         </div>
         <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          <button type="button" onclick="askPresetQuestion('How do I view live predictions on my PC while my phone is in my waist?')" class="shrink-0 px-3 py-1.5 rounded-full bg-surface-container-lowest hover:bg-primary hover:text-on-primary text-on-surface font-mono-tech text-[11px] font-semibold shadow-xs border border-outline-variant/25 transition-colors flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[14px]">devices</span><span>Waist Phone -&gt; PC Sync</span>
+          </button>
           <button type="button" onclick="askPresetQuestion('Compare 1D-CNN vs Regularized ANN')" class="shrink-0 px-3 py-1.5 rounded-full bg-surface-container-lowest hover:bg-primary hover:text-on-primary text-on-surface font-mono-tech text-[11px] font-semibold shadow-xs border border-outline-variant/25 transition-colors flex items-center gap-1.5">
             <span class="material-symbols-outlined text-[14px]">compare</span><span>1D-CNN vs ANN</span>
           </button>
@@ -1404,6 +1532,53 @@
     let stepPulseTimeout = null;
     let toastTimeout = null;
 
+    // Cross-Device Live Relay (Waist Phone -> PC) & Wake Lock State
+    let relayMyCode = '';
+    let relaySenderTargetCode = '';
+    let relayQrOpen = false;
+    let senderWs = null;
+    let senderWsReady = false;
+    let senderReconnectTimer = null;
+    let senderLabel = 'Waist Phone IMU';
+    let senderHttpFallbackLastTs = 0;
+    let deltaSampleQueue = [];
+    let latestTelemetrySnapshot = {
+      acc: [0, 0, 0],
+      gyro: [0, 0, 0],
+      tilt_deg: 0,
+      energy: 0
+    };
+    let lastSentPredictAxes = null;
+    let wsPredictTimeout = null;
+
+    let viewerRoomCode = '';
+    let viewerWs = null;
+    let viewerWsReady = false;
+    let viewerReconnectTimer = null;
+    let viewerPollTimer = null;
+    let viewerPingTimer = null;
+    let isViewingRemote = false;
+    let pcBuffer = [];
+    let relayLastSeq = 0;
+    let relayRttMs = null;
+    let detectedAccountRoomCode = '';
+    let wakeLockSentinel = null;
+
+    let urlPairCode = '';
+    let urlPairRole = '';
+    let urlPairApplied = false;
+    try {
+      const qs = new URLSearchParams(window.location.search || '');
+      const rawPair = (qs.get('pair') || '').replace(/[\s-]+/g, '').toUpperCase();
+      if (/^[A-Z0-9]{4,12}$/.test(rawPair)) {
+        urlPairCode = rawPair;
+        const rawRole = (qs.get('role') || 'viewer').toLowerCase();
+        urlPairRole = rawRole === 'sender' ? 'sender' : 'viewer';
+      }
+      relayMyCode = (localStorage.getItem('har_relay_code') || '').replace(/[\s-]+/g, '').toUpperCase();
+      if (!/^[A-Z0-9]{4,12}$/.test(relayMyCode)) relayMyCode = '';
+    } catch (_) {}
+
     try {
       sessionToken = localStorage.getItem('har_session_token') || '';
       const savedSteps = JSON.parse(localStorage.getItem('har_step_stats') || 'null');
@@ -1601,7 +1776,11 @@
       renderCustomProbBars({});
       renderStepCounterUI();
       initChatWelcomeCard();
-      await Promise.all([checkServerStatus(), runPreset('WALKING')]);
+      await Promise.all([checkServerStatus(), runPreset('WALKING'), initRelaySession()]);
+      await applyUrlPairIntent();
+      if (userPayload && !userPayload.is_guest && !urlPairApplied) {
+        checkActiveAccountPhoneStream();
+      }
       await navigateTab(targetTab);
     }
 
@@ -1662,7 +1841,12 @@
       setSessionToken('');
       isAuthenticated = false;
       currentUserInfo = null;
-      if (isRecordingMobile) stopMobileSensor();
+      if (isDesktopWalkSim) stopDesktopWalkSimulation();
+      else if (isRecordingMobile) stopMobileSensor();
+      if (isViewingRemote) disconnectRelayViewer({ silent: true });
+      stopSenderRelay('logout');
+      const autoBanner = document.getElementById('accountAutoPhoneBanner');
+      if (autoBanner) autoBanner.classList.add('hidden');
       updateAuthViewState();
       setAuthMessage('You have been signed out safely.', false);
       navigateTab('access', { skipAutoGuest: true });
@@ -1672,6 +1856,7 @@
       renderLiveBreakdownCards({});
       renderSimulatorCards();
       renderStepCounterUI();
+      updateRelayCodeUI();
       try {
         const res = await fetch('/api/auth/me', { headers: authHeaders() });
         if (res.ok) {
@@ -1680,6 +1865,10 @@
           return;
         }
       } catch (_) {}
+      if (urlPairCode) {
+        await continueAsGuest({ silent: true, targetTab: 'live' });
+        return;
+      }
       isAuthenticated = false;
       updateAuthViewState();
       await navigateTab('access', { skipAutoGuest: true });
@@ -2099,8 +2288,8 @@
       document.getElementById('analyticsActIcon').textContent = meta.icon;
       document.getElementById('analyticsLatencyText').textContent = `${result.cnn_result.latency_ms} ms`;
 
-      // Update Live tab cards when not actively streaming phone IMU
-      if (!isRecordingMobile && !isDesktopWalkSim) {
+      // Update Live tab cards when not actively streaming phone IMU or PC live mirror
+      if (!isRecordingMobile && !isDesktopWalkSim && !isViewingRemote) {
         document.getElementById('liveHeroImage').src = meta.img;
         document.getElementById('liveActivityMatIcon').textContent = meta.icon;
         document.getElementById('livePredictedActivity').textContent = meta.label;
@@ -2126,12 +2315,12 @@
       const winSteps = result.cnn_result.window_steps || 0;
       const winCadence = result.cnn_result.cadence_spm || 0;
       const peakIndices = result.cnn_result.step_peak_indices || [];
-      stepStats.lastWindowSteps = winSteps;
-      stepStats.lastWindowSpm = winCadence;
-      if (!isRecordingMobile && !isDesktopWalkSim) {
+      if (!isRecordingMobile && !isDesktopWalkSim && !isViewingRemote) {
+        stepStats.lastWindowSteps = winSteps;
+        stepStats.lastWindowSpm = winCadence;
         stepStats.cadenceSpm = winCadence;
+        renderStepCounterUI();
       }
-      renderStepCounterUI();
 
       // Simulator diagnostics stats
       const mean = arr => (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(4);
@@ -2197,11 +2386,12 @@
       if (el('analyticsCaloriesDisplay')) el('analyticsCaloriesDisplay').textContent = calStr;
       if (el('liveHeroCadence')) el('liveHeroCadence').textContent = spm || winSpm;
 
+      const pendingCnt = isViewingRemote ? (stepStats.remotePendingCount || 0) : pendingStepTimes.length;
       if (el('stepGaitLockNote')) {
         if (gaitStepLocked) {
           el('stepGaitLockNote').textContent = 'Gait locked (counting live)';
-        } else if (pendingStepTimes.length > 0) {
-          el('stepGaitLockNote').textContent = `Confirming rhythm (${pendingStepTimes.length}/3)...`;
+        } else if (pendingCnt > 0) {
+          el('stepGaitLockNote').textContent = `Confirming rhythm (${pendingCnt}/3)...`;
         } else if (total > 0) {
           el('stepGaitLockNote').textContent = 'Session step log active';
         } else {
@@ -2247,10 +2437,17 @@
       const spm = stepStats.lastWindowSpm > 0 ? stepStats.lastWindowSpm : 118;
       const actKey = currentContextState.current_activity || 'WALKING';
       registerConfirmedSteps(stepsToAdd, spm, actKey);
+      if (senderWs && senderWsReady) sendSenderTelemetryPacket([]);
       showToast(`Logged +${stepsToAdd} steps (${ACTIVITY_META[actKey].label})`);
     }
 
     function resetStepCounter() {
+      if (isViewingRemote && viewerWs && viewerWsReady) {
+        try {
+          viewerWs.send(JSON.stringify({ type: 'remote_command', command: 'reset_steps' }));
+          showToast('Sent step reset to waist phone');
+        } catch (_) {}
+      }
       stepStats = {
         total: 0,
         walking: 0,
@@ -2258,14 +2455,18 @@
         downstairs: 0,
         cadenceSpm: 0,
         lastWindowSteps: stepStats.lastWindowSteps || 0,
-        lastWindowSpm: stepStats.lastWindowSpm || 0
+        lastWindowSpm: stepStats.lastWindowSpm || 0,
+        remotePendingCount: 0
       };
       pendingStepTimes = [];
       gaitStepLocked = false;
       saveStepStats();
       renderStepCounterUI();
       triggerStepPulse('RESET');
-      showToast('Step counter reset');
+      if (senderWs && senderWsReady) {
+        sendSenderTelemetryPacket([]);
+      }
+      if (!isViewingRemote) showToast('Step counter reset');
     }
 
     function processRealtimeStepSample(sample, nowMs) {
@@ -2354,6 +2555,9 @@
       currentStepValleyVal = 0;
       samplesSincePrediction = 0;
       sensorPredictionInFlight = false;
+      deltaSampleQueue = [];
+      lastSentPredictAxes = null;
+      window.clearTimeout(wsPredictTimeout);
       sensorSessionId += 1;
     }
 
@@ -2374,7 +2578,8 @@
     }
 
     async function startMobileSensor() {
-      if (isDesktopWalkSim) stopDesktopWalkSimulation();
+      if (isViewingRemote) disconnectRelayViewer({ silent: true });
+      if (isDesktopWalkSim) stopDesktopWalkSimulation({ keepRelay: true });
       const stateEl = document.getElementById('sensorStateText');
 
       if (window.isSecureContext === false && !['localhost', '127.0.0.1'].includes(window.location.hostname)) {
@@ -2409,7 +2614,10 @@
       document.getElementById('stopSensorBtn').classList.remove('hidden');
       setLiveConnectionUI('Movement Sensor Active', 'LIVE', true);
       stateEl.textContent = 'Collecting 50 Hz samples (0 / 128)...';
-      document.getElementById('livePredictionStatus').textContent = 'Streaming 50 Hz accelerometer + gyroscope...';
+      document.getElementById('livePredictionStatus').textContent = 'Streaming 50 Hz accelerometer + gyroscope (Screen Wake Lock on)...';
+
+      requestScreenWakeLock();
+      startSenderRelay(getActiveBroadcastCode(), 'Waist Phone IMU');
 
       window.addEventListener('devicemotion', handleDeviceMotion);
       window.clearInterval(sensorSampleTimer);
@@ -2425,13 +2633,17 @@
       }, 2800);
     }
 
-    function stopMobileSensor() {
+    function stopMobileSensor(opts = {}) {
       isRecordingMobile = false;
       sensorSessionId += 1;
       window.clearTimeout(sensorStartupTimer);
+      window.clearTimeout(wsPredictTimeout);
       window.clearInterval(sensorSampleTimer);
       sensorSampleTimer = null;
+      sensorPredictionInFlight = false;
       window.removeEventListener('devicemotion', handleDeviceMotion);
+      releaseScreenWakeLock();
+      if (!opts.keepRelay) stopSenderRelay('paused');
       document.getElementById('startSensorBtn').classList.remove('hidden');
       document.getElementById('stopSensorBtn').classList.add('hidden');
       setLiveConnectionUI('Sensors Paused', 'PAUSED', false);
@@ -2446,7 +2658,7 @@
       }
     }
 
-    function onModelEngineChange() {
+    function onModelEngineChange(opts = {}) {
       const sel = document.getElementById('liveModelTypeSelect');
       if (!sel) return;
       const val = sel.value || 'cnn';
@@ -2458,14 +2670,24 @@
         ensemble: 'Ensemble CNN+ANN'
       };
       if (pill) pill.textContent = labels[val] || '1D-CNN Waist IMU';
-      showToast(`AI Engine: ${labels[val] || val.toUpperCase()}`);
+      if (!opts.silent) showToast(`AI Engine: ${labels[val] || val.toUpperCase()}`);
+
+      if (!opts.fromRemote && isViewingRemote && viewerWs && viewerWsReady) {
+        try {
+          viewerWs.send(JSON.stringify({ type: 'remote_command', command: 'set_model', model_type: val }));
+          if (!opts.silent) showToast(`Switched Waist Phone engine -> ${labels[val] || val.toUpperCase()}`);
+        } catch (_) {}
+        return;
+      }
+
       if (isRecordingMobile && sensorBuffer.length === 128 && !sensorPredictionInFlight) {
         requestLivePrediction();
       }
     }
 
     function startDesktopWalkSimulation() {
-      if (isRecordingMobile) stopMobileSensor();
+      if (isViewingRemote) disconnectRelayViewer({ silent: true });
+      if (isRecordingMobile) stopMobileSensor({ keepRelay: true });
       resetBuffersForNewStream();
       isDesktopWalkSim = true;
       isRecordingMobile = true;
@@ -2479,7 +2701,9 @@
       }
       document.getElementById('simLiveWalkLabel').textContent = 'Stop Demo';
       setLiveConnectionUI('Simulated 50 Hz Walk', 'DEMO LIVE', true);
-      document.getElementById('sensorStateText').textContent = 'Generating realistic 50 Hz walking telemetry for desktop testing...';
+      document.getElementById('sensorStateText').textContent = 'Generating realistic 50 Hz walking telemetry & broadcasting...';
+
+      startSenderRelay(getActiveBroadcastCode(), 'Desktop Demo Stream');
 
       window.clearInterval(sensorSampleTimer);
       sensorSampleTimer = window.setInterval(() => {
@@ -2497,17 +2721,26 @@
 
         gravityEstimate = [0.82, 0.25, 0.30];
         latestSensorSample = [bx, by, bz, gx, gy, gz, tx, ty, tz];
+        latestTelemetrySnapshot = {
+          acc: [Number(bx.toFixed(3)), Number(by.toFixed(3)), Number(bz.toFixed(3))],
+          gyro: [Number(gx.toFixed(3)), Number(gy.toFixed(3)), Number(gz.toFixed(3))],
+          tilt_deg: 78,
+          energy: Number(Math.hypot(bx, by, bz).toFixed(3))
+        };
         updateLiveAxisNumbers(bx, by, bz, gx, gy, gz, Math.hypot(bx, by, bz), 78);
         record50HzSampleTick();
       }, 20);
     }
 
-    function stopDesktopWalkSimulation() {
+    function stopDesktopWalkSimulation(opts = {}) {
       isDesktopWalkSim = false;
       isRecordingMobile = false;
       sensorSessionId += 1;
+      window.clearTimeout(wsPredictTimeout);
       window.clearInterval(sensorSampleTimer);
       sensorSampleTimer = null;
+      sensorPredictionInFlight = false;
+      if (!opts.keepRelay) stopSenderRelay('paused');
       document.getElementById('startSensorBtn').classList.remove('hidden');
       const simBtn = document.getElementById('simLiveWalkBtn');
       if (simBtn) {
@@ -2520,9 +2753,12 @@
 
     function resetLiveSensors() {
       const wasDemo = isDesktopWalkSim;
-      if (isDesktopWalkSim) stopDesktopWalkSimulation();
-      else if (isRecordingMobile) stopMobileSensor();
+      if (isDesktopWalkSim) stopDesktopWalkSimulation({ keepRelay: true });
+      else if (isRecordingMobile) stopMobileSensor({ keepRelay: true });
       resetBuffersForNewStream();
+      if (senderWs && senderWsReady) {
+        try { senderWs.send(JSON.stringify({ type: 'state_reset' })); } catch (_) {}
+      }
       updateSensorBufferStatus('Calibration reset · buffer cleared.');
       showToast('Sensor baseline & buffer reset');
       if (wasDemo) startDesktopWalkSimulation();
@@ -2612,6 +2848,12 @@
       const linMag = Math.hypot(ax, ay, az);
 
       updateLiveAxisNumbers(ax, ay, az, gx, gy, gz, linMag, pitchDeg);
+      latestTelemetrySnapshot = {
+        acc: [Number(ax.toFixed(3)), Number(ay.toFixed(3)), Number(az.toFixed(3))],
+        gyro: [Number(gx.toFixed(3)), Number(gy.toFixed(3)), Number(gz.toFixed(3))],
+        tilt_deg: pitchDeg,
+        energy: Number(linMag.toFixed(3))
+      };
       latestSensorSample = [ax, ay, az, gx, gy, gz, tx, ty, tz];
     }
 
@@ -2633,6 +2875,19 @@
       }
       samplesSincePrediction += 1;
 
+      // Queue compact 6-axis telemetry delta for low-latency PC streaming (~60ms micro-batches)
+      deltaSampleQueue.push([
+        Number(latestSensorSample[0].toFixed(3)),
+        Number(latestSensorSample[1].toFixed(3)),
+        Number(latestSensorSample[2].toFixed(3)),
+        Number(latestSensorSample[3].toFixed(3)),
+        Number(latestSensorSample[4].toFixed(3)),
+        Number(latestSensorSample[5].toFixed(3))
+      ]);
+      if (deltaSampleQueue.length >= 3) {
+        flushDeltaTelemetryBatch();
+      }
+
       if (sensorBuffer.length >= 8 && samplesSincePrediction % 2 === 0) {
         renderOscilloscope(
           sensorBuffer.map(s => s[0]),
@@ -2642,21 +2897,24 @@
       }
       updateSensorBufferStatus();
 
-      if (sensorBuffer.length === 128 && samplesSincePrediction >= 25 && !sensorPredictionInFlight) {
+      if (sensorBuffer.length === 128 && samplesSincePrediction >= 15 && !sensorPredictionInFlight) {
         requestLivePrediction();
       }
     }
 
     function updateSensorBufferStatus(overrideMsg) {
+      if (isViewingRemote && !overrideMsg) return;
       const count = sensorBuffer.length;
       document.getElementById('bufferCountText').textContent = `[${count} / 128]`;
       document.getElementById('bufferProgressBar').style.width = `${Math.min(100, (count / 128) * 100)}%`;
       if (overrideMsg) {
         document.getElementById('sensorStateText').textContent = overrideMsg;
       } else if (isRecordingMobile && !sensorPredictionInFlight) {
+        const pairCode = getActiveBroadcastCode();
+        const relaySuffix = senderWsReady ? ` · Live on code ${pairCode}` : '';
         document.getElementById('sensorStateText').textContent = count < 128
-          ? `Calibrating 50 Hz window (${count} / 128)...`
-          : `Streaming live 50 Hz AI inference (${isDesktopWalkSim ? 'Demo Walk' : 'Phone IMU'})`;
+          ? `Calibrating 50 Hz window (${count} / 128)${relaySuffix}...`
+          : `Streaming 50 Hz AI inference (${isDesktopWalkSim ? 'Demo Walk' : 'Phone IMU'})${relaySuffix}`;
       }
     }
 
@@ -2708,6 +2966,98 @@
       };
     }
 
+    function applyLivePredictionResult(result, accXSeries, accYSeries, accZSeries, measuredRateHz, selectedModel, isRemoteMirror = false) {
+      const stabilized = stabilizePrediction(result.probabilities || {});
+      const act = stabilized.activity;
+      const conf = stabilized.confidence;
+      const probs = stabilized.probabilities;
+      const meta = ACTIVITY_META[act] || ACTIVITY_META.WALKING;
+      const confStr = (conf * 100).toFixed(1);
+      const latStr = typeof result.latency_ms === 'number' ? `${result.latency_ms} ms` : '-- ms';
+
+      currentContextState.current_activity = act;
+      currentContextState.confidence = conf;
+
+      document.getElementById('liveHeroImage').src = meta.img;
+      document.getElementById('liveActivityMatIcon').textContent = meta.icon;
+      document.getElementById('livePredictedActivity').textContent = meta.label;
+      document.getElementById('livePredictionConfidence').textContent = isRemoteMirror && relayRttMs !== null
+        ? `${confStr}% · ~${relayRttMs}ms link`
+        : `${confStr}% · ${latStr}`;
+      document.getElementById('liveConfidenceBar').style.width = `${Math.min(100, conf * 100)}%`;
+      document.getElementById('liveMovementType').textContent = meta.movement;
+      document.getElementById('livePaceLabel').textContent = meta.pace;
+      document.getElementById('livePredictionStatus').textContent = isRemoteMirror
+        ? `PC Live Mirror · ${result.model_used} (${measuredRateHz.toFixed(0)} Hz)`
+        : `Smooth lock (${result.model_used} · ${measuredRateHz.toFixed(0)} Hz)`;
+
+      document.getElementById('analyticsHeroImage').src = meta.img;
+      document.getElementById('analyticsActIcon').textContent = meta.icon;
+      document.getElementById('ensPredLabel').textContent = meta.label;
+      document.getElementById('ensConf').textContent = `${confStr}%`;
+      document.getElementById('analyticsLatencyText').textContent = latStr;
+
+      if (selectedModel === 'ann') {
+        document.getElementById('annPredLabel').textContent = meta.label;
+        document.getElementById('annConf').textContent = `${confStr}%`;
+        document.getElementById('annLatency').textContent = latStr;
+        document.getElementById('cnnPredLabel').textContent = 'Standby';
+        document.getElementById('cnnConf').textContent = '--%';
+        document.getElementById('cnnLatency').textContent = '--';
+        document.getElementById('ensembleMethod').textContent = isRemoteMirror ? 'PC Mirror ANN' : 'Live ANN';
+      } else if (selectedModel === 'ensemble') {
+        document.getElementById('cnnPredLabel').textContent = meta.label;
+        document.getElementById('cnnConf').textContent = `${confStr}%`;
+        document.getElementById('cnnLatency').textContent = latStr;
+        document.getElementById('annPredLabel').textContent = meta.label;
+        document.getElementById('annConf').textContent = `${confStr}%`;
+        document.getElementById('annLatency').textContent = latStr;
+        document.getElementById('ensembleMethod').textContent = isRemoteMirror ? 'PC Fusion' : 'Live Fusion';
+      } else {
+        document.getElementById('cnnPredLabel').textContent = meta.label;
+        document.getElementById('cnnConf').textContent = `${confStr}%`;
+        document.getElementById('cnnLatency').textContent = latStr;
+        document.getElementById('annPredLabel').textContent = 'Standby';
+        document.getElementById('annConf').textContent = '--%';
+        document.getElementById('annLatency').textContent = '--';
+        document.getElementById('ensembleMethod').textContent = isRemoteMirror ? 'PC Mirror CNN' : 'Live 1D-CNN';
+      }
+
+      renderLiveBreakdownCards(probs);
+      renderCustomProbBars(probs);
+
+      const winSteps = result.window_steps || 0;
+      const winCadence = result.cadence_spm || 0;
+      const peaks = result.step_peak_indices || [];
+      stepStats.lastWindowSteps = winSteps;
+      stepStats.lastWindowSpm = winCadence;
+      if (!isRemoteMirror) {
+        if (winCadence > 0 && act.startsWith('WALKING')) {
+          stepStats.cadenceSpm = stepStats.cadenceSpm > 0 ? 0.6 * stepStats.cadenceSpm + 0.4 * winCadence : winCadence;
+        } else if (!act.startsWith('WALKING')) {
+          stepStats.cadenceSpm = 0;
+        }
+      }
+      renderStepCounterUI();
+
+      if (Array.isArray(accXSeries) && accXSeries.length >= 2) {
+        renderOscilloscope(accXSeries, accYSeries, accZSeries);
+        if (waveChartInstance) {
+          waveChartInstance.data.datasets[0].data = accXSeries;
+          waveChartInstance.data.datasets[1].data = accYSeries;
+          waveChartInstance.data.datasets[2].data = accZSeries;
+          waveChartInstance.data.datasets[3].data = buildStepPeakDataset(accXSeries, peaks);
+          waveChartInstance.update('none');
+        }
+      }
+      if (probChartInstance) {
+        const pArr = ACTIVITIES.map(a => probs[a]);
+        probChartInstance.data.datasets[0].data = selectedModel === 'ann' ? ACTIVITIES.map(() => 0) : pArr;
+        probChartInstance.data.datasets[1].data = selectedModel === 'cnn' ? ACTIVITIES.map(() => 0) : pArr;
+        probChartInstance.update('none');
+      }
+    }
+
     async function requestLivePrediction() {
       const requestSess = sensorSessionId;
       sensorPredictionInFlight = true;
@@ -2722,6 +3072,44 @@
       const selectedModel = modelSelect ? modelSelect.value : 'cnn';
       currentContextState.selected_model = selectedModel;
 
+      const accXSeries = windowCopy.map(s => s[0]);
+      const accYSeries = windowCopy.map(s => s[1]);
+      const accZSeries = windowCopy.map(s => s[2]);
+
+      // Fast Path: 1-hop binary/JSON frame over already-open WebSocket (broadcasts simultaneously to Phone + PC!)
+      if (senderWs && senderWsReady) {
+        lastSentPredictAxes = {
+          x: accXSeries,
+          y: accYSeries,
+          z: accZSeries,
+          rateHz: measuredRateHz,
+          modelType: selectedModel,
+          sess: requestSess
+        };
+        try {
+          senderWs.send(JSON.stringify({
+            type: 'predict',
+            window: windowCopy,
+            model_type: selectedModel,
+            sample_rate_hz: Number(measuredRateHz.toFixed(2)),
+            previous_activity: stableActivity,
+            steps: buildStepsSyncPayload(),
+            client_ts: Math.round(performance.now())
+          }));
+          window.clearTimeout(wsPredictTimeout);
+          wsPredictTimeout = window.setTimeout(() => {
+            if (requestSess === sensorSessionId && sensorPredictionInFlight) {
+              sensorPredictionInFlight = false;
+              updateSensorBufferStatus();
+            }
+          }, 3500);
+          return;
+        } catch (_) {
+          senderWsReady = false;
+        }
+      }
+
+      // HTTP Fallback Path (still publishes prediction to relay room if room code exists)
       try {
         const result = await apiJson('/predict', {
           method: 'POST',
@@ -2730,95 +3118,13 @@
             window: windowCopy,
             model_type: selectedModel,
             sample_rate_hz: Number(measuredRateHz.toFixed(2)),
-            previous_activity: stableActivity
+            previous_activity: stableActivity,
+            room_code: getActiveBroadcastCode()
           })
         });
         if (!isRecordingMobile || requestSess !== sensorSessionId) return;
-
-        const stabilized = stabilizePrediction(result.probabilities || {});
-        const act = stabilized.activity;
-        const conf = stabilized.confidence;
-        const probs = stabilized.probabilities;
-        const meta = ACTIVITY_META[act] || ACTIVITY_META.WALKING;
-        const confStr = (conf * 100).toFixed(1);
-
-        currentContextState.current_activity = act;
-        currentContextState.confidence = conf;
-
-        document.getElementById('liveHeroImage').src = meta.img;
-        document.getElementById('liveActivityMatIcon').textContent = meta.icon;
-        document.getElementById('livePredictedActivity').textContent = meta.label;
-        document.getElementById('livePredictionConfidence').textContent = `${confStr}% · ${result.latency_ms} ms`;
-        document.getElementById('liveConfidenceBar').style.width = `${Math.min(100, conf * 100)}%`;
-        document.getElementById('liveMovementType').textContent = meta.movement;
-        document.getElementById('livePaceLabel').textContent = meta.pace;
-        document.getElementById('livePredictionStatus').textContent = `Smooth lock (${result.model_used} · ${measuredRateHz.toFixed(0)} Hz)`;
-
-        document.getElementById('analyticsHeroImage').src = meta.img;
-        document.getElementById('analyticsActIcon').textContent = meta.icon;
-        document.getElementById('ensPredLabel').textContent = meta.label;
-        document.getElementById('ensConf').textContent = `${confStr}%`;
-        document.getElementById('analyticsLatencyText').textContent = `${result.latency_ms} ms`;
-
-        if (selectedModel === 'ann') {
-          document.getElementById('annPredLabel').textContent = meta.label;
-          document.getElementById('annConf').textContent = `${confStr}%`;
-          document.getElementById('annLatency').textContent = `${result.latency_ms} ms`;
-          document.getElementById('cnnPredLabel').textContent = 'Standby';
-          document.getElementById('cnnConf').textContent = '--%';
-          document.getElementById('cnnLatency').textContent = '--';
-          document.getElementById('ensembleMethod').textContent = 'Live ANN';
-        } else if (selectedModel === 'ensemble') {
-          document.getElementById('cnnPredLabel').textContent = meta.label;
-          document.getElementById('cnnConf').textContent = `${confStr}%`;
-          document.getElementById('cnnLatency').textContent = `${result.latency_ms} ms`;
-          document.getElementById('annPredLabel').textContent = meta.label;
-          document.getElementById('annConf').textContent = `${confStr}%`;
-          document.getElementById('annLatency').textContent = `${result.latency_ms} ms`;
-          document.getElementById('ensembleMethod').textContent = 'Live Fusion';
-        } else {
-          document.getElementById('cnnPredLabel').textContent = meta.label;
-          document.getElementById('cnnConf').textContent = `${confStr}%`;
-          document.getElementById('cnnLatency').textContent = `${result.latency_ms} ms`;
-          document.getElementById('annPredLabel').textContent = 'Standby';
-          document.getElementById('annConf').textContent = '--%';
-          document.getElementById('annLatency').textContent = '--';
-          document.getElementById('ensembleMethod').textContent = 'Live 1D-CNN';
-        }
-
-        renderLiveBreakdownCards(probs);
-        renderCustomProbBars(probs);
-
-        const winSteps = result.window_steps || 0;
-        const winCadence = result.cadence_spm || 0;
-        const peaks = result.step_peak_indices || [];
-        stepStats.lastWindowSteps = winSteps;
-        stepStats.lastWindowSpm = winCadence;
-        if (winCadence > 0 && act.startsWith('WALKING')) {
-          stepStats.cadenceSpm = stepStats.cadenceSpm > 0 ? 0.6 * stepStats.cadenceSpm + 0.4 * winCadence : winCadence;
-        } else if (!act.startsWith('WALKING')) {
-          stepStats.cadenceSpm = 0;
-        }
-        renderStepCounterUI();
-
-        const accXSeries = windowCopy.map(s => s[0]);
-        const accYSeries = windowCopy.map(s => s[1]);
-        const accZSeries = windowCopy.map(s => s[2]);
-        renderOscilloscope(accXSeries, accYSeries, accZSeries);
-
-        if (waveChartInstance) {
-          waveChartInstance.data.datasets[0].data = accXSeries;
-          waveChartInstance.data.datasets[1].data = accYSeries;
-          waveChartInstance.data.datasets[2].data = accZSeries;
-          waveChartInstance.data.datasets[3].data = buildStepPeakDataset(accXSeries, peaks);
-          waveChartInstance.update('none');
-        }
-        if (probChartInstance) {
-          const pArr = ACTIVITIES.map(a => probs[a]);
-          probChartInstance.data.datasets[0].data = selectedModel === 'ann' ? ACTIVITIES.map(() => 0) : pArr;
-          probChartInstance.data.datasets[1].data = selectedModel === 'cnn' ? ACTIVITIES.map(() => 0) : pArr;
-          probChartInstance.update('none');
-        }
+        applyLivePredictionResult(result, accXSeries, accYSeries, accZSeries, measuredRateHz, selectedModel, false);
+        publishRelayHttpFallback(result);
       } catch (err) {
         if (isRecordingMobile) {
           document.getElementById('sensorStateText').textContent = `Prediction paused: ${err.message}`;
@@ -2827,7 +3133,7 @@
         if (requestSess === sensorSessionId) {
           sensorPredictionInFlight = false;
           updateSensorBufferStatus();
-          if (isRecordingMobile && sensorBuffer.length === 128 && samplesSincePrediction >= 25) {
+          if (isRecordingMobile && sensorBuffer.length === 128 && samplesSincePrediction >= 15) {
             requestLivePrediction();
           }
         }
@@ -3034,13 +3340,837 @@
 
     function copyTextValue(val, btn) {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(val).then(() => showToast(`Copied ${val}`));
+        navigator.clipboard.writeText(val).then(() => showToast(`Copied ${val}`)).catch(() => showToast(val));
       } else {
         showToast(val);
       }
     }
 
+    // ==================== MULTI-DEVICE RELAY (WAIST PHONE -> PC) & WAKE LOCK ====================
+    function isSenderStreamingActive() {
+      return isRecordingMobile || isDesktopWalkSim;
+    }
+
+    function getActiveBroadcastCode() {
+      return relaySenderTargetCode || relayMyCode || '';
+    }
+
+    function persistBroadcastCode(code) {
+      relayMyCode = code;
+      try {
+        localStorage.setItem('har_relay_code', code);
+      } catch (_) {}
+    }
+
+    function buildRelayWsUrl(code, role, label) {
+      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const qs = new URLSearchParams({ role });
+      if (sessionToken) qs.set('token', sessionToken);
+      if (label) qs.set('label', label);
+      return `${proto}//${window.location.host}/ws/live/${encodeURIComponent(code)}?${qs.toString()}`;
+    }
+
+    function getPairPhoneUrl(code) {
+      const clean = (code || '').trim().toUpperCase();
+      return `${window.location.origin}/?pair=${encodeURIComponent(clean)}&role=sender`;
+    }
+
+    function setRelayStatusUI(text, tone = 'neutral') {
+      const pill = document.getElementById('relayStatusPill');
+      if (!pill) return;
+      pill.textContent = text;
+      if (tone === 'live') {
+        pill.className = 'font-mono-tech text-[10px] font-bold px-2 py-0.5 rounded-full bg-tertiary text-on-tertiary uppercase';
+      } else if (tone === 'wait') {
+        pill.className = 'font-mono-tech text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary-fixed text-primary uppercase';
+      } else if (tone === 'error') {
+        pill.className = 'font-mono-tech text-[10px] font-bold px-2 py-0.5 rounded-full bg-error-container text-on-error-container uppercase';
+      } else {
+        pill.className = 'font-mono-tech text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant uppercase';
+      }
+    }
+
+    function setRelayLatencyUI(rttMs) {
+      const el = document.getElementById('relayLatencyPill');
+      if (!el) return;
+      el.textContent = typeof rttMs === 'number' && Number.isFinite(rttMs)
+        ? `Link: ${Math.max(1, Math.round(rttMs))} ms`
+        : 'Link: -- ms';
+    }
+
+    function updateRelayCodeUI() {
+      const code = getActiveBroadcastCode();
+      const myCodeEl = document.getElementById('relayMyCodeText');
+      const noteEl = document.getElementById('relayTargetNote');
+      const echoEl = document.getElementById('relayQrCodeEcho');
+      const linkEl = document.getElementById('relayPairLinkText');
+
+      if (myCodeEl) myCodeEl.textContent = code || '------';
+      if (echoEl) echoEl.textContent = code || '------';
+      if (linkEl) linkEl.textContent = code ? getPairPhoneUrl(code) : 'https://...';
+
+      if (noteEl) {
+        if (relaySenderTargetCode) {
+          noteEl.textContent = `Linked to PC Monitor ${relaySenderTargetCode}`;
+          noteEl.className = 'text-[11px] text-tertiary font-semibold truncate';
+        } else {
+          noteEl.textContent = 'Auto-sends on Start Live Tracking';
+          noteEl.className = 'text-[11px] text-on-surface-variant truncate';
+        }
+      }
+
+      if (relayQrOpen && code) {
+        renderRelayQrCode(code);
+      }
+    }
+
+    function renderRelayQrCode(code) {
+      const box = document.getElementById('relayQrBox');
+      if (!box || !code) return;
+      const targetUrl = getPairPhoneUrl(code);
+      try {
+        if (typeof window.qrcode === 'function') {
+          const qr = window.qrcode(0, 'M');
+          qr.addData(targetUrl);
+          qr.make();
+          box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 1 });
+          const svg = box.querySelector('svg');
+          if (svg) {
+            svg.style.width = '100%';
+            svg.style.height = '100%';
+            svg.setAttribute('aria-label', `QR code for pair ${code}`);
+          }
+          return;
+        }
+      } catch (_) {}
+      box.innerHTML = `<div class="text-center font-mono-tech text-xs font-bold text-primary">${escapeHTML(code)}</div>`;
+    }
+
+    function toggleRelayQrDrawer(forceState) {
+      const panel = document.getElementById('relayQrPanel');
+      const label = document.getElementById('toggleRelayQrLabel');
+      if (!panel) return;
+      relayQrOpen = typeof forceState === 'boolean' ? forceState : !relayQrOpen;
+      panel.classList.toggle('hidden', !relayQrOpen);
+      if (label) label.textContent = relayQrOpen ? 'Hide QR' : 'QR & Link';
+      if (relayQrOpen) {
+        const code = getActiveBroadcastCode();
+        if (code) renderRelayQrCode(code);
+      }
+    }
+
+    function copyRelayPairCode() {
+      const code = getActiveBroadcastCode();
+      if (!code) {
+        showToast('Generating pair code...', true);
+        return;
+      }
+      copyTextValue(code);
+    }
+
+    function copyRelayPairLink() {
+      const code = getActiveBroadcastCode();
+      if (!code) return;
+      copyTextValue(getPairPhoneUrl(code));
+    }
+
+    async function initRelaySession() {
+      if (!relayMyCode) {
+        try {
+          const data = await apiJson('/api/relay/create', { method: 'POST' });
+          if (data && data.room_code) persistBroadcastCode(data.room_code);
+        } catch (_) {
+          persistBroadcastCode(String(Math.floor(100000 + Math.random() * 900000)));
+        }
+      }
+      updateRelayCodeUI();
+    }
+
+    async function regenerateRelayRoomCode() {
+      relaySenderTargetCode = '';
+      try {
+        const data = await apiJson('/api/relay/create', { method: 'POST' });
+        if (data && data.room_code) persistBroadcastCode(data.room_code);
+      } catch (_) {
+        persistBroadcastCode(String(Math.floor(100000 + Math.random() * 900000)));
+      }
+      updateRelayCodeUI();
+      showToast(`New broadcast code: ${getActiveBroadcastCode()}`);
+      if (isSenderStreamingActive()) {
+        startSenderRelay(getActiveBroadcastCode(), senderLabel);
+      }
+    }
+
+    async function openPcHostQrMode() {
+      if (!relayMyCode) await initRelaySession();
+      const hostCode = relayMyCode;
+      relaySenderTargetCode = '';
+      updateRelayCodeUI();
+      toggleRelayQrDrawer(true);
+      await connectRelayViewer(hostCode);
+      showToast(`PC Monitor ready on code ${hostCode} — scan QR on phone`);
+    }
+
+    async function applyUrlPairIntent() {
+      if (!urlPairCode || urlPairApplied) return;
+      urlPairApplied = true;
+      if (urlPairRole === 'sender') {
+        relaySenderTargetCode = urlPairCode;
+        persistBroadcastCode(urlPairCode);
+        updateRelayCodeUI();
+        setRelayStatusUI(`Linked: ${urlPairCode}`, 'wait');
+        const stEl = document.getElementById('livePredictionStatus');
+        if (stEl) {
+          stEl.textContent = `Paired to PC Monitor (${urlPairCode}) · Tap Start Live Tracking & place phone at waist!`;
+        }
+        showToast(`Phone linked to PC ${urlPairCode} — tap Start Live Tracking!`);
+      } else {
+        const inp = document.getElementById('relayViewerCodeInput');
+        if (inp) inp.value = urlPairCode;
+        await connectRelayViewer(urlPairCode);
+      }
+    }
+
+    async function checkActiveAccountPhoneStream() {
+      if (!isAuthenticated || (currentUserInfo && currentUserInfo.is_guest) || isViewingRemote || isSenderStreamingActive()) {
+        return;
+      }
+      try {
+        const data = await apiJson('/api/relay/active');
+        const banner = document.getElementById('accountAutoPhoneBanner');
+        const codeEl = document.getElementById('accountAutoPhoneCode');
+        if (data && data.sender_active && data.room_code && data.room_code !== getActiveBroadcastCode()) {
+          detectedAccountRoomCode = data.room_code;
+          if (codeEl) codeEl.textContent = detectedAccountRoomCode;
+          if (banner) banner.classList.remove('hidden');
+        } else if (banner) {
+          banner.classList.add('hidden');
+        }
+      } catch (_) {}
+    }
+
+    function connectDetectedAccountPhone() {
+      if (!detectedAccountRoomCode) return;
+      const banner = document.getElementById('accountAutoPhoneBanner');
+      if (banner) banner.classList.add('hidden');
+      connectRelayViewer(detectedAccountRoomCode);
+    }
+
+    async function requestScreenWakeLock() {
+      if (!('wakeLock' in navigator) || !navigator.wakeLock || typeof navigator.wakeLock.request !== 'function') {
+        return;
+      }
+      try {
+        if (wakeLockSentinel) return;
+        wakeLockSentinel = await navigator.wakeLock.request('screen');
+        wakeLockSentinel.addEventListener('release', () => {
+          wakeLockSentinel = null;
+        });
+      } catch (_) {}
+    }
+
+    function releaseScreenWakeLock() {
+      if (wakeLockSentinel && typeof wakeLockSentinel.release === 'function') {
+        wakeLockSentinel.release().catch(() => {});
+      }
+      wakeLockSentinel = null;
+    }
+
+    function buildStepsSyncPayload() {
+      return {
+        total: stepStats.total || 0,
+        walking: stepStats.walking || 0,
+        upstairs: stepStats.upstairs || 0,
+        downstairs: stepStats.downstairs || 0,
+        cadenceSpm: Math.round(stepStats.cadenceSpm || 0),
+        lastWindowSteps: stepStats.lastWindowSteps || 0,
+        lastWindowSpm: Math.round(stepStats.lastWindowSpm || 0),
+        gaitStepLocked: !!gaitStepLocked,
+        pendingCount: pendingStepTimes.length || 0
+      };
+    }
+
+    function startSenderRelay(code, label = 'Waist Phone IMU') {
+      const clean = (code || getActiveBroadcastCode()).trim().toUpperCase();
+      if (!/^[A-Z0-9]{4,12}$/.test(clean)) return;
+      senderLabel = label;
+
+      window.clearTimeout(senderReconnectTimer);
+      if (senderWs) {
+        try {
+          senderWs.onclose = null;
+          senderWs.close();
+        } catch (_) {}
+        senderWs = null;
+      }
+      senderWsReady = false;
+      setRelayStatusUI(`Connecting ${clean}...`, 'wait');
+
+      let ws;
+      try {
+        ws = new WebSocket(buildRelayWsUrl(clean, 'sender', label));
+      } catch (_) {
+        setRelayStatusUI(`HTTP Relay ${clean}`, 'wait');
+        return;
+      }
+      senderWs = ws;
+
+      ws.onopen = () => {
+        if (senderWs !== ws || !isSenderStreamingActive()) return;
+        senderWsReady = true;
+        setRelayStatusUI(`Broadcasting · ${clean}`, 'live');
+        updateSensorBufferStatus();
+      };
+
+      ws.onmessage = ev => {
+        if (senderWs !== ws) return;
+        try {
+          const msg = JSON.parse(ev.data);
+          handleSenderRelayMessage(msg);
+        } catch (_) {}
+      };
+
+      ws.onclose = () => {
+        if (senderWs !== ws) return;
+        senderWsReady = false;
+        window.clearTimeout(wsPredictTimeout);
+        if (sensorPredictionInFlight) {
+          sensorPredictionInFlight = false;
+        }
+        if (isSenderStreamingActive()) {
+          setRelayStatusUI(`Reconnecting ${clean}...`, 'wait');
+          senderReconnectTimer = window.setTimeout(() => {
+            if (isSenderStreamingActive()) startSenderRelay(clean, senderLabel);
+          }, 1200);
+        } else {
+          setRelayStatusUI('Sync Standby', 'neutral');
+          setRelayLatencyUI(null);
+        }
+      };
+
+      ws.onerror = () => {
+        senderWsReady = false;
+      };
+    }
+
+    function stopSenderRelay(reason = 'paused') {
+      window.clearTimeout(senderReconnectTimer);
+      senderWsReady = false;
+      deltaSampleQueue = [];
+      const code = getActiveBroadcastCode();
+
+      if (senderWs) {
+        const ws = senderWs;
+        senderWs = null;
+        try {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'sender_status', active: false, reason }));
+          }
+          ws.onclose = null;
+          ws.close();
+        } catch (_) {}
+      } else if (code && isAuthenticated) {
+        fetch(`/api/relay/${encodeURIComponent(code)}/publish`, {
+          method: 'POST',
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ sender_active: false })
+        }).catch(() => {});
+      }
+
+      if (!isViewingRemote) {
+        setRelayStatusUI('Sync Standby', 'neutral');
+        setRelayLatencyUI(null);
+      }
+    }
+
+    function sendSenderTelemetryPacket(samplesBatch) {
+      const payload = {
+        type: 'telemetry',
+        label: senderLabel,
+        samples: samplesBatch,
+        acc: latestTelemetrySnapshot.acc,
+        gyro: latestTelemetrySnapshot.gyro,
+        tilt_deg: latestTelemetrySnapshot.tilt_deg,
+        energy: latestTelemetrySnapshot.energy,
+        buffer_count: sensorBuffer.length,
+        steps: buildStepsSyncPayload(),
+        model_type: currentContextState.selected_model
+      };
+
+      if (senderWs && senderWsReady && senderWs.readyState === WebSocket.OPEN) {
+        try {
+          senderWs.send(JSON.stringify(payload));
+          return;
+        } catch (_) {
+          senderWsReady = false;
+        }
+      }
+
+      const now = performance.now();
+      if (now - senderHttpFallbackLastTs >= 350 && isAuthenticated) {
+        senderHttpFallbackLastTs = now;
+        publishRelayHttpFallback(null, payload);
+      }
+    }
+
+    function flushDeltaTelemetryBatch() {
+      if (!deltaSampleQueue.length) return;
+      const batch = deltaSampleQueue.splice(0, deltaSampleQueue.length);
+      sendSenderTelemetryPacket(batch);
+    }
+
+    function publishRelayHttpFallback(predObj = null, telemObj = null) {
+      const code = getActiveBroadcastCode();
+      if (!code || !isAuthenticated) return;
+      const body = { sender_active: true, sender_label: senderLabel };
+      if (telemObj) {
+        body.telemetry = {
+          samples: telemObj.samples,
+          acc: telemObj.acc,
+          gyro: telemObj.gyro,
+          tilt_deg: telemObj.tilt_deg,
+          energy: telemObj.energy,
+          buffer_count: telemObj.buffer_count,
+          steps: telemObj.steps,
+          model_type: telemObj.model_type
+        };
+      }
+      if (predObj) body.prediction = predObj;
+
+      fetch(`/api/relay/${encodeURIComponent(code)}/publish`, {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(body)
+      }).catch(() => {});
+    }
+
+    function handleSenderRelayMessage(msg) {
+      if (!msg || typeof msg !== 'object') return;
+      const code = getActiveBroadcastCode();
+
+      if (msg.type === 'relay_ready') {
+        const cnt = Number(msg.viewer_count || 0);
+        setRelayStatusUI(cnt > 0 ? `Live · ${cnt} PC Watching` : `Broadcasting · ${code}`, 'live');
+      } else if (msg.type === 'viewer_count') {
+        const cnt = Number(msg.viewer_count || 0);
+        setRelayStatusUI(cnt > 0 ? `Live · ${cnt} PC Watching` : `Broadcasting · ${code}`, 'live');
+        if (cnt > 0) sendSenderTelemetryPacket([]);
+      } else if (msg.type === 'prediction') {
+        window.clearTimeout(wsPredictTimeout);
+        const axes = lastSentPredictAxes;
+        const activeMatch = isSenderStreamingActive() && (!axes || axes.sess === sensorSessionId);
+        sensorPredictionInFlight = false;
+        if (activeMatch && msg.prediction) {
+          if (typeof msg.client_ts === 'number' && msg.client_ts > 0) {
+            const loopMs = Math.max(1, Math.round(performance.now() - msg.client_ts));
+            setRelayLatencyUI(loopMs);
+          }
+          const xs = axes ? axes.x : sensorBuffer.map(s => s[0]);
+          const ys = axes ? axes.y : sensorBuffer.map(s => s[1]);
+          const zs = axes ? axes.z : sensorBuffer.map(s => s[2]);
+          const rate = axes ? axes.rateHz : 50.0;
+          const mType = axes ? axes.modelType : currentContextState.selected_model;
+          applyLivePredictionResult(msg.prediction, xs, ys, zs, rate, mType, false);
+        }
+        updateSensorBufferStatus();
+        if (isSenderStreamingActive() && sensorBuffer.length === 128 && samplesSincePrediction >= 15 && !sensorPredictionInFlight) {
+          requestLivePrediction();
+        }
+      } else if (msg.type === 'predict_error') {
+        window.clearTimeout(wsPredictTimeout);
+        sensorPredictionInFlight = false;
+        updateSensorBufferStatus();
+      } else if (msg.type === 'remote_command') {
+        handleRemoteCommand(msg);
+      }
+    }
+
+    function handleRemoteCommand(msg) {
+      if (msg.command === 'set_model' && typeof msg.model_type === 'string') {
+        const sel = document.getElementById('liveModelTypeSelect');
+        if (sel && ['cnn', 'ann', 'ensemble'].includes(msg.model_type)) {
+          sel.value = msg.model_type;
+          onModelEngineChange({ fromRemote: true, silent: true });
+          sendSenderTelemetryPacket([]);
+        }
+      } else if (msg.command === 'reset_steps') {
+        stepStats = {
+          total: 0,
+          walking: 0,
+          upstairs: 0,
+          downstairs: 0,
+          cadenceSpm: 0,
+          lastWindowSteps: stepStats.lastWindowSteps || 0,
+          lastWindowSpm: stepStats.lastWindowSpm || 0,
+          remotePendingCount: 0
+        };
+        pendingStepTimes = [];
+        gaitStepLocked = false;
+        saveStepStats();
+        renderStepCounterUI();
+        triggerStepPulse('RESET');
+        sendSenderTelemetryPacket([]);
+      }
+    }
+
+    async function connectRelayViewer(explicitCode) {
+      const inp = document.getElementById('relayViewerCodeInput');
+      const raw = typeof explicitCode === 'string' && explicitCode.trim()
+        ? explicitCode
+        : (inp ? inp.value : '');
+      const clean = (raw || '').replace(/[\s-]+/g, '').toUpperCase();
+      if (!/^[A-Z0-9]{4,12}$/.test(clean)) {
+        showToast('Enter a valid 4–12 character phone code (e.g. 482915)', true);
+        if (inp) inp.focus();
+        return;
+      }
+      if (inp) inp.value = clean;
+
+      // Stop local IMU or Demo Stream on this tab so remote PC monitor owns the Live canvas
+      if (isDesktopWalkSim) stopDesktopWalkSimulation();
+      else if (isRecordingMobile) stopMobileSensor();
+
+      window.clearTimeout(viewerReconnectTimer);
+      window.clearInterval(viewerPollTimer);
+      window.clearInterval(viewerPingTimer);
+      if (viewerWs) {
+        try {
+          viewerWs.onclose = null;
+          viewerWs.close();
+        } catch (_) {}
+        viewerWs = null;
+      }
+
+      isViewingRemote = true;
+      viewerRoomCode = clean;
+      viewerWsReady = false;
+      pcBuffer = [];
+      relayLastSeq = 0;
+      relayRttMs = null;
+      smoothedProbabilities = null;
+      stableActivity = null;
+      candidateActivity = null;
+      candidateStreak = 0;
+
+      const banner = document.getElementById('pcViewerBanner');
+      const title = document.getElementById('pcViewerTitle');
+      const sub = document.getElementById('pcViewerSubtext');
+      if (banner) banner.classList.remove('hidden');
+      if (title) title.textContent = `PC Monitor Connecting · Room ${clean}`;
+      if (sub) sub.textContent = 'Waiting for waist phone stream · Switch AI Engine above anytime';
+
+      setRelayStatusUI(`PC Watching · ${clean}`, 'wait');
+      setLiveConnectionUI(`PC Monitor (${clean})`, 'MIRROR', true);
+      document.getElementById('sensorStateText').textContent = `Connected to room ${clean} · waiting for waist phone...`;
+
+      const openViewerSocket = () => {
+        if (!isViewingRemote || viewerRoomCode !== clean) return;
+        let ws;
+        try {
+          ws = new WebSocket(buildRelayWsUrl(clean, 'viewer'));
+        } catch (_) {
+          startViewerHttpFallback(clean);
+          return;
+        }
+        viewerWs = ws;
+
+        const wsFallbackTimeout = window.setTimeout(() => {
+          if (viewerWs === ws && !viewerWsReady && isViewingRemote) {
+            startViewerHttpFallback(clean);
+          }
+        }, 3000);
+
+        ws.onopen = () => {
+          window.clearTimeout(wsFallbackTimeout);
+          if (viewerWs !== ws || !isViewingRemote) return;
+          viewerWsReady = true;
+          window.clearInterval(viewerPollTimer);
+          viewerPollTimer = null;
+          try {
+            ws.send(JSON.stringify({ type: 'ping', t: performance.now() }));
+          } catch (_) {}
+          window.clearInterval(viewerPingTimer);
+          viewerPingTimer = window.setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              try { ws.send(JSON.stringify({ type: 'ping', t: performance.now() })); } catch (_) {}
+            }
+          }, 3000);
+        };
+
+        ws.onmessage = ev => {
+          if (viewerWs !== ws || !isViewingRemote) return;
+          try {
+            const msg = JSON.parse(ev.data);
+            handleViewerRelayMessage(msg);
+          } catch (_) {}
+        };
+
+        ws.onclose = () => {
+          window.clearTimeout(wsFallbackTimeout);
+          if (viewerWs !== ws) return;
+          viewerWsReady = false;
+          window.clearInterval(viewerPingTimer);
+          if (isViewingRemote && viewerRoomCode === clean) {
+            setRelayStatusUI(`Reconnecting ${clean}...`, 'wait');
+            startViewerHttpFallback(clean);
+            viewerReconnectTimer = window.setTimeout(openViewerSocket, 4000);
+          }
+        };
+
+        ws.onerror = () => {
+          viewerWsReady = false;
+        };
+      };
+
+      openViewerSocket();
+    }
+
+    function syncRemoteStepsFromPayload(stepsObj) {
+      if (!stepsObj || typeof stepsObj !== 'object') return;
+      const prevTotal = stepStats.total || 0;
+      const nextTotal = Number(stepsObj.total || 0);
+      stepStats.total = nextTotal;
+      stepStats.walking = Number(stepsObj.walking || 0);
+      stepStats.upstairs = Number(stepsObj.upstairs || 0);
+      stepStats.downstairs = Number(stepsObj.downstairs || 0);
+      stepStats.cadenceSpm = Number(stepsObj.cadenceSpm || 0);
+      if (typeof stepsObj.lastWindowSteps === 'number') {
+        stepStats.lastWindowSteps = stepsObj.lastWindowSteps;
+      }
+      if (typeof stepsObj.lastWindowSpm === 'number') {
+        stepStats.lastWindowSpm = stepsObj.lastWindowSpm;
+      }
+      stepStats.remotePendingCount = Number(stepsObj.pendingCount || 0);
+      gaitStepLocked = !!stepsObj.gaitStepLocked;
+      renderStepCounterUI();
+      if (nextTotal > prevTotal) {
+        const diff = nextTotal - prevTotal;
+        triggerStepPulse(diff > 1 ? `GAIT LOCK +${diff}` : 'STEP +1');
+      }
+    }
+
+    function applyRemoteTelemetryPacket(tData, labelText) {
+      if (!tData || typeof tData !== 'object') return;
+      if (Array.isArray(tData.samples) && tData.samples.length) {
+        tData.samples.forEach(s => {
+          if (Array.isArray(s) && s.length >= 6) {
+            pcBuffer.push(s);
+            if (pcBuffer.length > 128) pcBuffer.shift();
+          }
+        });
+      }
+      const acc = Array.isArray(tData.acc) ? tData.acc : (pcBuffer.length ? pcBuffer[pcBuffer.length - 1].slice(0, 3) : null);
+      const gyro = Array.isArray(tData.gyro) ? tData.gyro : (pcBuffer.length ? pcBuffer[pcBuffer.length - 1].slice(3, 6) : [0, 0, 0]);
+      if (acc && acc.length >= 3) {
+        const tilt = typeof tData.tilt_deg === 'number' ? tData.tilt_deg : 0;
+        const energy = typeof tData.energy === 'number' ? tData.energy : Math.hypot(acc[0], acc[1], acc[2]);
+        updateLiveAxisNumbers(acc[0], acc[1], acc[2], gyro[0] || 0, gyro[1] || 0, gyro[2] || 0, energy, tilt);
+      }
+
+      if (pcBuffer.length >= 8) {
+        renderOscilloscope(
+          pcBuffer.map(s => s[0]),
+          pcBuffer.map(s => s[1]),
+          pcBuffer.map(s => s[2])
+        );
+      }
+
+      const bufCount = typeof tData.buffer_count === 'number' ? tData.buffer_count : pcBuffer.length;
+      document.getElementById('bufferCountText').textContent = `[${bufCount} / 128]`;
+      document.getElementById('bufferProgressBar').style.width = `${Math.min(100, (bufCount / 128) * 100)}%`;
+
+      if (tData.model_type && ['cnn', 'ann', 'ensemble'].includes(tData.model_type)) {
+        const sel = document.getElementById('liveModelTypeSelect');
+        if (sel && sel.value !== tData.model_type) {
+          sel.value = tData.model_type;
+          onModelEngineChange({ fromRemote: true, silent: true });
+        }
+      }
+      if (tData.steps) syncRemoteStepsFromPayload(tData.steps);
+
+      if (labelText) {
+        document.getElementById('sensorStateText').textContent = bufCount < 128
+          ? `Mirroring ${labelText} · calibrating (${bufCount} / 128)...`
+          : `Live mirroring ${labelText} at ~50 Hz`;
+      }
+    }
+
+    function handleViewerRelayMessage(msg) {
+      if (!msg || typeof msg !== 'object' || !isViewingRemote) return;
+      const bannerTitle = document.getElementById('pcViewerTitle');
+      const bannerSub = document.getElementById('pcViewerSubtext');
+
+      if (msg.type === 'pong') {
+        if (typeof msg.t === 'number') {
+          relayRttMs = Math.max(1, Math.round(performance.now() - msg.t));
+          setRelayLatencyUI(relayRttMs);
+        }
+        return;
+      }
+
+      if (msg.type === 'room_snapshot') {
+        relayLastSeq = Number(msg.seq || 0);
+        const active = !!msg.sender_active;
+        const lbl = msg.sender_label || 'Waist Phone IMU';
+        setRelayStatusUI(active ? `PC Mirroring · ${msg.room_code}` : `PC Waiting · ${msg.room_code}`, active ? 'live' : 'wait');
+        if (bannerTitle) {
+          bannerTitle.textContent = active
+            ? `PC Live Mirror Active · ${lbl} (${msg.room_code})`
+            : `PC Monitor Ready · Waiting for Waist Phone (${msg.room_code})`;
+        }
+        if (bannerSub) {
+          bannerSub.textContent = active
+            ? 'Receiving 50 Hz telemetry in real time · Keep phone in waist pocket'
+            : 'Tap Start Live Tracking on the paired phone to begin streaming';
+        }
+        setLiveConnectionUI(active ? `Mirroring ${lbl}` : `Waiting for Phone (${msg.room_code})`, active ? 'PC LIVE' : 'STANDBY', active);
+        if (msg.telemetry) applyRemoteTelemetryPacket(msg.telemetry, lbl);
+        if (msg.prediction) {
+          const xs = pcBuffer.length >= 8 ? pcBuffer.map(s => s[0]) : null;
+          const ys = pcBuffer.length >= 8 ? pcBuffer.map(s => s[1]) : null;
+          const zs = pcBuffer.length >= 8 ? pcBuffer.map(s => s[2]) : null;
+          applyLivePredictionResult(msg.prediction, xs, ys, zs, 50.0, currentContextState.selected_model, true);
+        }
+        return;
+      }
+
+      if (typeof msg.seq === 'number') {
+        if (msg.seq < relayLastSeq) return;
+        relayLastSeq = msg.seq;
+      }
+
+      if (msg.type === 'sender_status') {
+        const active = !!msg.active;
+        const lbl = msg.label || 'Waist Phone IMU';
+        setRelayStatusUI(active ? `PC Mirroring · ${viewerRoomCode}` : `Phone Paused · ${viewerRoomCode}`, active ? 'live' : 'wait');
+        setLiveConnectionUI(active ? `Mirroring ${lbl}` : 'Phone Paused', active ? 'PC LIVE' : 'PAUSED', active);
+        if (bannerTitle) {
+          bannerTitle.textContent = active
+            ? `PC Live Mirror Active · ${lbl} (${viewerRoomCode})`
+            : `Phone Tracking Paused (${viewerRoomCode})`;
+        }
+        if (!active) {
+          document.getElementById('sensorStateText').textContent = 'Phone paused tracking · waiting for phone to resume...';
+        }
+      } else if (msg.type === 'telemetry') {
+        const lbl = msg.label || 'Waist Phone IMU';
+        setRelayStatusUI(`PC Mirroring · ${viewerRoomCode}`, 'live');
+        setLiveConnectionUI(`Mirroring ${lbl}`, 'PC LIVE', true);
+        if (bannerTitle) bannerTitle.textContent = `PC Live Mirror Active · ${lbl} (${viewerRoomCode})`;
+        if (bannerSub) bannerSub.textContent = 'Streaming 60 ms micro-batches · Switch AI Engine above anytime';
+        applyRemoteTelemetryPacket(msg, lbl);
+      } else if (msg.type === 'prediction' && msg.prediction) {
+        if (msg.steps) syncRemoteStepsFromPayload(msg.steps);
+        const xs = pcBuffer.length >= 8 ? pcBuffer.map(s => s[0]) : null;
+        const ys = pcBuffer.length >= 8 ? pcBuffer.map(s => s[1]) : null;
+        const zs = pcBuffer.length >= 8 ? pcBuffer.map(s => s[2]) : null;
+        const rate = typeof msg.measured_rate_hz === 'number' ? msg.measured_rate_hz : 50.0;
+        const mType = msg.model_type || currentContextState.selected_model;
+        applyLivePredictionResult(msg.prediction, xs, ys, zs, rate, mType, true);
+      } else if (msg.type === 'state_reset') {
+        pcBuffer = [];
+        smoothedProbabilities = null;
+        stableActivity = null;
+        candidateActivity = null;
+        candidateStreak = 0;
+        document.getElementById('bufferCountText').textContent = '[0 / 128]';
+        document.getElementById('bufferProgressBar').style.width = '0%';
+        document.getElementById('sensorStateText').textContent = 'Phone reset calibration · re-buffering...';
+      }
+    }
+
+    function startViewerHttpFallback(code) {
+      if (viewerPollTimer || !isViewingRemote || viewerRoomCode !== code) return;
+      setRelayStatusUI(`HTTP Sync · ${code}`, 'wait');
+      viewerPollTimer = window.setInterval(async () => {
+        if (!isViewingRemote || viewerRoomCode !== code || viewerWsReady) {
+          window.clearInterval(viewerPollTimer);
+          viewerPollTimer = null;
+          return;
+        }
+        try {
+          const t0 = performance.now();
+          const data = await apiJson(`/api/relay/${encodeURIComponent(code)}/latest?since_seq=${relayLastSeq}`);
+          const rtt = Math.round(performance.now() - t0);
+          relayRttMs = rtt;
+          setRelayLatencyUI(rtt);
+          if (data && data.exists && data.changed) {
+            relayLastSeq = Number(data.seq || relayLastSeq);
+            const active = !!data.sender_active;
+            const lbl = data.sender_label || 'Waist Phone IMU';
+            setLiveConnectionUI(active ? `HTTP Mirror · ${lbl}` : 'Phone Paused', active ? 'PC SYNC' : 'PAUSED', active);
+            if (data.telemetry) applyRemoteTelemetryPacket(data.telemetry, lbl);
+            if (data.prediction) {
+              const xs = pcBuffer.length >= 8 ? pcBuffer.map(s => s[0]) : null;
+              const ys = pcBuffer.length >= 8 ? pcBuffer.map(s => s[1]) : null;
+              const zs = pcBuffer.length >= 8 ? pcBuffer.map(s => s[2]) : null;
+              applyLivePredictionResult(data.prediction, xs, ys, zs, 50.0, currentContextState.selected_model, true);
+            }
+          }
+        } catch (_) {}
+      }, 250);
+    }
+
+    function disconnectRelayViewer(opts = {}) {
+      isViewingRemote = false;
+      viewerRoomCode = '';
+      viewerWsReady = false;
+      relayRttMs = null;
+      pcBuffer = [];
+      stepStats.remotePendingCount = 0;
+      window.clearTimeout(viewerReconnectTimer);
+      window.clearInterval(viewerPollTimer);
+      window.clearInterval(viewerPingTimer);
+      viewerPollTimer = null;
+      viewerPingTimer = null;
+
+      if (viewerWs) {
+        try {
+          viewerWs.onclose = null;
+          viewerWs.close();
+        } catch (_) {}
+        viewerWs = null;
+      }
+
+      const banner = document.getElementById('pcViewerBanner');
+      if (banner) banner.classList.add('hidden');
+      setRelayStatusUI('Sync Standby', 'neutral');
+      setRelayLatencyUI(null);
+      if (!isSenderStreamingActive()) {
+        setLiveConnectionUI('Sensors Standby', 'READY', false);
+        const stEl = document.getElementById('sensorStateText');
+        if (stEl) stEl.textContent = 'Tap Start Live Tracking below to stream at 50 Hz';
+      }
+      renderStepCounterUI();
+      if (!opts.silent) showToast('Disconnected PC live monitor');
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        if (isRecordingMobile && !isDesktopWalkSim) {
+          requestScreenWakeLock();
+          if (!senderWsReady) startSenderRelay(getActiveBroadcastCode(), senderLabel);
+        } else if (isViewingRemote && viewerRoomCode && !viewerWsReady) {
+          connectRelayViewer(viewerRoomCode);
+        }
+      }
+    });
+
+    window.addEventListener('pagehide', () => {
+      if (isSenderStreamingActive()) stopSenderRelay('pagehide');
+      if (isViewingRemote) disconnectRelayViewer({ silent: true });
+    });
+
     window.addEventListener('DOMContentLoaded', () => {
+      const viewerInput = document.getElementById('relayViewerCodeInput');
+      if (viewerInput) {
+        viewerInput.addEventListener('keydown', e => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            connectRelayViewer();
+          }
+        });
+      }
       checkAuthentication();
     });
   </script>

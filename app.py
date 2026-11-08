@@ -1,20 +1,24 @@
+import asyncio
 import os
 import hashlib
 import hmac
+import json
 import logging
 import pickle
 import re
 import secrets
 import sqlite3
 import tempfile
+import threading
 import time
 from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import AsyncIterator, List, Dict, Optional
+from typing import Any, AsyncIterator, List, Dict, Optional, Set
 import numpy as np
 import torch
 import torch.nn.functional as F
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -164,11 +168,9 @@ def _extract_session_token(request: Request) -> Optional[str]:
     return request.cookies.get(SESSION_COOKIE)
 
 
-def require_authenticated_user(request: Request) -> dict:
-    token = _extract_session_token(request)
+def authenticate_session_token(token: Optional[str]) -> Optional[dict]:
     if not token:
-        raise HTTPException(status_code=401, detail="Authentication required")
-
+        return None
     initialize_auth_db()
     token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
     connection = get_auth_db()
@@ -186,8 +188,19 @@ def require_authenticated_user(request: Request) -> dict:
         connection.close()
 
     if user is None:
-        raise HTTPException(status_code=401, detail="Session expired or invalid")
+        return None
     return {"id": user["id"], "username": user["username"]}
+
+
+def require_authenticated_user(request: Request) -> dict:
+    token = _extract_session_token(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    user = authenticate_session_token(token)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Session expired or invalid")
+    return user
 
 
 app.add_middleware(
@@ -330,6 +343,18 @@ class LiveWindowPayload(BaseModel):
         default=None,
         description="Previous stabilized activity for hysteresis continuity"
     )
+    room_code: Optional[str] = Field(
+        default=None,
+        max_length=24,
+        description="Optional cross-device live sync room code for low-latency PC mirror broadcast"
+    )
+
+
+class RelayPublishPayload(BaseModel):
+    sender_active: Optional[bool] = None
+    sender_label: Optional[str] = Field(default=None, max_length=64)
+    telemetry: Optional[Dict[str, Any]] = None
+    prediction: Optional[Dict[str, Any]] = None
 
 class FeatureVectorPayload(BaseModel):
     features: List[float] = Field(
@@ -425,8 +450,11 @@ def adjust_Untrained_Probs(probs: np.ndarray, signals: Optional[np.ndarray] = No
 
 # ----------------- Routes -----------------
 @app.get("/")
-def serve_ui():
-    return RedirectResponse(url="/static/index.html")
+def serve_ui(request: Request):
+    target = "/static/index.html"
+    if request.url.query:
+        target = f"{target}?{request.url.query}"
+    return RedirectResponse(url=target)
 
 @app.post("/api/auth/register")
 def register(payload: CredentialsPayload, request: Request, response: Response):
@@ -870,51 +898,54 @@ def detect_steps_in_window(
     return len(peaks), cadence_spm, peaks
 
 
-@app.post("/predict", response_model=PredictionResponse)
-def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(require_authenticated_user)):
-    window = np.asarray(payload.window, dtype=np.float32)
+def _run_live_inference(
+    raw_window: Any,
+    model_type: str = "cnn",
+    sample_rate_hz: float = 50.0,
+    previous_activity: Optional[str] = None,
+    verbose: bool = True,
+) -> PredictionResponse:
+    window = np.asarray(raw_window, dtype=np.float32)
     if window.shape == (9, 128):
         window = window.T
     if window.shape != (128, 9):
-        raise HTTPException(status_code=400, detail=f"Expected shape (128, 9), got {window.shape}")
+        raise ValueError(f"Expected shape (128, 9), got {window.shape}")
     if not np.isfinite(window).all():
-        raise HTTPException(status_code=400, detail="Window must contain only finite numbers")
+        raise ValueError("Window must contain only finite numbers")
 
     input_tensor = torch.as_tensor(window, dtype=torch.float32).unsqueeze(0)
     if tuple(input_tensor.shape) != (1, 128, 9):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Expected input tensor shape (1, 128, 9), got {tuple(input_tensor.shape)}",
-        )
-    assert tuple(input_tensor.shape) == (1, 128, 9)
+        raise ValueError(f"Expected input tensor shape (1, 128, 9), got {tuple(input_tensor.shape)}")
 
     min_value = float(input_tensor.min().item())
     max_value = float(input_tensor.max().item())
-    print(
-        "Live /predict tensor diagnostics: "
-        f"shape={tuple(input_tensor.shape)}, dtype={input_tensor.dtype}, "
-        f"min={min_value:.6f}, max={max_value:.6f}, model_type={payload.model_type}",
-        flush=True,
-    )
-    if min_value < -2.0 or max_value > 2.0:
-        logging.getLogger(__name__).warning(
-            "Live /predict values outside [-2.0, 2.0]; clamping before inference"
+    if verbose:
+        print(
+            "Live /predict tensor diagnostics: "
+            f"shape={tuple(input_tensor.shape)}, dtype={input_tensor.dtype}, "
+            f"min={min_value:.6f}, max={max_value:.6f}, model_type={model_type}",
+            flush=True,
         )
+    if min_value < -2.0 or max_value > 2.0:
+        if verbose:
+            logging.getLogger(__name__).warning(
+                "Live /predict values outside [-2.0, 2.0]; clamping before inference"
+            )
         input_tensor = input_tensor.clamp(-2.0, 2.0)
 
     raw_signals = input_tensor.squeeze(0).numpy().T.copy()
     calibrated_signals, kinematic_prior = calibrate_live_phone_signals(
         raw_signals,
-        sample_rate_hz=payload.sample_rate_hz,
-        previous_activity=payload.previous_activity,
+        sample_rate_hz=sample_rate_hz,
+        previous_activity=previous_activity,
     )
-    requested_model = (payload.model_type or "cnn").strip().lower()
+    requested_model = (model_type or "cnn").strip().lower()
 
     if requested_model == "ann":
         live_features = extract_561_features_from_signals(calibrated_signals)
         ann_res = predict_ann_features(live_features, kinematic_prior=kinematic_prior)
         w_steps, spm, peaks = detect_steps_in_window(
-            calibrated_signals, payload.sample_rate_hz, ann_res.predicted_activity
+            calibrated_signals, sample_rate_hz, ann_res.predicted_activity
         )
         ann_res.window_steps = w_steps
         ann_res.cadence_spm = spm
@@ -922,7 +953,7 @@ def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(require
         return ann_res
     if requested_model == "ensemble":
         cnn_res = predict_cnn_signals(
-            calibrated_signals, kinematic_prior=kinematic_prior, sample_rate_hz=payload.sample_rate_hz
+            calibrated_signals, kinematic_prior=kinematic_prior, sample_rate_hz=sample_rate_hz
         )
         live_features = extract_561_features_from_signals(calibrated_signals)
         ann_res = predict_ann_features(live_features, kinematic_prior=kinematic_prior)
@@ -932,7 +963,7 @@ def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(require
         }
         best_act = max(ens_probs, key=ens_probs.get)
         w_steps, spm, peaks = detect_steps_in_window(
-            calibrated_signals, payload.sample_rate_hz, best_act
+            calibrated_signals, sample_rate_hz, best_act
         )
         return PredictionResponse(
             model_used="Ensemble (1D-CNN + Regularized ANN)",
@@ -946,8 +977,26 @@ def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(require
             step_peak_indices=peaks,
         )
     return predict_cnn_signals(
-        calibrated_signals, kinematic_prior=kinematic_prior, sample_rate_hz=payload.sample_rate_hz
+        calibrated_signals, kinematic_prior=kinematic_prior, sample_rate_hz=sample_rate_hz
     )
+
+
+@app.post("/predict", response_model=PredictionResponse)
+def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(require_authenticated_user)):
+    try:
+        res = _run_live_inference(
+            payload.window,
+            model_type=payload.model_type,
+            sample_rate_hz=payload.sample_rate_hz,
+            previous_activity=payload.previous_activity,
+            verbose=True,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    if payload.room_code:
+        _sync_publish_prediction_to_room(payload.room_code, res.model_dump(), user_id=user["id"])
+    return res
 
 
 def predict_cnn_signals(
@@ -1403,6 +1452,38 @@ def build_model_chatbot_reply(
             ],
         },
         {
+            "id": "remote_pc_sync",
+            "keywords": [
+                "pc", "laptop", "desktop", "computer", "other device", "second device",
+                "mirror", "pair", "pairing", "code", "qr", "websocket", "wss", "relay",
+                "cannot see", "watch on pc", "remote", "latency", "broadcast", "pocket",
+            ],
+            "phrases": [
+                "on pc", "on my pc", "other device", "cannot see", "view waist phone",
+                "watch on pc", "pair code", "qr code", "live sync", "phone in waist",
+            ],
+            "title": "Phone-at-Waist -> PC Low-Latency Live Mirror",
+            "badge": "PC Live Sync",
+            "answer": (
+                "When your phone is clipped at your waist or inside your pocket, use **Watch Waist Phone Live on PC** in the Live tab "
+                "to stream real-time predictions to your PC with minimal latency (~20–60 ms waveform relay via WebSockets `wss://`):\n"
+                "• **Easy Option 1 (Phone First):** On your phone, note **1. Waist Phone Broadcast Code**, tap **Start Live Tracking**, and slip the phone into your waist pocket. Then on your PC, type that 6-digit code in **2. Watch Any Code on This PC** and click **Watch on PC**.\n"
+                "• **Easy Option 2 (QR Scan):** On your PC, click **Phone QR** and scan the QR code with your phone camera, then tap **Start Live Tracking**.\n"
+                "• **Same Account Auto-Detect:** Signed-in non-guest accounts automatically show a **Watch Now on PC** banner when your phone is streaming!"
+            ),
+            "highlights": [
+                ChatHighlightItem(label="Transport", value="Persistent WebSocket + HTTP Fallback"),
+                ChatHighlightItem(label="Waveform Relay", value="~60 ms micro-batches (~16 FPS)"),
+                ChatHighlightItem(label="Inference Push", value="300 ms sliding window -> Direct Fan-Out"),
+                ChatHighlightItem(label="Remote Control", value="Switch CNN/ANN or Reset from PC"),
+            ],
+            "follow_ups": [
+                "Why wear the phone on the waist?",
+                "How does the biomechanical step counter work?",
+                "Compare 1D-CNN vs Regularized ANN",
+            ],
+        },
+        {
             "id": "project_author",
             "keywords": [
                 "tapash", "pradhan", "pushpa", "shova", "author", "creator", "developer",
@@ -1483,3 +1564,536 @@ def chat_with_model_assistant(
     user: dict = Depends(require_authenticated_user),
 ):
     return build_model_chatbot_reply(payload.message, payload.context)
+
+
+# ----------------- Low-Latency Cross-Device Live Relay (Waist Phone -> PC) -----------------
+ROOM_CODE_PATTERN = re.compile(r"^[A-Z0-9]{4,12}$")
+MAX_RELAY_ROOMS = 500
+ROOM_IDLE_TTL_SEC = 1800.0
+RELAY_ROOMS_LOCK = threading.Lock()
+RELAY_EVENT_LOOP: Optional[asyncio.AbstractEventLoop] = None
+
+
+@dataclass
+class LiveRelayRoom:
+    code: str
+    owner_id: Optional[int] = None
+    owner_username: Optional[str] = None
+    created_at: float = field(default_factory=time.time)
+    last_activity_at: float = field(default_factory=time.time)
+    seq: int = 0
+    sender_active: bool = False
+    sender_label: str = "Waist Phone IMU"
+    senders: Set[WebSocket] = field(default_factory=set)
+    viewers: Set[WebSocket] = field(default_factory=set)
+    latest_telemetry: Optional[Dict[str, Any]] = None
+    latest_prediction: Optional[Dict[str, Any]] = None
+
+
+LIVE_RELAY_ROOMS: Dict[str, LiveRelayRoom] = {}
+
+
+def _normalize_room_code(raw: str) -> str:
+    cleaned = re.sub(r"[\s-]+", "", (raw or "").strip().upper())
+    if not ROOM_CODE_PATTERN.fullmatch(cleaned):
+        raise HTTPException(status_code=400, detail="Pair code must be 4-12 letters or digits.")
+    return cleaned
+
+
+def _purge_stale_rooms_locked(now: Optional[float] = None) -> None:
+    ts = now if now is not None else time.time()
+    expired = [
+        code
+        for code, rm in LIVE_RELAY_ROOMS.items()
+        if (ts - rm.last_activity_at) > ROOM_IDLE_TTL_SEC and not rm.senders and not rm.viewers
+    ]
+    for code in expired:
+        LIVE_RELAY_ROOMS.pop(code, None)
+    if len(LIVE_RELAY_ROOMS) > MAX_RELAY_ROOMS:
+        ordered = sorted(LIVE_RELAY_ROOMS.items(), key=lambda kv: kv[1].last_activity_at)
+        for code, rm in ordered[: len(LIVE_RELAY_ROOMS) - MAX_RELAY_ROOMS]:
+            if not rm.senders and not rm.viewers:
+                LIVE_RELAY_ROOMS.pop(code, None)
+
+
+def _get_or_create_room(code: str, owner: Optional[dict] = None) -> LiveRelayRoom:
+    now = time.time()
+    with RELAY_ROOMS_LOCK:
+        _purge_stale_rooms_locked(now)
+        rm = LIVE_RELAY_ROOMS.get(code)
+        if rm is None:
+            rm = LiveRelayRoom(
+                code=code,
+                owner_id=owner["id"] if owner else None,
+                owner_username=owner["username"] if owner else None,
+                created_at=now,
+                last_activity_at=now,
+            )
+            LIVE_RELAY_ROOMS[code] = rm
+        else:
+            rm.last_activity_at = now
+            if owner and rm.owner_id is None:
+                rm.owner_id = owner["id"]
+                rm.owner_username = owner["username"]
+        return rm
+
+
+async def _ws_broadcast_targets(targets: Set[WebSocket], msg: Dict[str, Any], room: LiveRelayRoom, role_attr: str) -> None:
+    with RELAY_ROOMS_LOCK:
+        sockets = list(targets)
+    if not sockets:
+        return
+    payload_str = json.dumps(msg, separators=(",", ":"))
+
+    async def _send_one(ws: WebSocket):
+        try:
+            await asyncio.wait_for(ws.send_text(payload_str), timeout=1.5)
+            return None
+        except Exception:
+            return ws
+
+    results = await asyncio.gather(*(_send_one(ws) for ws in sockets), return_exceptions=True)
+    dead = [r for r in results if isinstance(r, WebSocket)]
+    if dead:
+        with RELAY_ROOMS_LOCK:
+            target_set: Set[WebSocket] = getattr(room, role_attr)
+            for d in dead:
+                target_set.discard(d)
+            if role_attr == "senders" and not room.senders:
+                room.sender_active = False
+
+
+def _sync_publish_prediction_to_room(room_code: str, pred_dict: Dict[str, Any], user_id: Optional[int] = None) -> None:
+    cleaned = re.sub(r"[\s-]+", "", (room_code or "").strip().upper())
+    if not ROOM_CODE_PATTERN.fullmatch(cleaned):
+        return
+    now = time.time()
+    room = _get_or_create_room(cleaned)
+    with RELAY_ROOMS_LOCK:
+        room.seq += 1
+        room.sender_active = True
+        room.last_activity_at = now
+        if user_id and room.owner_id is None:
+            room.owner_id = user_id
+        room.latest_prediction = pred_dict
+        seq = room.seq
+        has_viewers = bool(room.viewers)
+    if has_viewers and RELAY_EVENT_LOOP is not None and not RELAY_EVENT_LOOP.is_closed():
+        msg = {
+            "type": "prediction",
+            "seq": seq,
+            "prediction": pred_dict,
+            "server_ts_ms": int(now * 1000),
+        }
+        try:
+            asyncio.run_coroutine_threadsafe(
+                _ws_broadcast_targets(room.viewers, msg, room, "viewers"),
+                RELAY_EVENT_LOOP,
+            )
+        except RuntimeError:
+            pass
+
+
+@app.post("/api/relay/create")
+def create_relay_room(user: dict = Depends(require_authenticated_user)):
+    now = time.time()
+    with RELAY_ROOMS_LOCK:
+        _purge_stale_rooms_locked(now)
+        for _ in range(32):
+            candidate = str(secrets.randbelow(900_000) + 100_000)
+            if candidate not in LIVE_RELAY_ROOMS:
+                break
+        else:
+            candidate = secrets.token_hex(3).upper()
+        rm = LiveRelayRoom(
+            code=candidate,
+            owner_id=user["id"],
+            owner_username=user["username"],
+            created_at=now,
+            last_activity_at=now,
+        )
+        LIVE_RELAY_ROOMS[candidate] = rm
+    return {"room_code": candidate, "expires_in_sec": int(ROOM_IDLE_TTL_SEC)}
+
+
+@app.get("/api/relay/active")
+def find_active_account_room(user: dict = Depends(require_authenticated_user)):
+    if user["username"] == "guest_researcher":
+        return {"room_code": None, "sender_active": False}
+    now = time.time()
+    with RELAY_ROOMS_LOCK:
+        _purge_stale_rooms_locked(now)
+        matches = [
+            rm
+            for rm in LIVE_RELAY_ROOMS.values()
+            if rm.owner_id == user["id"] and (rm.sender_active or rm.senders)
+        ]
+        if not matches:
+            return {"room_code": None, "sender_active": False}
+        latest_rm = max(matches, key=lambda r: r.last_activity_at)
+        return {
+            "room_code": latest_rm.code,
+            "sender_active": latest_rm.sender_active,
+            "sender_label": latest_rm.sender_label,
+        }
+
+
+@app.post("/api/relay/{room_code}/publish")
+async def publish_relay_update(
+    room_code: str,
+    payload: RelayPublishPayload,
+    user: dict = Depends(require_authenticated_user),
+):
+    code = _normalize_room_code(room_code)
+    room = _get_or_create_room(code, owner=user)
+    now = time.time()
+    broadcast_msgs: List[Dict[str, Any]] = []
+
+    with RELAY_ROOMS_LOCK:
+        room.last_activity_at = now
+        if payload.sender_label:
+            room.sender_label = payload.sender_label[:64]
+        if payload.sender_active is not None:
+            room.sender_active = payload.sender_active
+            room.seq += 1
+            broadcast_msgs.append(
+                {
+                    "type": "sender_status",
+                    "seq": room.seq,
+                    "active": room.sender_active,
+                    "label": room.sender_label,
+                    "server_ts_ms": int(now * 1000),
+                }
+            )
+        if payload.telemetry is not None:
+            room.sender_active = True
+            room.seq += 1
+            room.latest_telemetry = payload.telemetry
+            broadcast_msgs.append(
+                {
+                    "type": "telemetry",
+                    "seq": room.seq,
+                    **payload.telemetry,
+                    "sender_active": True,
+                    "label": room.sender_label,
+                    "server_ts_ms": int(now * 1000),
+                }
+            )
+        if payload.prediction is not None:
+            room.sender_active = True
+            room.seq += 1
+            room.latest_prediction = payload.prediction
+            broadcast_msgs.append(
+                {
+                    "type": "prediction",
+                    "seq": room.seq,
+                    "prediction": payload.prediction,
+                    "server_ts_ms": int(now * 1000),
+                }
+            )
+        seq = room.seq
+        viewer_count = len(room.viewers)
+
+    for m in broadcast_msgs:
+        await _ws_broadcast_targets(room.viewers, m, room, "viewers")
+
+    return {"ok": True, "room_code": code, "seq": seq, "viewer_count": viewer_count}
+
+
+@app.get("/api/relay/{room_code}/latest")
+def get_relay_latest(
+    room_code: str,
+    since_seq: int = Query(default=0, ge=0),
+    user: dict = Depends(require_authenticated_user),
+):
+    code = _normalize_room_code(room_code)
+    with RELAY_ROOMS_LOCK:
+        rm = LIVE_RELAY_ROOMS.get(code)
+        if rm is None:
+            return {
+                "exists": False,
+                "changed": False,
+                "room_code": code,
+                "seq": 0,
+                "sender_active": False,
+                "sender_label": "Waist Phone IMU",
+                "viewer_count": 0,
+                "telemetry": None,
+                "prediction": None,
+            }
+        rm.last_activity_at = time.time()
+        changed = rm.seq > since_seq
+        return {
+            "exists": True,
+            "changed": changed,
+            "room_code": code,
+            "seq": rm.seq,
+            "sender_active": rm.sender_active or bool(rm.senders),
+            "sender_label": rm.sender_label,
+            "viewer_count": len(rm.viewers),
+            "telemetry": rm.latest_telemetry if changed or since_seq == 0 else None,
+            "prediction": rm.latest_prediction if changed or since_seq == 0 else None,
+        }
+
+
+@app.websocket("/ws/live/{room_code}")
+async def websocket_live_relay(websocket: WebSocket, room_code: str):
+    global RELAY_EVENT_LOOP
+    RELAY_EVENT_LOOP = asyncio.get_running_loop()
+
+    cleaned_code = re.sub(r"[\s-]+", "", (room_code or "").strip().upper())
+    if not ROOM_CODE_PATTERN.fullmatch(cleaned_code):
+        await websocket.close(code=4400, reason="Invalid pair code")
+        return
+
+    token = websocket.query_params.get("token") or websocket.cookies.get(SESSION_COOKIE)
+    user = authenticate_session_token(token)
+    if user is None:
+        await websocket.close(code=4401, reason="Authentication required")
+        return
+
+    role = (websocket.query_params.get("role") or "viewer").strip().lower()
+    if role not in ("sender", "viewer"):
+        role = "viewer"
+
+    await websocket.accept()
+    room = _get_or_create_room(cleaned_code, owner=user)
+
+    try:
+        if role == "sender":
+            label = (websocket.query_params.get("label") or "Waist Phone IMU").strip()[:64]
+            with RELAY_ROOMS_LOCK:
+                room.senders.add(websocket)
+                room.sender_active = True
+                if label:
+                    room.sender_label = label
+                room.seq += 1
+                seq = room.seq
+                viewer_count = len(room.viewers)
+                room.last_activity_at = time.time()
+            await websocket.send_text(
+                json.dumps(
+                    {"type": "relay_ready", "role": "sender", "room_code": cleaned_code, "viewer_count": viewer_count},
+                    separators=(",", ":"),
+                )
+            )
+            await _ws_broadcast_targets(
+                room.viewers,
+                {
+                    "type": "sender_status",
+                    "seq": seq,
+                    "active": True,
+                    "label": room.sender_label,
+                    "viewer_count": viewer_count,
+                    "server_ts_ms": int(time.time() * 1000),
+                },
+                room,
+                "viewers",
+            )
+        else:
+            with RELAY_ROOMS_LOCK:
+                room.viewers.add(websocket)
+                room.last_activity_at = time.time()
+                snapshot = {
+                    "type": "room_snapshot",
+                    "room_code": cleaned_code,
+                    "seq": room.seq,
+                    "sender_active": room.sender_active or bool(room.senders),
+                    "sender_label": room.sender_label,
+                    "viewer_count": len(room.viewers),
+                    "telemetry": room.latest_telemetry,
+                    "prediction": room.latest_prediction,
+                    "server_ts_ms": int(time.time() * 1000),
+                }
+                viewer_count = len(room.viewers)
+            await websocket.send_text(json.dumps(snapshot, separators=(",", ":")))
+            await _ws_broadcast_targets(
+                room.senders,
+                {"type": "viewer_count", "viewer_count": viewer_count},
+                room,
+                "senders",
+            )
+
+        while True:
+            raw_msg = await websocket.receive_text()
+            try:
+                data = json.loads(raw_msg)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(data, dict):
+                continue
+
+            msg_type = data.get("type")
+            now = time.time()
+            with RELAY_ROOMS_LOCK:
+                room.last_activity_at = now
+
+            if msg_type == "ping":
+                await websocket.send_text(
+                    json.dumps(
+                        {"type": "pong", "t": data.get("t"), "server_ts_ms": int(now * 1000)},
+                        separators=(",", ":"),
+                    )
+                )
+            elif role == "sender" and msg_type == "telemetry":
+                with RELAY_ROOMS_LOCK:
+                    room.sender_active = True
+                    room.seq += 1
+                    seq = room.seq
+                    if isinstance(data.get("label"), str) and data["label"].strip():
+                        room.sender_label = data["label"].strip()[:64]
+                    telem_record = {
+                        "samples": data.get("samples"),
+                        "acc": data.get("acc"),
+                        "gyro": data.get("gyro"),
+                        "tilt_deg": data.get("tilt_deg"),
+                        "energy": data.get("energy"),
+                        "buffer_count": data.get("buffer_count"),
+                        "steps": data.get("steps"),
+                        "model_type": data.get("model_type"),
+                    }
+                    room.latest_telemetry = telem_record
+                    label_now = room.sender_label
+                await _ws_broadcast_targets(
+                    room.viewers,
+                    {
+                        "type": "telemetry",
+                        "seq": seq,
+                        "sender_active": True,
+                        "label": label_now,
+                        "server_ts_ms": int(now * 1000),
+                        **telem_record,
+                    },
+                    room,
+                    "viewers",
+                )
+            elif role == "sender" and msg_type == "predict":
+                raw_window = data.get("window")
+                model_type = str(data.get("model_type") or "cnn")
+                try:
+                    rate_hz = float(data.get("sample_rate_hz") or 50.0)
+                except (TypeError, ValueError):
+                    rate_hz = 50.0
+                rate_hz = float(np.clip(rate_hz, 10.0, 240.0))
+                prev_act = data.get("previous_activity")
+                try:
+                    pred_res = await asyncio.to_thread(
+                        _run_live_inference,
+                        raw_window,
+                        model_type,
+                        rate_hz,
+                        prev_act,
+                        False,
+                    )
+                    pred_dict = pred_res.model_dump()
+                except Exception as exc:
+                    await websocket.send_text(
+                        json.dumps({"type": "predict_error", "detail": str(exc)}, separators=(",", ":"))
+                    )
+                    continue
+
+                with RELAY_ROOMS_LOCK:
+                    room.sender_active = True
+                    room.seq += 1
+                    seq = room.seq
+                    room.latest_prediction = pred_dict
+                out_msg = {
+                    "type": "prediction",
+                    "seq": seq,
+                    "prediction": pred_dict,
+                    "steps": data.get("steps"),
+                    "measured_rate_hz": rate_hz,
+                    "model_type": model_type,
+                    "client_ts": data.get("client_ts"),
+                    "server_ts_ms": int(time.time() * 1000),
+                }
+                await asyncio.gather(
+                    _ws_broadcast_targets(room.senders, out_msg, room, "senders"),
+                    _ws_broadcast_targets(room.viewers, out_msg, room, "viewers"),
+                )
+            elif role == "sender" and msg_type == "sender_status":
+                active_flag = bool(data.get("active", False))
+                with RELAY_ROOMS_LOCK:
+                    room.sender_active = active_flag
+                    if isinstance(data.get("label"), str) and data["label"].strip():
+                        room.sender_label = data["label"].strip()[:64]
+                    if not active_flag:
+                        room.seq += 1
+                    seq = room.seq
+                    label_now = room.sender_label
+                await _ws_broadcast_targets(
+                    room.viewers,
+                    {
+                        "type": "sender_status",
+                        "seq": seq,
+                        "active": active_flag,
+                        "label": label_now,
+                        "reason": data.get("reason"),
+                        "server_ts_ms": int(now * 1000),
+                    },
+                    room,
+                    "viewers",
+                )
+            elif role == "sender" and msg_type == "state_reset":
+                with RELAY_ROOMS_LOCK:
+                    room.seq += 1
+                    seq = room.seq
+                    room.latest_prediction = None
+                    room.latest_telemetry = None
+                await _ws_broadcast_targets(
+                    room.viewers,
+                    {"type": "state_reset", "seq": seq, "server_ts_ms": int(now * 1000)},
+                    room,
+                    "viewers",
+                )
+            elif role == "viewer" and msg_type == "remote_command":
+                cmd_msg = {
+                    "type": "remote_command",
+                    "command": data.get("command"),
+                    "model_type": data.get("model_type"),
+                    "server_ts_ms": int(now * 1000),
+                }
+                await _ws_broadcast_targets(room.senders, cmd_msg, room, "senders")
+
+    except WebSocketDisconnect:
+        pass
+    finally:
+        if role == "sender":
+            notify_offline = False
+            with RELAY_ROOMS_LOCK:
+                room.senders.discard(websocket)
+                if not room.senders:
+                    room.sender_active = False
+                    room.seq += 1
+                    seq = room.seq
+                    label_now = room.sender_label
+                    notify_offline = bool(room.viewers)
+                else:
+                    seq = room.seq
+                    label_now = room.sender_label
+            if notify_offline:
+                await _ws_broadcast_targets(
+                    room.viewers,
+                    {
+                        "type": "sender_status",
+                        "seq": seq,
+                        "active": False,
+                        "label": label_now,
+                        "reason": "disconnected",
+                        "server_ts_ms": int(time.time() * 1000),
+                    },
+                    room,
+                    "viewers",
+                )
+        else:
+            with RELAY_ROOMS_LOCK:
+                room.viewers.discard(websocket)
+                viewer_count = len(room.viewers)
+                has_senders = bool(room.senders)
+            if has_senders:
+                await _ws_broadcast_targets(
+                    room.senders,
+                    {"type": "viewer_count", "viewer_count": viewer_count},
+                    room,
+                    "senders",
+                )
