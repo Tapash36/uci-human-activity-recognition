@@ -365,8 +365,37 @@ class PresetPredictionResponse(DualComparisonResponse):
 
 
 class CredentialsPayload(BaseModel):
-    username: str = Field(..., min_length=3, max_length=32)
+    username: str = Field(..., min_length=3, max_length=100)
     password: str = Field(..., min_length=1, max_length=128)
+
+
+class ChatContextPayload(BaseModel):
+    selected_model: Optional[str] = "cnn"
+    current_activity: Optional[str] = None
+    confidence: Optional[float] = None
+    total_steps: Optional[int] = 0
+    window_steps: Optional[int] = 0
+    cadence_spm: Optional[float] = 0.0
+    tilt_deg: Optional[float] = None
+    motion_energy: Optional[float] = None
+
+
+class ChatRequestPayload(BaseModel):
+    message: str = Field(..., min_length=1, max_length=1000)
+    context: Optional[ChatContextPayload] = None
+
+
+class ChatHighlightItem(BaseModel):
+    label: str
+    value: str
+
+
+class ChatResponsePayload(BaseModel):
+    title: str
+    badge: str
+    answer: str
+    highlights: List[ChatHighlightItem] = Field(default_factory=list)
+    follow_ups: List[str] = Field(default_factory=list)
 
 
 # ----------------- Helper kinematic heuristic fallback if weights aren't uploaded yet -----------------
@@ -401,57 +430,91 @@ def serve_ui():
 
 @app.post("/api/auth/register")
 def register(payload: CredentialsPayload, request: Request, response: Response):
-    if not re.fullmatch(r"[A-Za-z0-9_.-]{3,32}", payload.username):
+    username = payload.username.strip()
+    if not re.fullmatch(r"[A-Za-z0-9_.@+-]{3,100}", username):
         raise HTTPException(
             status_code=400,
-            detail="Username must be 3-32 characters: letters, numbers, '.', '_' or '-'.",
+            detail="Enter a valid username or email (3-100 characters: letters, numbers, '.', '_', '-', '+', or '@').",
         )
-    if len(payload.password) < 12:
-        raise HTTPException(status_code=400, detail="Password must be at least 12 characters.")
+    if len(payload.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters.")
 
     initialize_auth_db()
-    username = payload.username.lower()
+    username_norm = username.lower()
     connection = get_auth_db()
     try:
         with connection:
             cursor = connection.execute(
                 "INSERT INTO users (username, password_hash) VALUES (?, ?)",
-                (username, hash_password(payload.password)),
+                (username_norm, hash_password(payload.password)),
             )
             user_id = cursor.lastrowid
     except sqlite3.IntegrityError:
-        raise HTTPException(status_code=409, detail="That username is already registered.")
+        raise HTTPException(status_code=409, detail="That username or email is already registered.")
     finally:
         connection.close()
 
     token = create_session(user_id)
     set_session_cookie(response, request, token)
-    return {"username": username, "token": token}
+    return {"username": username_norm, "token": token, "is_guest": False}
 
 
 @app.post("/api/auth/login")
 def login(payload: CredentialsPayload, request: Request, response: Response):
     initialize_auth_db()
+    username_norm = payload.username.strip().lower()
     connection = get_auth_db()
     try:
         user = connection.execute(
             "SELECT id, username, password_hash FROM users WHERE username = ?",
-            (payload.username.lower(),),
+            (username_norm,),
         ).fetchone()
     finally:
         connection.close()
 
     if user is None or not verify_password(payload.password, user["password_hash"]):
-        raise HTTPException(status_code=401, detail="Invalid username or password.")
+        raise HTTPException(status_code=401, detail="Invalid email/username or password.")
 
     token = create_session(user["id"])
     set_session_cookie(response, request, token)
-    return {"username": user["username"], "token": token}
+    return {"username": user["username"], "token": token, "is_guest": user["username"] == "guest_researcher"}
+
+
+@app.post("/api/auth/guest")
+def login_as_guest(request: Request, response: Response):
+    initialize_auth_db()
+    guest_username = "guest_researcher"
+    connection = get_auth_db()
+    try:
+        row = connection.execute(
+            "SELECT id, username FROM users WHERE username = ?",
+            (guest_username,),
+        ).fetchone()
+        if row is None:
+            with connection:
+                cursor = connection.execute(
+                    "INSERT INTO users (username, password_hash) VALUES (?, ?)",
+                    (guest_username, hash_password(secrets.token_urlsafe(32))),
+                )
+                user_id = cursor.lastrowid
+        else:
+            user_id = row["id"]
+    finally:
+        connection.close()
+
+    token = create_session(user_id)
+    set_session_cookie(response, request, token)
+    return {"username": "Guest Demo", "account": guest_username, "token": token, "is_guest": True}
 
 
 @app.get("/api/auth/me")
 def current_user(user: dict = Depends(require_authenticated_user)):
-    return {"username": user["username"]}
+    is_guest = user["username"] == "guest_researcher"
+    return {
+        "username": "Guest Demo" if is_guest else user["username"],
+        "account": user["username"],
+        "is_guest": is_guest,
+    }
 
 
 @app.post("/api/auth/logout")
@@ -479,6 +542,10 @@ def logout(request: Request, response: Response):
     return {"status": "logged out"}
 
 
+def _count_model_params(model: torch.nn.Module) -> int:
+    return int(sum(p.numel() for p in model.parameters()))
+
+
 @app.get("/api/status")
 def api_status(user: dict = Depends(require_authenticated_user)):
     return {
@@ -486,12 +553,24 @@ def api_status(user: dict = Depends(require_authenticated_user)):
         "device": str(device),
         "cnn_weights_loaded": cnn_weights_loaded,
         "ann_weights_loaded": ann_weights_loaded,
+        "primary_model_loaded": primary_model_loaded,
+        "weights_file": "model.pth" if primary_model_loaded else "har_1dcnn_weights.pth / har_ann_regularized.pth",
+        "cnn_params": _count_model_params(cnn_model),
+        "ann_params": _count_model_params(ann_model),
+        "activities": ACTIVITY_NAMES,
+        "sample_rate_hz": 50,
+        "window_size": 128,
+        "num_channels": 9,
+        "feature_dim": 561,
         "benchmarks": {
             "cnn_test_accuracy": 94.03,
             "cnn_macro_f1": 0.9412,
             "ann_test_accuracy": 95.72,
-            "ann_macro_f1": 0.9573
-        }
+            "ann_macro_f1": 0.9573,
+            "test_samples": 2947,
+            "train_samples": 7352,
+            "subjects": 30,
+        },
     }
 
 @app.get("/api/sample/{activity_name}")
@@ -1008,3 +1087,399 @@ def predict_preset(
         signals=signals,
         **prediction.model_dump(),
     )
+
+
+def _format_activity_friendly(act: Optional[str]) -> str:
+    mapping = {
+        "WALKING": "Walking",
+        "WALKING_UPSTAIRS": "Walking Upstairs",
+        "WALKING_DOWNSTAIRS": "Walking Downstairs",
+        "SITTING": "Sitting",
+        "STANDING": "Standing",
+        "LAYING": "Laying",
+    }
+    if not act:
+        return "Standby"
+    return mapping.get(act.upper(), act.replace("_", " ").title())
+
+
+def build_model_chatbot_reply(
+    query: str,
+    context: Optional[ChatContextPayload] = None,
+) -> ChatResponsePayload:
+    q = " ".join(query.strip().lower().split())
+    ctx = context or ChatContextPayload()
+
+    cnn_params = _count_model_params(cnn_model)
+    ann_params = _count_model_params(ann_model)
+    loaded_tag = (
+        "Loaded (model.pth + checkpoints)"
+        if (cnn_weights_loaded and ann_weights_loaded)
+        else "Loaded (Partial / Fallback)"
+    )
+
+    live_act = _format_activity_friendly(ctx.current_activity)
+    live_conf = f"{ctx.confidence * 100:.1f}%" if isinstance(ctx.confidence, (int, float)) and ctx.confidence > 0 else "Standby"
+    live_steps = int(ctx.total_steps or 0)
+    live_win_steps = int(ctx.window_steps or 0)
+    live_spm = int(round(ctx.cadence_spm or 0))
+    selected_model = (ctx.selected_model or "cnn").upper()
+
+    topics = [
+        {
+            "id": "live_status",
+            "keywords": [
+                "right now", "current", "my status", "my telemetry", "doing now",
+                "my steps", "live session", "what am i doing", "model loaded", "weights status",
+                "model status", "loaded weights", "device", "cpu", "gpu",
+            ],
+            "phrases": ["right now", "what am i doing", "live telemetry", "model status", "weights loaded", "my steps"],
+            "title": "Live Session & Model Status",
+            "badge": "Live Telemetry",
+            "answer": (
+                f"Right now the studio has the {selected_model} pipeline selected on compute device `{device}` "
+                f"({loaded_tag}). Latest detected state is {live_act} ({live_conf} certainty), with "
+                f"{live_steps:,} logged steps, {live_win_steps} steps in the latest 2.56s window, and "
+                f"{live_spm} SPM cadence."
+            ),
+            "highlights": [
+                ChatHighlightItem(label="Detected State", value=f"{live_act} ({live_conf})"),
+                ChatHighlightItem(label="Logged Steps", value=f"{live_steps:,} steps · {live_spm} SPM"),
+                ChatHighlightItem(label="1D-CNN Params", value=f"{cnn_params:,} ({'Ready' if cnn_weights_loaded else 'Demo'})"),
+                ChatHighlightItem(label="Regularized ANN Params", value=f"{ann_params:,} ({'Ready' if ann_weights_loaded else 'Demo'})"),
+            ],
+            "follow_ups": [
+                "Compare 1D-CNN vs Regularized ANN",
+                "How does the step counter avoid false steps?",
+                "How are predictions smoothed?",
+            ],
+        },
+        {
+            "id": "cnn_architecture",
+            "keywords": [
+                "cnn", "1d-cnn", "1d cnn", "conv", "convolution", "feature_extractor",
+                "maxpool", "kernel", "channel", "layers", "layer", "architecture", "parameters",
+                "tensor", "9x128", "128x9", "loso", "model.pth",
+            ],
+            "phrases": ["1d-cnn", "1d cnn", "cnn architecture", "input shape", "how many parameters", "model.pth"],
+            "title": "HAR_1DCNN Architecture & Tensor Specs",
+            "badge": "1D-CNN Specs",
+            "answer": (
+                f"The primary live sensor model is `HAR_1DCNN` ({cnn_params:,} trainable parameters), trained with "
+                "Leave-One-Subject-Out (LOSO) cross-validation in `model.pth`. It ingests raw 50 Hz smartphone tensors "
+                "shaped `(batch, 9, 128)` (2.56 seconds per window), extracts multi-scale temporal patterns through "
+                "3 Conv1D+BatchNorm1d+ReLU+MaxPool1d blocks (`9->64->128->256` channels, pooling `128->64->32->16`), "
+                "applies `Dropout(0.3)`, flattens to 4,096 features, and classifies across 6 activities via `Linear(4096->128->6)` "
+                "with `Dropout(0.5)`."
+            ),
+            "highlights": [
+                ChatHighlightItem(label="Input Tensor", value="(1, 9, 128) @ 50 Hz (2.56s)"),
+                ChatHighlightItem(label="Conv Blocks", value="k=5,5,3 -> 64, 128, 256 ch"),
+                ChatHighlightItem(label="Benchmark", value="94.03% Acc · 0.9412 Macro F1"),
+                ChatHighlightItem(label="Parameters", value=f"{cnn_params:,} weights"),
+            ],
+            "follow_ups": [
+                "What are the 9 input channels?",
+                "How does Regularized ANN differ from 1D-CNN?",
+                "What is the Butterworth cutoff frequency?",
+            ],
+        },
+        {
+            "id": "ann_architecture",
+            "keywords": [
+                "ann", "mlp", "regularized", "561", "features", "engineered", "dense",
+                "adamw", "early stopping", "extract_561", "linear", "dropout",
+            ],
+            "phrases": ["regularized ann", "561 features", "mlp", "feature vector", "ann architecture", "can ann run", "live phone sensors"],
+            "title": "RegularizedHAR_ANN (561-Feature MLP)",
+            "badge": "ANN Architecture",
+            "answer": (
+                f"`RegularizedHAR_ANN` ({ann_params:,} parameters) classifies 561 normalized time- and frequency-domain "
+                "features (`[-1, 1]`) computed over 2.56s windows — including channel means, standard deviations, IQR, energy, "
+                "jerk derivatives, Signal Magnitude Area (SMA), and FFT spectral components. Its architecture stacks 3 dense blocks "
+                "(`561->256->128->64->6`) with `BatchNorm1d`, `ReLU`, and graduated `Dropout(0.4, 0.3, 0.2)`, trained with "
+                "`AdamW` weight decay and early stopping for 95.72% test accuracy."
+            ),
+            "highlights": [
+                ChatHighlightItem(label="Input Vector", value="561 time + FFT features"),
+                ChatHighlightItem(label="Hidden Layers", value="256 -> 128 -> 64 -> 6"),
+                ChatHighlightItem(label="Regularization", value="BatchNorm + Dropout 0.4/0.3/0.2"),
+                ChatHighlightItem(label="Benchmark", value="95.72% Acc · 0.9573 Macro F1"),
+            ],
+            "follow_ups": [
+                "Compare 1D-CNN vs Regularized ANN",
+                "Can ANN run on live phone sensors?",
+                "How does Ensemble mode combine both models?",
+            ],
+        },
+        {
+            "id": "compare_models",
+            "keywords": [
+                "compare", "difference", "differ", "vs", "better", "which model", "ensemble",
+                "accuracy", "accurate", "f1", "macro", "benchmark", "latency", "speed",
+            ],
+            "phrases": [
+                "compare 1d-cnn", "vs regularized ann", "1d-cnn vs", "cnn vs ann",
+                "differ from 1d-cnn", "compare models", "how accurate",
+                "which model should", "ensemble mode",
+            ],
+            "title": "1D-CNN vs Regularized ANN vs Ensemble",
+            "badge": "Benchmarks",
+            "answer": (
+                "Both models evaluate the UCI HAR 2,947-sample test split (30 volunteers, 6 activities):\n"
+                "• **Regularized ANN** reaches **95.72% accuracy** (0.9573 Macro F1) on pre-extracted 561 statistical/FFT features.\n"
+                "• **1D-CNN** reaches **94.03% accuracy** (0.9412 Macro F1) directly on raw `9x128` time-series waves without manual feature engineering, making it ideal for real-time phone tracking (~5–15 ms latency).\n"
+                "• **Ensemble Mode** blends `50% CNN + 50% ANN` softmax probabilities alongside waist-frame kinematic calibration."
+            ),
+            "highlights": [
+                ChatHighlightItem(label="1D-CNN (Raw 9x128)", value="94.03% Acc · 0.9412 F1"),
+                ChatHighlightItem(label="Regularized ANN (561)", value="95.72% Acc · 0.9573 F1"),
+                ChatHighlightItem(label="Ensemble Fusion", value="50% CNN + 50% ANN"),
+                ChatHighlightItem(label="Dataset Split", value="7,352 Train / 2,947 Test"),
+            ],
+            "follow_ups": [
+                "Explain the 1D-CNN convolution layers",
+                "How does live smartphone calibration work?",
+                "How does step counting work?",
+            ],
+        },
+        {
+            "id": "signals_filter",
+            "keywords": [
+                "signal", "channels", "9 channels", "butterworth", "filter", "cutoff",
+                "0.3", "0.3hz", "gravity", "sampling", "50hz", "50 hz", "window",
+                "2.56", "128", "smooth", "smoothed", "smoothing", "ema", "hysteresis",
+                "flicker", "flickering", "low-pass", "imu", "accelerometer", "gyroscope",
+            ],
+            "phrases": [
+                "butterworth", "cutoff frequency", "9 channels", "50 hz",
+                "how does it detect", "predictions smoothed", "prevent flickering",
+                "gravity filter",
+            ],
+            "title": "Signal Pipeline, Gravity Filter & Smoothing",
+            "badge": "DSP Pipeline",
+            "answer": (
+                "Each 2.56-second inference window captures **128 readings at 50 Hz** across **9 channels**: "
+                "body acceleration `(X, Y, Z)`, gyroscope angular velocity `(X, Y, Z)`, and total acceleration `(X, Y, Z)`. "
+                "Following Anguita et al. (2013), gravitational acceleration (`< 0.3 Hz` low-pass Butterworth filter; "
+                "online EMA in browser) is separated from high-frequency body motion. Live smartphone predictions also run "
+                "through `alpha = 0.45` Exponential Moving Average (EMA) smoothing and a 2-window hysteresis lock so predictions stay steady without flickering."
+            ),
+            "highlights": [
+                ChatHighlightItem(label="Gravity Cutoff", value="fc = 0.3 Hz Low-Pass Filter"),
+                ChatHighlightItem(label="Window Cadence", value="128 samples @ 50 Hz = 2.56s"),
+                ChatHighlightItem(label="9 Tensor Channels", value="body_acc, gyro, total_acc (XYZ)"),
+                ChatHighlightItem(label="Jitter Lock", value="EMA alpha=0.45 + 2-win hysteresis"),
+            ],
+            "follow_ups": [
+                "Why wear the phone on the waist?",
+                "Why did sitting show laying or downstairs?",
+                "How does step detection work?",
+            ],
+        },
+        {
+            "id": "step_detection",
+            "keywords": [
+                "step", "steps", "pedometer", "cadence", "spm", "peak", "valley",
+                "distance", "calorie", "calories", "prominence", "gait", "count",
+                "biomechanical", "refractory",
+            ],
+            "phrases": [
+                "step counter", "count steps", "step detection", "step counting",
+                "steps accurately", "false steps", "cadence spm", "how are steps",
+            ],
+            "title": "Biomechanical Step Counter & Cadence Engine",
+            "badge": "Step Detection",
+            "answer": (
+                "Our step counter uses an orientation-independent biomechanical algorithm on both client (50 Hz real-time) "
+                "and backend (`detect_steps_in_window`): 3D body acceleration is projected onto the gravity vector, smoothed "
+                "with a 5-tap filter to remove >8 Hz hand tremor, and checked for peak-valley prominence `>= 0.085 g` with a "
+                "`290 ms` refractory period (48–205 SPM). To prevent false counts when picking up your phone, it requires "
+                "**3 consecutive rhythmic steps** before locking gait, and tags each step as Flat Walking, Upstairs, or Downstairs."
+            ),
+            "highlights": [
+                ChatHighlightItem(label="Vertical Axis", value="Gravity-projected dot product"),
+                ChatHighlightItem(label="Peak Gate", value=">= 0.085g prominence, >= 290ms"),
+                ChatHighlightItem(label="False-Step Guard", value="3-step gait lock + 2.2s reset"),
+                ChatHighlightItem(label="Biomechanics", value="0.74m stride · 0.045 kcal/step"),
+            ],
+            "follow_ups": [
+                "Why wear the phone on the waist?",
+                "What are my current steps and cadence?",
+                "Compare Walking vs Upstairs vs Downstairs signals",
+            ],
+        },
+        {
+            "id": "waist_placement",
+            "keywords": [
+                "waist", "belt", "pocket", "holster", "position", "orientation",
+                "hand", "holding", "ios", "android", "troubleshoot", "wrong", "problem",
+                "laying", "sitting", "standing", "upstairs", "downstairs", "calibrate", "tilt",
+            ],
+            "phrases": [
+                "why wear", "on the waist", "wear at waist", "belt clip",
+                "sitting it showed laying", "sitting show laying", "why did sitting",
+                "wrong activity", "phone orientation",
+            ],
+            "title": "Waist Calibration & Troubleshooting Tips",
+            "badge": "Placement Guide",
+            "answer": (
+                "The UCI HAR benchmark was recorded with a Samsung Galaxy S II strapped at the subject's waist, so hip/pocket "
+                "placement gives the cleanest torso tilt and vertical heel-strike waves. When holding the phone in your hand, "
+                "our `calibrate_live_phone_signals` pipeline handles iOS (`-g`) vs Android (`+g`) sign conventions automatically, "
+                "checks horizontal pitch (<22.5° = Laying, 23–73° = Sitting, >=74° = Standing), and requires rhythmic 1.0–3.4 Hz "
+                "autocorrelation across >=3 quarters of the window before predicting walking or stairs."
+            ),
+            "highlights": [
+                ChatHighlightItem(label="Laying Pitch", value="< 22.5 deg (or horizontal axis)"),
+                ChatHighlightItem(label="Sitting Pitch", value="23 deg - 73 deg reading tilt"),
+                ChatHighlightItem(label="Standing Pitch", value=">= 74 deg upright posture"),
+                ChatHighlightItem(label="Walk Freq Band", value="1.0 - 3.4 Hz rhythmic gait"),
+            ],
+            "follow_ups": [
+                "Why do I need HTTPS for phone sensors?",
+                "How does hysteresis prevent flickering?",
+                "How accurate are the models?",
+            ],
+        },
+        {
+            "id": "https_permissions",
+            "keywords": [
+                "https", "permission", "safari", "iphone", "mobile", "devicemotion",
+                "blocked", "allow", "sensor active", "no motion events", "privacy", "private",
+            ],
+            "phrases": ["permission", "https required", "devicemotion", "ios safari", "is my data private"],
+            "title": "Mobile Sensor Permissions & Privacy",
+            "badge": "Security & Sensors",
+            "answer": (
+                "Modern mobile browsers (especially iOS Safari and Android Chrome) require a secure **HTTPS** context to unlock "
+                "`DeviceMotionEvent` accelerometer/gyroscope telemetry and explicit user permission on iOS (`requestPermission()`). "
+                "Your movement stays private: zero camera, microphone, or GPS coordinates are collected—only 9 inertial motion "
+                "axes are analyzed during your session."
+            ),
+            "highlights": [
+                ChatHighlightItem(label="Transport", value="HTTPS required for Web Motion API"),
+                ChatHighlightItem(label="Sampling Rate", value="50 Hz (20 ms interval timer)"),
+                ChatHighlightItem(label="Privacy Scope", value="IMU only (no GPS, mic, camera)"),
+                ChatHighlightItem(label="Auth Modes", value="Registered account or Guest Demo"),
+            ],
+            "follow_ups": [
+                "Who built this project and where is the code?",
+                "How does the 1D-CNN model work?",
+                "How do I start live tracking?",
+            ],
+        },
+        {
+            "id": "activity_classes",
+            "keywords": [
+                "6 activities", "six activities", "classes", "walking", "upstairs",
+                "downstairs", "sitting", "standing", "laying", "posture", "postures",
+                "dynamic", "stationary", "recognize", "recognizes",
+            ],
+            "phrases": [
+                "6 activities", "six activities", "walking vs upstairs",
+                "upstairs vs downstairs", "sitting vs standing", "how does the model tell",
+                "what activities", "stationary postures",
+            ],
+            "title": "The 6 UCI HAR Activities & Signal Signatures",
+            "badge": "6 Classes",
+            "answer": (
+                "The model classifies **3 dynamic gait activities** and **3 stationary postures**:\n"
+                "• **Walking (~1.75–2.25 Hz)**: Steady rhythmic bounce & balanced heel-strike cadence.\n"
+                "• **Walking Upstairs (~1.5–1.85 Hz)**: Slower, higher-effort lift against gravity with distinct pitch oscillation.\n"
+                "• **Walking Downstairs (~2.1–2.5 Hz)**: Faster cadence with sharper vertical braking impacts.\n"
+                "• **Sitting vs Standing vs Laying**: Low body variance (`<0.05g`); separated cleanly by waist gravity tilt angle (<22.5° Laying, 23–73° Sitting, >=74° Standing)."
+            ),
+            "highlights": [
+                ChatHighlightItem(label="Walking Cadence", value="~1.75–2.25 Hz · Steady Gait"),
+                ChatHighlightItem(label="Stair Ascent/Descent", value="1.5–1.85 Hz Up · 2.1–2.5 Hz Down"),
+                ChatHighlightItem(label="Stationary Postures", value="Sitting, Standing, Laying"),
+                ChatHighlightItem(label="Transition Guard", value="EMA alpha=0.45 + Deadbands"),
+            ],
+            "follow_ups": [
+                "How does the biomechanical step counter work?",
+                "Compare 1D-CNN vs Regularized ANN",
+                "Why wear the phone on the waist?",
+            ],
+        },
+        {
+            "id": "project_author",
+            "keywords": [
+                "tapash", "pradhan", "pushpa", "shova", "author", "creator", "developer",
+                "contact", "email", "github", "repo", "code", "scu", "seoul christian",
+                "university", "capstone", "team", "dataset", "uci", "api", "endpoint", "docs",
+            ],
+            "phrases": ["contact the developer", "project code", "who built", "github", "seoul christian"],
+            "title": "SCU Capstone Project, Team & Source Code",
+            "badge": "Attribution",
+            "answer": (
+                "This UCI HAR Activity Studio was built at **Seoul Christian University** (AI & Big Data Convergence Capstone) "
+                "by **Tapash Pradhan** (`tapashpradhan1234@gmail.com`) alongside teammates **Pushpa Ramtel** and **Shova Dhital**. "
+                "It runs FastAPI + PyTorch with dual inference pipelines (`/predict`, `/predict/cnn`, `/predict/ann`, `/predict/compare`, "
+                "`/api/demo/{activity}`, `/api/chat`), full Swagger docs at `/docs`, and source code hosted on GitHub."
+            ),
+            "highlights": [
+                ChatHighlightItem(label="Lead Developer", value="Tapash Pradhan (SCU)"),
+                ChatHighlightItem(label="Contributors", value="Pushpa Ramtel · Shova Dhital"),
+                ChatHighlightItem(label="Email", value="tapashpradhan1234@gmail.com"),
+                ChatHighlightItem(label="GitHub", value="github.com/Tapash36"),
+            ],
+            "follow_ups": [
+                "Explain the 1D-CNN model architecture",
+                "Compare 1D-CNN vs Regularized ANN",
+                "Show my live session telemetry",
+            ],
+        },
+    ]
+
+    best_topic = None
+    best_score = 0
+    for t in topics:
+        score = 0
+        for p in t["phrases"]:
+            if p in q:
+                score += 6
+        for kw in t["keywords"]:
+            if re.search(rf"(?<![a-z0-9]){re.escape(kw)}(?![a-z0-9])", q):
+                score += 2
+        if score > best_score:
+            best_score = score
+            best_topic = t
+
+    if best_topic is None or best_score < 2:
+        return ChatResponsePayload(
+            title="UCI HAR Model Assistant",
+            badge="Model Guide",
+            answer=(
+                "I specialize in the UCI HAR Activity Studio models and live motion pipeline. "
+                "Ask me about the **1D-CNN** (`9x128` raw waveforms, 94.03% acc), **Regularized ANN** (`561` features, 95.72% acc), "
+                "**Ensemble mode**, **0.3 Hz gravity filtering**, **Biomechanical Step Counter**, **waist calibration**, or your **live telemetry**!"
+            ),
+            highlights=[
+                ChatHighlightItem(label="1D-CNN Model", value=f"{cnn_params:,} params · 94.03% Acc"),
+                ChatHighlightItem(label="Regularized ANN", value=f"{ann_params:,} params · 95.72% Acc"),
+                ChatHighlightItem(label="Live State", value=f"{live_act} ({live_conf})"),
+                ChatHighlightItem(label="Step Counter", value=f"{live_steps:,} steps · {live_spm} SPM"),
+            ],
+            follow_ups=[
+                "Compare 1D-CNN vs Regularized ANN",
+                "How does the step counter detect steps accurately?",
+                "What are the 9 input channels at 50 Hz?",
+            ],
+        )
+
+    return ChatResponsePayload(
+        title=best_topic["title"],
+        badge=best_topic["badge"],
+        answer=best_topic["answer"],
+        highlights=best_topic["highlights"],
+        follow_ups=best_topic["follow_ups"],
+    )
+
+
+@app.post("/api/chat", response_model=ChatResponsePayload)
+def chat_with_model_assistant(
+    payload: ChatRequestPayload,
+    user: dict = Depends(require_authenticated_user),
+):
+    return build_model_chatbot_reply(payload.message, payload.context)
