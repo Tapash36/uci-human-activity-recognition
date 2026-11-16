@@ -18,6 +18,7 @@ from typing import Any, AsyncIterator, List, Dict, Optional, Set
 import numpy as np
 import torch
 import torch.nn.functional as F
+import tensorflow as tf
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
@@ -97,7 +98,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title="UCI HAR AI & Big Data Convergence API",
-    description="Dual-Pipeline Human Activity Recognition API (1D-CNN Raw Signals & Regularized ANN 561-Features)",
+    description="Human Activity Recognition API with CNN-LSTM, 1D-CNN, and Regularized ANN inference",
     version="2.0.0",
     lifespan=lifespan,
 )
@@ -235,6 +236,9 @@ primary_model_loaded = False
 model_weights_path = BASE_DIR / "model.pth"
 cnn_weights_path = BASE_DIR / "har_1dcnn_weights.pth"
 ann_weights_path = BASE_DIR / "har_ann_regularized.pth"
+cnn_lstm_model_path = BASE_DIR / "cnn_lstm_model.keras"
+cnn_lstm_model: Optional[tf.keras.Model] = None
+cnn_lstm_model_loaded = False
 
 
 def _unwrap_state_dict(loaded_obj):
@@ -305,6 +309,32 @@ def _load_primary_loso_model() -> None:
         )
 
 
+def _load_cnn_lstm_model() -> None:
+    global cnn_lstm_model, cnn_lstm_model_loaded
+    logger = logging.getLogger(__name__)
+    if not cnn_lstm_model_path.exists():
+        logger.error("CNN-LSTM model file is missing: %s", cnn_lstm_model_path)
+        return
+    try:
+        loaded_model = tf.keras.models.load_model(
+            cnn_lstm_model_path, compile=False, safe_mode=True
+        )
+        if loaded_model.input_shape != (None, 128, 9):
+            raise ValueError(
+                f"Expected CNN-LSTM input shape (None, 128, 9), got {loaded_model.input_shape}"
+            )
+        if loaded_model.output_shape != (None, len(ACTIVITY_NAMES)):
+            raise ValueError(
+                f"Expected {len(ACTIVITY_NAMES)} CNN-LSTM outputs, got {loaded_model.output_shape}"
+            )
+    except (OSError, TypeError, ValueError) as exc:
+        logger.error("Unable to load CNN-LSTM model from %s: %s", cnn_lstm_model_path, exc)
+        return
+    cnn_lstm_model = loaded_model
+    cnn_lstm_model_loaded = True
+
+
+_load_cnn_lstm_model()
 _load_primary_loso_model()
 if not cnn_weights_loaded:
     cnn_weights_loaded = _load_weights(cnn_model, cnn_weights_path)
@@ -330,8 +360,8 @@ class LiveWindowPayload(BaseModel):
         description="128 timesteps x 9 channels: [body_acc_xyz, body_gyro_xyz, total_acc_xyz]"
     )
     model_type: str = Field(
-        default="cnn",
-        description="Requested model architecture: 'cnn', 'ann', or 'ensemble'"
+        default="cnn_lstm",
+        description="Requested model architecture: 'cnn_lstm', 'cnn', 'ann', or 'ensemble'"
     )
     sample_rate_hz: float = Field(
         default=50.0,
@@ -395,7 +425,7 @@ class CredentialsPayload(BaseModel):
 
 
 class ChatContextPayload(BaseModel):
-    selected_model: Optional[str] = "cnn"
+    selected_model: Optional[str] = "cnn_lstm"
     current_activity: Optional[str] = None
     confidence: Optional[float] = None
     total_steps: Optional[int] = 0
@@ -579,6 +609,8 @@ def api_status(user: dict = Depends(require_authenticated_user)):
     return {
         "status": "online",
         "device": str(device),
+        "cnn_lstm_model_loaded": cnn_lstm_model_loaded,
+        "cnn_lstm_model_file": cnn_lstm_model_path.name,
         "cnn_weights_loaded": cnn_weights_loaded,
         "ann_weights_loaded": ann_weights_loaded,
         "primary_model_loaded": primary_model_loaded,
@@ -900,7 +932,7 @@ def detect_steps_in_window(
 
 def _run_live_inference(
     raw_window: Any,
-    model_type: str = "cnn",
+    model_type: str = "cnn_lstm",
     sample_rate_hz: float = 50.0,
     previous_activity: Optional[str] = None,
     verbose: bool = True,
@@ -939,8 +971,12 @@ def _run_live_inference(
         sample_rate_hz=sample_rate_hz,
         previous_activity=previous_activity,
     )
-    requested_model = (model_type or "cnn").strip().lower()
+    requested_model = (model_type or "cnn_lstm").strip().lower()
 
+    if requested_model == "cnn_lstm":
+        return predict_cnn_lstm_signals(
+            calibrated_signals, sample_rate_hz=sample_rate_hz
+        )
     if requested_model == "ann":
         live_features = extract_561_features_from_signals(calibrated_signals)
         ann_res = predict_ann_features(live_features, kinematic_prior=kinematic_prior)
@@ -976,9 +1012,11 @@ def _run_live_inference(
             cadence_spm=spm,
             step_peak_indices=peaks,
         )
-    return predict_cnn_signals(
-        calibrated_signals, kinematic_prior=kinematic_prior, sample_rate_hz=sample_rate_hz
-    )
+    if requested_model == "cnn":
+        return predict_cnn_signals(
+            calibrated_signals, kinematic_prior=kinematic_prior, sample_rate_hz=sample_rate_hz
+        )
+    raise ValueError("model_type must be one of: cnn_lstm, cnn, ann, ensemble")
 
 
 @app.post("/predict", response_model=PredictionResponse)
@@ -993,10 +1031,50 @@ def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(require
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
 
     if payload.room_code:
         _sync_publish_prediction_to_room(payload.room_code, res.model_dump(), user_id=user["id"])
     return res
+
+
+def predict_cnn_lstm_signals(
+    signals: np.ndarray,
+    sample_rate_hz: float = 50.0,
+) -> PredictionResponse:
+    if not cnn_lstm_model_loaded or cnn_lstm_model is None:
+        raise RuntimeError("CNN-LSTM model is unavailable; check cnn_lstm_model.keras")
+
+    start = time.perf_counter()
+    model_input = np.asarray(signals, dtype=np.float32).T[np.newaxis, ...]
+    with tf.device("/CPU:0"):
+        model_output = cnn_lstm_model(model_input, training=False)
+    probs = np.asarray(model_output, dtype=np.float32)
+    if probs.shape != (1, len(ACTIVITY_NAMES)) or not np.isfinite(probs).all():
+        raise RuntimeError(f"CNN-LSTM returned invalid probabilities with shape {probs.shape}")
+    class_probs = probs[0]
+    if np.any(class_probs < 0.0) or not np.isclose(float(class_probs.sum()), 1.0, atol=1e-4):
+        raise RuntimeError("CNN-LSTM output must be six normalized class probabilities")
+
+    pred_idx = int(np.argmax(class_probs))
+    pred_act = ACTIVITY_NAMES[pred_idx]
+    w_steps, spm, peaks = detect_steps_in_window(signals, sample_rate_hz, pred_act)
+    latency = (time.perf_counter() - start) * 1000.0
+    return PredictionResponse(
+        model_used="CNN-LSTM (Raw 128x9 Signals)",
+        predicted_activity=pred_act,
+        confidence=round(float(class_probs[pred_idx]), 4),
+        probabilities={
+            ACTIVITY_NAMES[i]: round(float(class_probs[i]), 4)
+            for i in range(len(ACTIVITY_NAMES))
+        },
+        latency_ms=round(latency, 2),
+        weights_status="Trained (cnn_lstm_model.keras loaded)",
+        window_steps=w_steps,
+        cadence_spm=spm,
+        step_peak_indices=peaks,
+    )
 
 
 def predict_cnn_signals(
@@ -1172,7 +1250,7 @@ def build_model_chatbot_reply(
     live_steps = int(ctx.total_steps or 0)
     live_win_steps = int(ctx.window_steps or 0)
     live_spm = int(round(ctx.cadence_spm or 0))
-    selected_model = (ctx.selected_model or "cnn").upper()
+    selected_model = (ctx.selected_model or "cnn_lstm").upper()
 
     topics = [
         {
@@ -1969,7 +2047,7 @@ async def websocket_live_relay(websocket: WebSocket, room_code: str):
                 )
             elif role == "sender" and msg_type == "predict":
                 raw_window = data.get("window")
-                model_type = str(data.get("model_type") or "cnn")
+                model_type = str(data.get("model_type") or "cnn_lstm")
                 try:
                     rate_hz = float(data.get("sample_rate_hz") or 50.0)
                 except (TypeError, ValueError):

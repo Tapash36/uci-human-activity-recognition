@@ -220,7 +220,8 @@
             <label for="liveModelTypeSelect" class="font-mono-tech text-[10px] uppercase font-semibold text-on-surface-variant shrink-0">AI Engine:</label>
             <select id="liveModelTypeSelect" onchange="onModelEngineChange()"
               class="flex-1 bg-surface-container-low border border-outline-variant/30 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30">
-              <option value="cnn" selected>1D-CNN (Raw 9x128 Signals · 94.03%)</option>
+              <option value="cnn_lstm" selected>CNN-LSTM (Raw 128x9 Signals)</option>
+              <option value="cnn">1D-CNN (Raw 9x128 Signals · 94.03%)</option>
               <option value="ann">Regularized ANN (561 Features · 95.72%)</option>
               <option value="ensemble">Ensemble Fusion (50% CNN + 50% ANN)</option>
             </select>
@@ -363,7 +364,7 @@
 
             <div class="absolute top-3 left-3 bg-inverse-surface/80 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1.5">
               <span class="material-symbols-outlined text-primary-fixed text-[14px]">smartphone</span>
-              <span id="liveActiveEnginePill" class="font-mono-tech text-[10px] text-surface-variant font-semibold uppercase">1D-CNN Waist IMU</span>
+              <span id="liveActiveEnginePill" class="font-mono-tech text-[10px] text-surface-variant font-semibold uppercase">CNN-LSTM Waist IMU</span>
             </div>
 
             <div class="absolute top-3 right-3 bg-surface/92 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
@@ -1476,7 +1477,7 @@
     };
 
     let currentContextState = {
-      selected_model: 'cnn',
+      selected_model: 'cnn_lstm',
       current_activity: 'WALKING',
       confidence: 0.98,
       latestSignals: null,
@@ -2661,15 +2662,16 @@
     function onModelEngineChange(opts = {}) {
       const sel = document.getElementById('liveModelTypeSelect');
       if (!sel) return;
-      const val = sel.value || 'cnn';
+      const val = sel.value || 'cnn_lstm';
       currentContextState.selected_model = val;
       const pill = document.getElementById('liveActiveEnginePill');
       const labels = {
+        cnn_lstm: 'CNN-LSTM Waist IMU',
         cnn: '1D-CNN Waist IMU',
         ann: 'Feature ANN (561)',
         ensemble: 'Ensemble CNN+ANN'
       };
-      if (pill) pill.textContent = labels[val] || '1D-CNN Waist IMU';
+      if (pill) pill.textContent = labels[val] || 'CNN-LSTM Waist IMU';
       if (!opts.silent) showToast(`AI Engine: ${labels[val] || val.toUpperCase()}`);
 
       if (!opts.fromRemote && isViewingRemote && viewerWs && viewerWsReady) {
@@ -3053,7 +3055,7 @@
       if (probChartInstance) {
         const pArr = ACTIVITIES.map(a => probs[a]);
         probChartInstance.data.datasets[0].data = selectedModel === 'ann' ? ACTIVITIES.map(() => 0) : pArr;
-        probChartInstance.data.datasets[1].data = selectedModel === 'cnn' ? ACTIVITIES.map(() => 0) : pArr;
+        probChartInstance.data.datasets[1].data = ['cnn', 'cnn_lstm'].includes(selectedModel) ? ACTIVITIES.map(() => 0) : pArr;
         probChartInstance.update('none');
       }
     }
@@ -3069,7 +3071,7 @@
         : 2.54;
       const measuredRateHz = elapsedSec > 0.2 ? Math.min(120, Math.max(15, (windowCopy.length - 1) / elapsedSec)) : 50.0;
       const modelSelect = document.getElementById('liveModelTypeSelect');
-      const selectedModel = modelSelect ? modelSelect.value : 'cnn';
+      const selectedModel = modelSelect ? modelSelect.value : 'cnn_lstm';
       currentContextState.selected_model = selectedModel;
 
       const accXSeries = windowCopy.map(s => s[0]);
@@ -3788,7 +3790,7 @@
     function handleRemoteCommand(msg) {
       if (msg.command === 'set_model' && typeof msg.model_type === 'string') {
         const sel = document.getElementById('liveModelTypeSelect');
-        if (sel && ['cnn', 'ann', 'ensemble'].includes(msg.model_type)) {
+        if (sel && ['cnn_lstm', 'cnn', 'ann', 'ensemble'].includes(msg.model_type)) {
           sel.value = msg.model_type;
           onModelEngineChange({ fromRemote: true, silent: true });
           sendSenderTelemetryPacket([]);
@@ -3979,7 +3981,7 @@
       document.getElementById('bufferCountText').textContent = `[${bufCount} / 128]`;
       document.getElementById('bufferProgressBar').style.width = `${Math.min(100, (bufCount / 128) * 100)}%`;
 
-      if (tData.model_type && ['cnn', 'ann', 'ensemble'].includes(tData.model_type)) {
+      if (tData.model_type && ['cnn_lstm', 'cnn', 'ann', 'ensemble'].includes(tData.model_type)) {
         const sel = document.getElementById('liveModelTypeSelect');
         if (sel && sel.value !== tData.model_type) {
           sel.value = tData.model_type;
