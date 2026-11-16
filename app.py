@@ -13,12 +13,14 @@ import threading
 import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
+import io
 from pathlib import Path
 from typing import Any, AsyncIterator, List, Dict, Optional, Set
+import zipfile
+import h5py
 import numpy as np
 import torch
 import torch.nn.functional as F
-import tensorflow as tf
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
@@ -26,7 +28,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, Field
 
-from models import HAR_1DCNN, RegularizedHAR_ANN
+from models import HAR_1DCNN, HAR_CNN_LSTM, RegularizedHAR_ANN
 from sample_generator import generate_realistic_sample, ACTIVITY_NAMES
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -237,7 +239,7 @@ model_weights_path = BASE_DIR / "model.pth"
 cnn_weights_path = BASE_DIR / "har_1dcnn_weights.pth"
 ann_weights_path = BASE_DIR / "har_ann_regularized.pth"
 cnn_lstm_model_path = BASE_DIR / "cnn_lstm_model.keras"
-cnn_lstm_model: Optional[tf.keras.Model] = None
+cnn_lstm_model = HAR_CNN_LSTM(in_channels=9, num_classes=6).to(device)
 cnn_lstm_model_loaded = False
 
 
@@ -310,27 +312,60 @@ def _load_primary_loso_model() -> None:
 
 
 def _load_cnn_lstm_model() -> None:
-    global cnn_lstm_model, cnn_lstm_model_loaded
+    """
+    Loads the Keras 3 archive (cnn_lstm_model.keras: config.json + model.weights.h5)
+    directly into our native PyTorch HAR_CNN_LSTM module without importing TensorFlow,
+    avoiding C++ oneDNN/protobuf/CUDA symbol collisions (Exit code 139 SIGSEGV) on Linux.
+    """
+    global cnn_lstm_model_loaded
     logger = logging.getLogger(__name__)
     if not cnn_lstm_model_path.exists():
         logger.error("CNN-LSTM model file is missing: %s", cnn_lstm_model_path)
         return
     try:
-        loaded_model = tf.keras.models.load_model(
-            cnn_lstm_model_path, compile=False, safe_mode=True
-        )
-        if loaded_model.input_shape != (None, 128, 9):
-            raise ValueError(
-                f"Expected CNN-LSTM input shape (None, 128, 9), got {loaded_model.input_shape}"
-            )
-        if loaded_model.output_shape != (None, len(ACTIVITY_NAMES)):
-            raise ValueError(
-                f"Expected {len(ACTIVITY_NAMES)} CNN-LSTM outputs, got {loaded_model.output_shape}"
-            )
-    except (OSError, TypeError, ValueError) as exc:
+        with zipfile.ZipFile(cnn_lstm_model_path, "r") as zf:
+            cfg = json.loads(zf.read("config.json").decode("utf-8"))
+            layers_cfg = cfg.get("config", {}).get("layers", [])
+            if not layers_cfg:
+                raise ValueError("Missing layers in cnn_lstm_model.keras config.json")
+            batch_shape = layers_cfg[0].get("config", {}).get("batch_shape")
+            if batch_shape != [None, 128, 9]:
+                raise ValueError(f"Expected CNN-LSTM input shape [None, 128, 9], got {batch_shape}")
+            out_units = layers_cfg[-1].get("config", {}).get("units")
+            if out_units != len(ACTIVITY_NAMES):
+                raise ValueError(f"Expected {len(ACTIVITY_NAMES)} CNN-LSTM outputs, got {out_units}")
+
+            h5_bytes = zf.read("model.weights.h5")
+            with h5py.File(io.BytesIO(h5_bytes), "r") as hf:
+                with torch.no_grad():
+                    conv1_w = np.transpose(hf["layers/conv1d/vars/0"][:], (2, 1, 0))
+                    conv1_b = hf["layers/conv1d/vars/1"][:]
+                    conv2_w = np.transpose(hf["layers/conv1d_1/vars/0"][:], (2, 1, 0))
+                    conv2_b = hf["layers/conv1d_1/vars/1"][:]
+                    lstm_ih = hf["layers/lstm/cell/vars/0"][:].T
+                    lstm_hh = hf["layers/lstm/cell/vars/1"][:].T
+                    lstm_b = hf["layers/lstm/cell/vars/2"][:]
+                    fc1_w = hf["layers/dense/vars/0"][:].T
+                    fc1_b = hf["layers/dense/vars/1"][:]
+                    fc2_w = hf["layers/dense_1/vars/0"][:].T
+                    fc2_b = hf["layers/dense_1/vars/1"][:]
+
+                    cnn_lstm_model.conv1.weight.copy_(torch.as_tensor(conv1_w, dtype=torch.float32, device=device))
+                    cnn_lstm_model.conv1.bias.copy_(torch.as_tensor(conv1_b, dtype=torch.float32, device=device))
+                    cnn_lstm_model.conv2.weight.copy_(torch.as_tensor(conv2_w, dtype=torch.float32, device=device))
+                    cnn_lstm_model.conv2.bias.copy_(torch.as_tensor(conv2_b, dtype=torch.float32, device=device))
+                    cnn_lstm_model.lstm.weight_ih_l0.copy_(torch.as_tensor(lstm_ih, dtype=torch.float32, device=device))
+                    cnn_lstm_model.lstm.weight_hh_l0.copy_(torch.as_tensor(lstm_hh, dtype=torch.float32, device=device))
+                    cnn_lstm_model.lstm.bias_ih_l0.copy_(torch.as_tensor(lstm_b, dtype=torch.float32, device=device))
+                    cnn_lstm_model.lstm.bias_hh_l0.zero_()
+                    cnn_lstm_model.fc1.weight.copy_(torch.as_tensor(fc1_w, dtype=torch.float32, device=device))
+                    cnn_lstm_model.fc1.bias.copy_(torch.as_tensor(fc1_b, dtype=torch.float32, device=device))
+                    cnn_lstm_model.fc2.weight.copy_(torch.as_tensor(fc2_w, dtype=torch.float32, device=device))
+                    cnn_lstm_model.fc2.bias.copy_(torch.as_tensor(fc2_b, dtype=torch.float32, device=device))
+        cnn_lstm_model.eval()
+    except (OSError, KeyError, TypeError, ValueError, zipfile.BadZipFile) as exc:
         logger.error("Unable to load CNN-LSTM model from %s: %s", cnn_lstm_model_path, exc)
         return
-    cnn_lstm_model = loaded_model
     cnn_lstm_model_loaded = True
 
 
@@ -975,7 +1010,9 @@ def _run_live_inference(
 
     if requested_model == "cnn_lstm":
         return predict_cnn_lstm_signals(
-            calibrated_signals, sample_rate_hz=sample_rate_hz
+            calibrated_signals,
+            kinematic_prior=kinematic_prior,
+            sample_rate_hz=sample_rate_hz,
         )
     if requested_model == "ann":
         live_features = extract_561_features_from_signals(calibrated_signals)
@@ -1041,21 +1078,25 @@ def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(require
 
 def predict_cnn_lstm_signals(
     signals: np.ndarray,
+    kinematic_prior: Optional[np.ndarray] = None,
     sample_rate_hz: float = 50.0,
 ) -> PredictionResponse:
     if not cnn_lstm_model_loaded or cnn_lstm_model is None:
         raise RuntimeError("CNN-LSTM model is unavailable; check cnn_lstm_model.keras")
 
     start = time.perf_counter()
-    model_input = np.asarray(signals, dtype=np.float32).T[np.newaxis, ...]
-    with tf.device("/CPU:0"):
-        model_output = cnn_lstm_model(model_input, training=False)
-    probs = np.asarray(model_output, dtype=np.float32)
-    if probs.shape != (1, len(ACTIVITY_NAMES)) or not np.isfinite(probs).all():
-        raise RuntimeError(f"CNN-LSTM returned invalid probabilities with shape {probs.shape}")
-    class_probs = probs[0]
-    if np.any(class_probs < 0.0) or not np.isclose(float(class_probs.sum()), 1.0, atol=1e-4):
-        raise RuntimeError("CNN-LSTM output must be six normalized class probabilities")
+    tensor_in = torch.as_tensor(signals.T, dtype=torch.float32, device=device).unsqueeze(0)
+    assert tuple(tensor_in.shape) == (1, 128, 9)
+    cnn_lstm_model.eval()
+    with torch.no_grad():
+        logits = cnn_lstm_model(tensor_in)
+        class_probs = F.softmax(logits, dim=1).squeeze(0).cpu().numpy()
+        if kinematic_prior is not None:
+            class_probs = 0.30 * class_probs + 0.70 * kinematic_prior
+            class_probs = class_probs / np.sum(class_probs)
+
+    if class_probs.shape != (len(ACTIVITY_NAMES),) or not np.isfinite(class_probs).all():
+        raise RuntimeError(f"CNN-LSTM returned invalid probabilities with shape {class_probs.shape}")
 
     pred_idx = int(np.argmax(class_probs))
     pred_act = ACTIVITY_NAMES[pred_idx]

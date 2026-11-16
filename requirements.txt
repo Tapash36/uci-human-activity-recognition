@@ -2,7 +2,7 @@ fastapi
 uvicorn
 websockets>=12.0
 torch
-tensorflow>=2.16,<3
+h5py>=3.10.0
 numpy
 pydantic
 requests>=2.31.0

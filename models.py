@@ -1,5 +1,41 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
+
+class HAR_CNN_LSTM(nn.Module):
+    """
+    PyTorch execution module matching the Keras 3 Sequential architecture in cnn_lstm_model.keras:
+    Input (B, 128, 9) -> Conv1D(64, k=3, ReLU) -> Conv1D(64, k=3, ReLU) -> Dropout(0.5)
+    -> MaxPool1D(2) -> LSTM(100, return_sequences=False) -> Dropout(0.5)
+    -> Dense(100, ReLU) -> Dense(6, Softmax/Logits).
+    """
+
+    def __init__(self, in_channels: int = 9, num_classes: int = 6):
+        super(HAR_CNN_LSTM, self).__init__()
+        self.conv1 = nn.Conv1d(in_channels=in_channels, out_channels=64, kernel_size=3, stride=1, padding=0)
+        self.conv2 = nn.Conv1d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0)
+        self.dropout1 = nn.Dropout(p=0.5)
+        self.pool = nn.MaxPool1d(kernel_size=2, stride=2)
+        self.lstm = nn.LSTM(input_size=64, hidden_size=100, batch_first=True)
+        self.dropout2 = nn.Dropout(p=0.5)
+        self.fc1 = nn.Linear(100, 100)
+        self.fc2 = nn.Linear(100, num_classes)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # Accept either (B, 128, 9) timesteps-first or (B, 9, 128) channels-first
+        if x.ndim == 3 and x.shape[1] == 128 and x.shape[2] == 9:
+            x = x.transpose(1, 2)
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = self.dropout1(x)
+        x = self.pool(x)
+        x = x.transpose(1, 2)  # (B, 62, 64) for batch_first LSTM
+        lstm_out, _ = self.lstm(x)
+        x = self.dropout2(lstm_out[:, -1, :])
+        x = F.relu(self.fc1(x))
+        return self.fc2(x)
+
 
 class HAR_1DCNN(nn.Module):
     def __init__(self, in_channels=9, num_classes=6):

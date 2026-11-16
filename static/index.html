@@ -3022,7 +3022,9 @@
         document.getElementById('annPredLabel').textContent = 'Standby';
         document.getElementById('annConf').textContent = '--%';
         document.getElementById('annLatency').textContent = '--';
-        document.getElementById('ensembleMethod').textContent = isRemoteMirror ? 'PC Mirror CNN' : 'Live 1D-CNN';
+        document.getElementById('ensembleMethod').textContent = selectedModel === 'cnn_lstm'
+          ? (isRemoteMirror ? 'PC CNN-LSTM' : 'Live CNN-LSTM')
+          : (isRemoteMirror ? 'PC Mirror CNN' : 'Live 1D-CNN');
       }
 
       renderLiveBreakdownCards(probs);
