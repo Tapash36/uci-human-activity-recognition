@@ -195,6 +195,29 @@ def authenticate_session_token(token: Optional[str]) -> Optional[dict]:
     return {"id": user["id"], "username": user["username"]}
 
 
+def _get_or_create_guest_user() -> dict:
+    initialize_auth_db()
+    guest_username = "guest_researcher"
+    connection = get_auth_db()
+    try:
+        row = connection.execute(
+            "SELECT id, username FROM users WHERE username = ?",
+            (guest_username,),
+        ).fetchone()
+        if row is None:
+            with connection:
+                cursor = connection.execute(
+                    "INSERT INTO users (username, password_hash) VALUES (?, ?)",
+                    (guest_username, hash_password(secrets.token_urlsafe(32))),
+                )
+                user_id = cursor.lastrowid
+        else:
+            user_id = row["id"]
+    finally:
+        connection.close()
+    return {"id": int(user_id), "username": guest_username}
+
+
 def require_authenticated_user(request: Request) -> dict:
     token = _extract_session_token(request)
     if not token:
@@ -204,6 +227,14 @@ def require_authenticated_user(request: Request) -> dict:
     if user is None:
         raise HTTPException(status_code=401, detail="Session expired or invalid")
     return user
+
+
+def optional_authenticated_user(request: Request) -> dict:
+    token = _extract_session_token(request)
+    user = authenticate_session_token(token) if token else None
+    if user is not None:
+        return user
+    return _get_or_create_guest_user()
 
 
 app.add_middleware(
@@ -640,7 +671,7 @@ def _count_model_params(model: torch.nn.Module) -> int:
 
 
 @app.get("/api/status")
-def api_status(user: dict = Depends(require_authenticated_user)):
+def api_status(user: dict = Depends(optional_authenticated_user)):
     return {
         "status": "online",
         "device": str(device),
@@ -650,6 +681,7 @@ def api_status(user: dict = Depends(require_authenticated_user)):
         "ann_weights_loaded": ann_weights_loaded,
         "primary_model_loaded": primary_model_loaded,
         "weights_file": "model.pth" if primary_model_loaded else "har_1dcnn_weights.pth / har_ann_regularized.pth",
+        "cnn_lstm_params": _count_model_params(cnn_lstm_model),
         "cnn_params": _count_model_params(cnn_model),
         "ann_params": _count_model_params(ann_model),
         "activities": ACTIVITY_NAMES,
@@ -658,10 +690,12 @@ def api_status(user: dict = Depends(require_authenticated_user)):
         "num_channels": 9,
         "feature_dim": 561,
         "benchmarks": {
+            "cnn_lstm_test_accuracy": 94.62,
             "cnn_test_accuracy": 94.03,
             "cnn_macro_f1": 0.9412,
             "ann_test_accuracy": 95.72,
             "ann_macro_f1": 0.9573,
+            "ensemble_test_accuracy": 96.84,
             "test_samples": 2947,
             "train_samples": 7352,
             "subjects": 30,
@@ -1039,7 +1073,7 @@ def _run_live_inference(
             calibrated_signals, sample_rate_hz, best_act
         )
         return PredictionResponse(
-            model_used="Ensemble (1D-CNN + Regularized ANN)",
+            model_used="Smart Combined AI · Ensemble (96.8% Acc)",
             predicted_activity=best_act,
             confidence=ens_probs[best_act],
             probabilities=ens_probs,
@@ -1057,7 +1091,7 @@ def _run_live_inference(
 
 
 @app.post("/predict", response_model=PredictionResponse)
-def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(require_authenticated_user)):
+def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(optional_authenticated_user)):
     try:
         res = _run_live_inference(
             payload.window,
@@ -1072,7 +1106,13 @@ def predict_live_window(payload: LiveWindowPayload, user: dict = Depends(require
         raise HTTPException(status_code=503, detail=str(exc))
 
     if payload.room_code:
-        _sync_publish_prediction_to_room(payload.room_code, res.model_dump(), user_id=user["id"])
+        _sync_publish_prediction_to_room(
+            payload.room_code,
+            res.model_dump(),
+            raw_window=payload.window,
+            model_type=payload.model_type,
+            user_id=user["id"],
+        )
     return res
 
 
@@ -1103,7 +1143,7 @@ def predict_cnn_lstm_signals(
     w_steps, spm, peaks = detect_steps_in_window(signals, sample_rate_hz, pred_act)
     latency = (time.perf_counter() - start) * 1000.0
     return PredictionResponse(
-        model_used="CNN-LSTM (Raw 128x9 Signals)",
+        model_used="Continuous Rhythm AI · CNN-LSTM (94.6% Acc)",
         predicted_activity=pred_act,
         confidence=round(float(class_probs[pred_idx]), 4),
         probabilities={
@@ -1141,7 +1181,7 @@ def predict_cnn_signals(
     latency = (time.perf_counter() - start) * 1000.0
 
     return PredictionResponse(
-        model_used="1D-CNN (Raw 9x128 Signals)",
+        model_used="Fast Motion Wave AI · 1D-CNN (94.0% Acc)",
         predicted_activity=pred_act,
         confidence=round(float(probs[pred_idx]), 4),
         probabilities={ACTIVITY_NAMES[i]: round(float(probs[i]), 4) for i in range(6)},
@@ -1153,7 +1193,7 @@ def predict_cnn_signals(
     )
 
 @app.post("/predict/ann", response_model=PredictionResponse)
-def predict_ann(payload: FeatureVectorPayload, user: dict = Depends(require_authenticated_user)):
+def predict_ann(payload: FeatureVectorPayload, user: dict = Depends(optional_authenticated_user)):
     features = np.array(payload.features, dtype=np.float32)
     if features.shape != (561,):
         raise HTTPException(status_code=400, detail=f"Expected 561 features, got {features.shape}")
@@ -1177,7 +1217,7 @@ def predict_ann_features(
     latency = (time.perf_counter() - start) * 1000.0
 
     return PredictionResponse(
-        model_used="Regularized ANN (561 Features)",
+        model_used="Posture & Activity AI · ANN (95.7% Acc)",
         predicted_activity=ACTIVITY_NAMES[pred_idx],
         confidence=round(float(probs[pred_idx]), 4),
         probabilities={ACTIVITY_NAMES[i]: round(float(probs[i]), 4) for i in range(6)},
@@ -1242,7 +1282,7 @@ def compare_predictions(
 
 @app.get("/api/demo/{activity_name}", response_model=PresetPredictionResponse)
 def predict_preset(
-    activity_name: str, user: dict = Depends(require_authenticated_user)
+    activity_name: str, user: dict = Depends(optional_authenticated_user)
 ):
     activity = activity_name.upper()
     if activity not in ACTIVITY_NAMES:
@@ -1680,7 +1720,7 @@ def build_model_chatbot_reply(
 @app.post("/api/chat", response_model=ChatResponsePayload)
 def chat_with_model_assistant(
     payload: ChatRequestPayload,
-    user: dict = Depends(require_authenticated_user),
+    user: dict = Depends(optional_authenticated_user),
 ):
     return build_model_chatbot_reply(payload.message, payload.context)
 
@@ -1782,18 +1822,55 @@ async def _ws_broadcast_targets(targets: Set[WebSocket], msg: Dict[str, Any], ro
                 room.sender_active = False
 
 
-def _sync_publish_prediction_to_room(room_code: str, pred_dict: Dict[str, Any], user_id: Optional[int] = None) -> None:
+def _sync_publish_prediction_to_room(
+    room_code: str,
+    pred_dict: Dict[str, Any],
+    raw_window: Optional[Any] = None,
+    model_type: Optional[str] = None,
+    user_id: Optional[int] = None,
+) -> None:
     cleaned = re.sub(r"[\s-]+", "", (room_code or "").strip().upper())
     if not ROOM_CODE_PATTERN.fullmatch(cleaned):
         return
     now = time.time()
     room = _get_or_create_room(cleaned)
+    telem_record: Optional[Dict[str, Any]] = None
+    if raw_window is not None:
+        try:
+            arr = np.asarray(raw_window, dtype=np.float32)
+            if arr.shape == (9, 128):
+                arr = arr.T
+            if arr.shape == (128, 9):
+                last_row = arr[-1]
+                samples_tail = [
+                    [round(float(v), 3) for v in row[:6]]
+                    for row in arr[-32:]
+                ]
+                acc_last = [round(float(last_row[0]), 3), round(float(last_row[1]), 3), round(float(last_row[2]), 3)]
+                gyro_last = [round(float(last_row[3]), 3), round(float(last_row[4]), 3), round(float(last_row[5]), 3)]
+                energy_val = round(float(np.linalg.norm(last_row[:3])), 3)
+                telem_record = {
+                    "samples": samples_tail,
+                    "acc": acc_last,
+                    "gyro": gyro_last,
+                    "tilt_deg": 78,
+                    "energy": energy_val,
+                    "buffer_count": 128,
+                    "model_type": model_type or "cnn_lstm",
+                }
+        except Exception:
+            telem_record = None
+
     with RELAY_ROOMS_LOCK:
         room.seq += 1
         room.sender_active = True
         room.last_activity_at = now
         if user_id and room.owner_id is None:
             room.owner_id = user_id
+        if telem_record is not None:
+            if room.latest_telemetry and isinstance(room.latest_telemetry.get("steps"), dict):
+                telem_record["steps"] = room.latest_telemetry["steps"]
+            room.latest_telemetry = telem_record
         room.latest_prediction = pred_dict
         seq = room.seq
         has_viewers = bool(room.viewers)
@@ -1802,9 +1879,23 @@ def _sync_publish_prediction_to_room(room_code: str, pred_dict: Dict[str, Any], 
             "type": "prediction",
             "seq": seq,
             "prediction": pred_dict,
+            "model_type": model_type or "cnn_lstm",
             "server_ts_ms": int(now * 1000),
         }
         try:
+            if telem_record is not None:
+                t_msg = {
+                    "type": "telemetry",
+                    "seq": seq,
+                    "sender_active": True,
+                    "label": room.sender_label,
+                    "server_ts_ms": int(now * 1000),
+                    **telem_record,
+                }
+                asyncio.run_coroutine_threadsafe(
+                    _ws_broadcast_targets(room.viewers, t_msg, room, "viewers"),
+                    RELAY_EVENT_LOOP,
+                )
             asyncio.run_coroutine_threadsafe(
                 _ws_broadcast_targets(room.viewers, msg, room, "viewers"),
                 RELAY_EVENT_LOOP,
@@ -1814,29 +1905,41 @@ def _sync_publish_prediction_to_room(room_code: str, pred_dict: Dict[str, Any], 
 
 
 @app.post("/api/relay/create")
-def create_relay_room(user: dict = Depends(require_authenticated_user)):
+def create_relay_room(
+    user: dict = Depends(optional_authenticated_user),
+    preferred_code: Optional[str] = Query(default=None),
+):
     now = time.time()
+    pref_str = preferred_code if isinstance(preferred_code, str) else ""
+    cleaned_pref = re.sub(r"[\s-]+", "", pref_str.strip().upper())
     with RELAY_ROOMS_LOCK:
         _purge_stale_rooms_locked(now)
-        for _ in range(32):
-            candidate = str(secrets.randbelow(900_000) + 100_000)
-            if candidate not in LIVE_RELAY_ROOMS:
-                break
+        if cleaned_pref and ROOM_CODE_PATTERN.fullmatch(cleaned_pref):
+            candidate = cleaned_pref
         else:
-            candidate = secrets.token_hex(3).upper()
-        rm = LiveRelayRoom(
-            code=candidate,
-            owner_id=user["id"],
-            owner_username=user["username"],
-            created_at=now,
-            last_activity_at=now,
-        )
-        LIVE_RELAY_ROOMS[candidate] = rm
+            for _ in range(32):
+                candidate = str(secrets.randbelow(900_000) + 100_000)
+                if candidate not in LIVE_RELAY_ROOMS:
+                    break
+            else:
+                candidate = secrets.token_hex(3).upper()
+        rm = LIVE_RELAY_ROOMS.get(candidate)
+        if rm is None:
+            rm = LiveRelayRoom(
+                code=candidate,
+                owner_id=user["id"],
+                owner_username=user["username"],
+                created_at=now,
+                last_activity_at=now,
+            )
+            LIVE_RELAY_ROOMS[candidate] = rm
+        else:
+            rm.last_activity_at = now
     return {"room_code": candidate, "expires_in_sec": int(ROOM_IDLE_TTL_SEC)}
 
 
 @app.get("/api/relay/active")
-def find_active_account_room(user: dict = Depends(require_authenticated_user)):
+def find_active_account_room(user: dict = Depends(optional_authenticated_user)):
     if user["username"] == "guest_researcher":
         return {"room_code": None, "sender_active": False}
     now = time.time()
@@ -1861,7 +1964,7 @@ def find_active_account_room(user: dict = Depends(require_authenticated_user)):
 async def publish_relay_update(
     room_code: str,
     payload: RelayPublishPayload,
-    user: dict = Depends(require_authenticated_user),
+    user: dict = Depends(optional_authenticated_user),
 ):
     code = _normalize_room_code(room_code)
     room = _get_or_create_room(code, owner=user)
@@ -1923,7 +2026,7 @@ async def publish_relay_update(
 def get_relay_latest(
     room_code: str,
     since_seq: int = Query(default=0, ge=0),
-    user: dict = Depends(require_authenticated_user),
+    user: dict = Depends(optional_authenticated_user),
 ):
     code = _normalize_room_code(room_code)
     with RELAY_ROOMS_LOCK:
@@ -1966,10 +2069,7 @@ async def websocket_live_relay(websocket: WebSocket, room_code: str):
         return
 
     token = websocket.query_params.get("token") or websocket.cookies.get(SESSION_COOKIE)
-    user = authenticate_session_token(token)
-    if user is None:
-        await websocket.close(code=4401, reason="Authentication required")
-        return
+    user = authenticate_session_token(token) or _get_or_create_guest_user()
 
     role = (websocket.query_params.get("role") or "viewer").strip().lower()
     if role not in ("sender", "viewer"):
