@@ -220,3 +220,7 @@ __marimo__/
 .streamlit/secrets.toml
 
 har_auth.sqlite3*
+UCI HAR Dataset/
+results/
+best_har_pipeline.joblib
+har_1dcnn_clean.pth

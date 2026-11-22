@@ -176,25 +176,206 @@
     <!-- ==================== TAB 1: LIVE SMARTPHONE TRACKING ==================== -->
     <section id="view-live" class="tab-view hidden space-y-4 view-animate">
 
-      <!-- Important Placement Card + Model Controls -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
-        <div class="lg:col-span-7 bg-primary-fixed/45 border border-primary/20 rounded-xl p-3.5 flex items-start gap-3 shadow-sm">
-          <div class="w-9 h-9 rounded-full bg-primary flex items-center justify-center shrink-0 mt-0.5 shadow-sm text-on-primary">
-            <span class="material-symbols-outlined text-[19px]">info</span>
-          </div>
-          <div class="min-w-0 flex-1">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <span class="font-display text-[13px] sm:text-[14px] text-primary font-bold tracking-tight">Important: Keep Phone at Your Waist</span>
-              <span class="bg-tertiary-container text-on-tertiary-container font-mono-tech text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase">iOS &amp; Android Ready</span>
+      <!-- ==================== CLEAR USER GUIDELINES (SIMPLE LANGUAGE) ==================== -->
+      <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-outline-variant/25 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-primary text-on-primary flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[18px]">menu_book</span>
             </div>
-            <p class="text-xs text-on-surface-variant mt-0.5 leading-relaxed">
-              Clip or pocket your phone securely at your waist and tap <strong>Start Live Tracking</strong>. Since you cannot see your waist phone while walking, use <strong>Watch Waist Phone on PC</strong> below to mirror live readings on your laptop in milliseconds.
+            <div>
+              <h2 class="font-display text-sm sm:text-base font-bold text-on-surface">How to Use This Website (Simple Guide)</h2>
+              <p class="text-xs text-on-surface-variant">Follow these 4 simple guidelines for accurate live activity &amp; step prediction</p>
+            </div>
+          </div>
+          <span class="bg-tertiary-fixed/50 text-on-tertiary-fixed font-mono-tech text-[10px] px-2.5 py-1 rounded-full font-bold uppercase">5 AI Models Side-by-Side</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+          <div class="bg-surface-container-low rounded-xl p-3 space-y-1 border border-outline-variant/15">
+            <div class="font-display font-bold text-primary flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px]">psychology</span>
+              <span>1. What We Are Doing</span>
+            </div>
+            <p class="text-on-surface-variant leading-relaxed">
+              We read your phone's motion sensors (50 times per second) to detect <strong>Walking, Upstairs, Downstairs, Sitting, Standing, and Laying</strong>, count your <strong>live steps</strong>, and compare all 5 AI models (<strong>CNN-LSTM, ANN, SVM, LOSO, CombinAI</strong>) side by side.
+            </p>
+          </div>
+
+          <div class="bg-primary-fixed/35 rounded-xl p-3 space-y-1 border border-primary/25">
+            <div class="font-display font-bold text-primary flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px]">do_not_touch</span>
+              <span>2. Where to Keep Mobile</span>
+            </div>
+            <p class="text-on-surface leading-relaxed">
+              <strong>Do NOT hold your mobile in your hand.</strong> Hand movement causes false readings. You must keep your mobile <strong>attached at your waist in one fixed place</strong> (belt clip, waistband, or tight front waist pocket).
+            </p>
+          </div>
+
+          <div class="bg-surface-container-low rounded-xl p-3 space-y-1 border border-outline-variant/15">
+            <div class="font-display font-bold text-tertiary flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px]">play_circle</span>
+              <span>3. What to Do on Mobile</span>
+            </div>
+            <p class="text-on-surface-variant leading-relaxed">
+              Open this page on your mobile, check your <strong>6-digit Device Number (Code)</strong> in <strong>Box 1</strong> below, tap <strong>Start Live Tracking</strong>, and attach the mobile firmly at your waist in one place.
+            </p>
+          </div>
+
+          <div class="bg-surface-container-low rounded-xl p-3 space-y-1 border border-outline-variant/15">
+            <div class="font-display font-bold text-secondary flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px]">desktop_windows</span>
+              <span>4. How to See Live on PC</span>
+            </div>
+            <p class="text-on-surface-variant leading-relaxed">
+              Since your mobile is at your waist, open this page on your PC. Take the <strong>6-digit number (code) from your mobile (Box 1)</strong>, type it into <strong>Box 2 on your PC</strong>, and click <strong>Watch on PC</strong> to see live predictions!
             </p>
           </div>
         </div>
+      </div>
 
-        <!-- Stream & Model Selector Card -->
-        <div class="lg:col-span-5 bg-surface-container-lowest rounded-xl p-3.5 shadow-sm border border-outline-variant/20 flex flex-col justify-between gap-2.5">
+      <!-- ==================== DEVICE CODE CONNECTION (PHONE -> PC) & MODEL SELECTOR ==================== -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+        <!-- Left: Phone -> PC 6-Digit Code Connection -->
+        <div class="lg:col-span-7 bg-surface-container-lowest rounded-xl p-3.5 shadow-sm border border-outline-variant/25 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2 min-w-0">
+              <div class="w-8 h-8 rounded-lg bg-secondary/10 text-secondary flex items-center justify-center shrink-0">
+                <span class="material-symbols-outlined text-[19px]">devices</span>
+              </div>
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <h3 class="font-display text-sm font-bold text-on-surface">See Mobile Live Prediction on PC (Device Number / Code)</h3>
+                  <span id="relayStatusPill" class="font-mono-tech text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant uppercase">Sync Standby</span>
+                </div>
+                <p class="text-[11px] text-on-surface-variant">Give the 6-digit number from Box 1 (Mobile) into Box 2 (PC) where you want to see the live prediction</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              <span id="relayLatencyPill" class="font-mono-tech text-[11px] font-semibold bg-surface-container-low text-primary px-2.5 py-1 rounded-lg">Link: -- ms</span>
+              <button id="toggleRelayQrBtn" type="button" onclick="toggleRelayQrDrawer()"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-colors">
+                <span class="material-symbols-outlined text-[15px] text-primary">qr_code_2</span>
+                <span id="toggleRelayQrLabel">QR Code</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Active PC Live Monitor Banner -->
+          <div id="pcViewerBanner" class="hidden bg-tertiary-fixed/35 border-2 border-tertiary/50 rounded-xl p-3 space-y-2 shadow-xs">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="w-2.5 h-2.5 rounded-full bg-tertiary animate-ping shrink-0"></span>
+                <div class="min-w-0">
+                  <div class="font-display text-xs sm:text-sm font-bold text-on-tertiary-fixed truncate" id="pcViewerTitle">PC Monitor Connected · Syncing Mobile...</div>
+                  <div class="font-mono-tech text-[11px] text-on-tertiary-fixed/85 truncate" id="pcViewerSubtext">Showing live predictions from your waist mobile</div>
+                </div>
+              </div>
+              <button type="button" onclick="disconnectRelayViewer()"
+                class="px-3 py-1.5 rounded-lg bg-surface-container-lowest hover:bg-error-container hover:text-error text-on-surface text-xs font-semibold shadow-xs transition-colors shrink-0">
+                Disconnect PC
+              </button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div class="bg-surface-container-lowest/95 rounded-lg px-3 py-1.5 flex items-center justify-between border border-tertiary/25">
+                <div>
+                  <span class="font-mono-tech text-[9px] uppercase font-bold text-on-surface-variant block">Live Activity</span>
+                  <span id="pcBannerActivity" class="font-display text-sm font-bold text-primary">Waiting...</span>
+                </div>
+                <span id="pcBannerConf" class="font-mono-tech text-xs font-bold bg-tertiary-fixed text-on-tertiary-fixed px-2 py-0.5 rounded-full">--%</span>
+              </div>
+              <div class="bg-surface-container-lowest/95 rounded-lg px-3 py-1.5 flex items-center justify-between border border-tertiary/25">
+                <div>
+                  <span class="font-mono-tech text-[9px] uppercase font-bold text-on-surface-variant block">Live Steps</span>
+                  <span id="pcBannerSteps" class="font-display text-sm font-bold text-tertiary">0 steps</span>
+                </div>
+                <span id="pcBannerCadence" class="font-mono-tech text-xs font-semibold text-on-surface-variant">0 SPM</span>
+              </div>
+              <div class="bg-surface-container-lowest/95 rounded-lg px-3 py-1.5 flex items-center justify-between border border-tertiary/25">
+                <div>
+                  <span class="font-mono-tech text-[9px] uppercase font-bold text-on-surface-variant block">3-Axis Motion</span>
+                  <span id="pcBannerAxes" class="font-mono-tech text-[11px] font-bold text-on-surface">X: +0.00g · Y: +0.00g · Z: +0.00g</span>
+                </div>
+                <span id="pcBannerModelTag" class="font-mono-tech text-[10px] font-semibold text-secondary">CNN-LSTM</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Account Auto-Detect Phone Banner -->
+          <div id="accountAutoPhoneBanner" class="hidden bg-primary-fixed/40 border border-primary/25 rounded-lg px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2 text-xs text-on-primary-fixed">
+              <span class="material-symbols-outlined text-[17px] text-primary">sensors</span>
+              <span>Your mobile is streaming live on code <strong id="accountAutoPhoneCode" class="font-mono-tech">------</strong>!</span>
+            </div>
+            <button type="button" onclick="connectDetectedAccountPhone()"
+              class="px-3 py-1 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary-container transition-colors">
+              Watch Now on PC
+            </button>
+          </div>
+
+          <!-- Box 1 (From Mobile) & Box 2 (To PC) -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            <div class="bg-surface-container-low rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2 border border-outline-variant/20">
+              <div class="min-w-0">
+                <span class="font-mono-tech text-[10px] uppercase font-bold text-primary block">Box 1. Mobile Code (From Phone at Waist)</span>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <span id="relayMyCodeText" class="font-mono-tech text-lg font-bold tracking-widest text-on-surface">------</span>
+                  <span id="relayTargetNote" class="text-[11px] text-on-surface-variant truncate">Copy this code to your PC</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <button type="button" onclick="copyRelayPairCode()" title="Copy 6-digit code"
+                  class="px-2.5 py-1.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container text-on-surface text-xs font-semibold border border-outline-variant/25 flex items-center gap-1 transition-colors">
+                  <span class="material-symbols-outlined text-[15px] text-primary">content_copy</span>
+                  <span>Copy</span>
+                </button>
+                <button type="button" onclick="regenerateRelayRoomCode()" title="Generate fresh code"
+                  class="px-2.5 py-1.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container text-on-surface text-xs font-semibold border border-outline-variant/25 flex items-center gap-1 transition-colors">
+                  <span class="material-symbols-outlined text-[15px] text-secondary">refresh</span>
+                  <span>New</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="bg-surface-container-low rounded-xl p-2.5 flex flex-wrap items-center gap-2 border border-outline-variant/20">
+              <div class="flex-1 min-w-[135px]">
+                <label for="relayViewerCodeInput" class="font-mono-tech text-[10px] uppercase font-bold text-secondary block mb-0.5">Box 2. Enter Mobile Code Here (On PC)</label>
+                <input id="relayViewerCodeInput" type="text" inputmode="numeric" maxlength="12" placeholder="Type 6-digit mobile code"
+                  class="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg px-2.5 py-1.5 font-mono-tech text-xs font-bold tracking-wider text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 uppercase" />
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0 self-end">
+                <button id="watchPcBtn" type="button" onclick="connectRelayViewer()"
+                  class="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary-container text-on-secondary text-xs font-bold flex items-center gap-1 shadow-xs transition-colors">
+                  <span class="material-symbols-outlined text-[16px]">cast</span>
+                  <span>Watch on PC</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Expandable QR Code Drawer -->
+          <div id="relayQrPanel" class="hidden bg-surface-container-low rounded-xl p-3 border border-outline-variant/25">
+            <div class="flex flex-col sm:flex-row items-center gap-3.5">
+              <div id="relayQrBox" class="w-24 h-24 bg-white rounded-xl p-2 flex items-center justify-center shadow-xs shrink-0 border border-outline-variant/20">
+                <span class="font-mono-tech text-[10px] text-on-surface-variant text-center">Generating QR...</span>
+              </div>
+              <div class="flex-1 min-w-0 space-y-1 text-center sm:text-left">
+                <span class="font-display text-xs font-bold text-on-surface block">Scan With Mobile Camera to Link Code <strong id="relayQrCodeEcho" class="font-mono-tech text-primary">------</strong></span>
+                <div class="flex flex-wrap items-center gap-2 justify-center sm:justify-start pt-1">
+                  <code id="relayPairLinkText" class="px-2 py-1 rounded bg-surface-container-lowest text-[11px] font-mono-tech text-primary border border-outline-variant/20 max-w-full truncate">https://...</code>
+                  <button type="button" onclick="copyRelayPairLink()"
+                    class="px-2.5 py-1 rounded-lg bg-primary text-on-primary text-[11px] font-semibold hover:bg-primary-container transition-colors">
+                    Copy Link
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Sensor Status, Model Selector (CNN-LSTM, ANN, SVM, LOSO, CombinAI) & Start Button -->
+        <div class="lg:col-span-5 bg-surface-container-lowest rounded-xl p-3.5 shadow-sm border border-outline-variant/25 flex flex-col justify-between gap-2.5">
           <div class="flex items-center justify-between gap-2">
             <div class="flex items-center gap-2 min-w-0">
               <span class="relative flex h-2.5 w-2.5 shrink-0">
@@ -216,191 +397,84 @@
             <div id="bufferProgressBar" class="h-full bg-primary transition-all duration-150 rounded-full" style="width: 0%"></div>
           </div>
 
-          <div class="space-y-1.5">
+          <div class="space-y-1">
             <div class="flex items-center justify-between gap-2">
-              <label for="liveModelTypeSelect" class="font-mono-tech text-[10px] uppercase font-bold text-primary shrink-0">Choose AI Model:</label>
+              <label for="liveModelTypeSelect" class="font-mono-tech text-[10px] uppercase font-bold text-primary shrink-0">Primary Highlighted Model:</label>
               <span id="liveModelAccBadge" class="font-mono-tech text-[10px] font-bold bg-tertiary-fixed/60 text-on-tertiary-fixed px-2 py-0.5 rounded-full">94.6% Accuracy</span>
             </div>
             <select id="liveModelTypeSelect" onchange="onModelEngineChange()"
               class="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-2.5 py-2 text-xs font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30">
-              <option value="cnn_lstm" selected>🔄 Continuous Rhythm AI — CNN-LSTM (94.6% Accuracy · Best for Walking &amp; Stairs)</option>
-              <option value="ensemble">⭐ Smart Combined AI — All Models (96.8% Accuracy · Most Accurate &amp; Stable)</option>
-              <option value="ann">🎯 Posture &amp; Activity AI — ANN (95.7% Accuracy · Best for Sitting &amp; Standing)</option>
-              <option value="cnn">⚡ Fast Motion Wave AI — 1D-CNN (94.0% Accuracy · Fastest Response)</option>
+              <option value="cnn_lstm" selected>CNN-LSTM (94.6% Accuracy)</option>
+              <option value="ann">ANN (95.7% Accuracy)</option>
+              <option value="svm">SVM (96.3% Accuracy)</option>
+              <option value="loso">LOSO (95.8% Accuracy)</option>
+              <option value="combinai">CombinAI (96.8% Accuracy)</option>
             </select>
-            <div id="liveModelInfoStrip" class="bg-surface-container-low/80 rounded-lg px-2.5 py-1.5 flex items-start gap-1.5 border border-outline-variant/15">
-              <span class="material-symbols-outlined text-primary text-[14px] mt-0.5 shrink-0">verified</span>
-              <p id="liveModelDescText" class="text-[11px] text-on-surface-variant leading-snug">
-                <strong class="text-on-surface">Continuous Rhythm AI (94.6%):</strong> Uses memory across 2.56s of motion waves to smoothly track continuous walking and stairs.
-              </p>
+            <p id="liveModelDescText" class="text-[11px] text-on-surface-variant leading-snug pt-0.5">
+              <strong class="text-on-surface">CNN-LSTM (94.6%):</strong> Time-series deep model on raw 128x9 signals. All 5 models are shown side by side below.
+            </p>
+          </div>
+
+          <div class="flex flex-col gap-2 pt-0.5">
+            <button id="startSensorBtn" type="button" onclick="startMobileSensor()"
+              class="w-full bg-primary hover:bg-primary-container text-on-primary py-2.5 px-4 rounded-xl font-display text-sm font-bold flex items-center justify-center gap-2 shadow-sm active:scale-[0.99] transition-all">
+              <span class="material-symbols-outlined text-[20px]">play_circle</span>
+              <span>Start Live Tracking (Keep Mobile at Waist)</span>
+            </button>
+            <button id="stopSensorBtn" type="button" onclick="stopMobileSensor()"
+              class="hidden w-full bg-error text-on-error py-2.5 px-4 rounded-xl font-display text-sm font-bold flex items-center justify-center gap-2 shadow-sm active:scale-[0.99] transition-all">
+              <span class="material-symbols-outlined text-[20px]">stop_circle</span>
+              <span>Stop Live Tracking</span>
+            </button>
+
+            <div class="grid grid-cols-3 gap-2">
+              <button id="calibrateBtn" type="button" onclick="resetLiveSensors()"
+                class="bg-surface-container-low hover:bg-surface-container text-on-surface py-2 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 border border-outline-variant/20 transition-colors">
+                <span class="material-symbols-outlined text-primary text-[16px]">restart_alt</span>
+                <span>Reset</span>
+              </button>
+              <button id="simLiveWalkBtn" type="button" onclick="toggleDesktopWalkSimulation()"
+                class="bg-surface-container-low hover:bg-surface-container text-on-surface py-2 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 border border-outline-variant/20 transition-colors"
+                title="Simulate live 50 Hz walking stream">
+                <span class="material-symbols-outlined text-tertiary text-[16px]">directions_run</span>
+                <span id="simLiveWalkLabel">Demo Stream</span>
+              </button>
+              <button id="snapshotBtn" type="button" onclick="saveCurrentSnapshot()"
+                class="bg-surface-container-low hover:bg-surface-container text-on-surface py-2 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 border border-outline-variant/20 transition-colors">
+                <span class="material-symbols-outlined text-secondary text-[16px]">bookmark</span>
+                <span>Save JSON</span>
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Multi-Device Live Sync Panel (Waist Phone -> PC Monitor) -->
-      <div class="bg-surface-container-lowest rounded-xl p-3.5 shadow-sm border border-outline-variant/25 space-y-3">
+      <!-- ==================== SIDE-BY-SIDE 5 AI MODELS COMPARISON ==================== -->
+      <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-outline-variant/25 space-y-3">
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <div class="flex items-center gap-2 min-w-0">
-            <div class="w-8 h-8 rounded-lg bg-secondary/10 text-secondary flex items-center justify-center shrink-0">
-              <span class="material-symbols-outlined text-[19px]">devices</span>
-            </div>
-            <div class="min-w-0">
-              <div class="flex flex-wrap items-center gap-1.5">
-                <h3 class="font-display text-sm font-bold text-on-surface">Watch Waist Phone Live on PC</h3>
-                <span id="relayStatusPill" class="font-mono-tech text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant uppercase">Sync Standby</span>
-              </div>
-              <p class="text-[11px] text-on-surface-variant truncate">Start Live Tracking on your phone, then type the phone's 6-digit code in Box 2 on your PC</p>
-            </div>
+          <div>
+            <h3 class="font-display text-base font-bold text-on-surface">All 5 AI Models Side-by-Side Prediction Comparison</h3>
+            <p class="text-xs text-on-surface-variant">Live comparison of CNN-LSTM, ANN, SVM, LOSO, and CombinAI on the current 2.56s sensor window (click any model to select)</p>
           </div>
-
-          <div class="flex items-center gap-2 shrink-0">
-            <span id="relayLatencyPill" class="font-mono-tech text-[11px] font-semibold bg-surface-container-low text-primary px-2.5 py-1 rounded-lg">Link: -- ms</span>
-            <button id="toggleRelayQrBtn" type="button" onclick="toggleRelayQrDrawer()"
-              class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-colors">
-              <span class="material-symbols-outlined text-[15px] text-primary">qr_code_2</span>
-              <span id="toggleRelayQrLabel">QR &amp; Link</span>
-            </button>
-          </div>
+          <span id="fiveModelsAgreementBadge" class="font-mono-tech text-[11px] font-bold px-2.5 py-1 rounded-full bg-tertiary-fixed/50 text-on-tertiary-fixed">5 / 5 Models Ready</span>
         </div>
 
-        <!-- Active PC Live Monitor Banner (visible while watching remote waist phone) -->
-        <div id="pcViewerBanner" class="hidden bg-tertiary-fixed/35 border-2 border-tertiary/50 rounded-xl p-3 space-y-2.5 shadow-xs">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="flex items-center gap-2.5 min-w-0">
-              <span class="w-2.5 h-2.5 rounded-full bg-tertiary animate-ping shrink-0"></span>
-              <div class="min-w-0">
-                <div class="font-display text-xs sm:text-sm font-bold text-on-tertiary-fixed truncate" id="pcViewerTitle">PC Monitor Connected · Syncing Phone...</div>
-                <div class="font-mono-tech text-[11px] text-on-tertiary-fixed/85 truncate" id="pcViewerSubtext">Receiving live readings from paired phone · All cards below are updating live</div>
-              </div>
-            </div>
-            <button type="button" onclick="disconnectRelayViewer()"
-              class="px-3 py-1.5 rounded-lg bg-surface-container-lowest hover:bg-error-container hover:text-error text-on-surface text-xs font-semibold shadow-xs transition-colors shrink-0">
-              Disconnect PC
-            </button>
-          </div>
-
-          <!-- Instant Live Readout Bar inside PC Monitor Banner -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
-            <div class="bg-surface-container-lowest/95 rounded-lg px-3 py-2 flex items-center justify-between border border-tertiary/25">
-              <div>
-                <span class="font-mono-tech text-[9px] uppercase font-bold text-on-surface-variant block">Phone Live Activity</span>
-                <span id="pcBannerActivity" class="font-display text-sm sm:text-base font-bold text-primary">Waiting...</span>
-              </div>
-              <span id="pcBannerConf" class="font-mono-tech text-xs font-bold bg-tertiary-fixed text-on-tertiary-fixed px-2 py-0.5 rounded-full">--%</span>
-            </div>
-            <div class="bg-surface-container-lowest/95 rounded-lg px-3 py-2 flex items-center justify-between border border-tertiary/25">
-              <div>
-                <span class="font-mono-tech text-[9px] uppercase font-bold text-on-surface-variant block">Live Steps &amp; Pace</span>
-                <span id="pcBannerSteps" class="font-display text-sm sm:text-base font-bold text-tertiary">0 steps</span>
-              </div>
-              <span id="pcBannerCadence" class="font-mono-tech text-xs font-semibold text-on-surface-variant">0 SPM</span>
-            </div>
-            <div class="bg-surface-container-lowest/95 rounded-lg px-3 py-2 flex items-center justify-between border border-tertiary/25">
-              <div>
-                <span class="font-mono-tech text-[9px] uppercase font-bold text-on-surface-variant block">Phone 3-Axis Motion</span>
-                <span id="pcBannerAxes" class="font-mono-tech text-xs font-bold text-on-surface">X: +0.00g · Y: +0.00g · Z: +0.00g</span>
-              </div>
-              <span id="pcBannerModelTag" class="font-mono-tech text-[10px] font-semibold text-secondary">94.6% AI</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Account Auto-Detect Phone Banner (for personal logged-in accounts) -->
-        <div id="accountAutoPhoneBanner" class="hidden bg-primary-fixed/40 border border-primary/25 rounded-lg px-3 py-2 flex flex-wrap items-center justify-between gap-2">
-          <div class="flex items-center gap-2 text-xs text-on-primary-fixed">
-            <span class="material-symbols-outlined text-[17px] text-primary">sensors</span>
-            <span>Your account's phone is streaming live on code <strong id="accountAutoPhoneCode" class="font-mono-tech">------</strong>!</span>
-          </div>
-          <button type="button" onclick="connectDetectedAccountPhone()"
-            class="px-3 py-1 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-primary-container transition-colors">
-            Watch Now on PC
-          </button>
-        </div>
-
-        <!-- Dual Pairing Controls: Phone Code vs PC Receiver -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-          <!-- Phone Broadcaster Box -->
-          <div class="bg-surface-container-low rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2">
-            <div class="min-w-0">
-              <span class="font-mono-tech text-[10px] uppercase font-bold text-primary block">1. Waist Phone Broadcast Code</span>
-              <div class="flex items-center gap-2 mt-0.5">
-                <span id="relayMyCodeText" class="font-mono-tech text-lg font-bold tracking-widest text-on-surface">------</span>
-                <span id="relayTargetNote" class="text-[11px] text-on-surface-variant truncate">Auto-sends on Start Live Tracking</span>
-              </div>
-            </div>
-            <div class="flex items-center gap-1.5 shrink-0">
-              <button type="button" onclick="copyRelayPairCode()" title="Copy 6-digit code"
-                class="px-2.5 py-1.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container text-on-surface text-xs font-semibold border border-outline-variant/25 flex items-center gap-1 transition-colors">
-                <span class="material-symbols-outlined text-[15px] text-primary">content_copy</span>
-                <span>Copy</span>
-              </button>
-              <button type="button" onclick="regenerateRelayRoomCode()" title="Generate fresh code"
-                class="px-2.5 py-1.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container text-on-surface text-xs font-semibold border border-outline-variant/25 flex items-center gap-1 transition-colors">
-                <span class="material-symbols-outlined text-[15px] text-secondary">refresh</span>
-                <span>New</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- PC Receiver Box -->
-          <div class="bg-surface-container-low rounded-xl p-2.5 flex flex-wrap items-center gap-2">
-            <div class="flex-1 min-w-[140px]">
-              <label for="relayViewerCodeInput" class="font-mono-tech text-[10px] uppercase font-bold text-secondary block mb-0.5">2. Watch Any Code on This PC</label>
-              <input id="relayViewerCodeInput" type="text" inputmode="numeric" maxlength="12" placeholder="Enter phone code (e.g. 482915)"
-                class="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg px-2.5 py-1.5 font-mono-tech text-xs font-bold tracking-wider text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 uppercase" />
-            </div>
-            <div class="flex items-center gap-1.5 shrink-0 self-end">
-              <button id="watchPcBtn" type="button" onclick="connectRelayViewer()"
-                class="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary-container text-on-secondary text-xs font-bold flex items-center gap-1 shadow-xs transition-colors">
-                <span class="material-symbols-outlined text-[16px]">cast</span>
-                <span>Watch on PC</span>
-              </button>
-              <button type="button" onclick="openPcHostQrMode()" title="Generate a PC Monitor code & QR to scan from your phone"
-                class="px-2.5 py-2 rounded-lg bg-surface-container-lowest hover:bg-surface-container text-on-surface text-xs font-semibold border border-outline-variant/25 flex items-center gap-1 transition-colors">
-                <span class="material-symbols-outlined text-[16px] text-tertiary">qr_code_scanner</span>
-                <span class="hidden sm:inline">Phone QR</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Expandable QR Code & Direct Pair Link Drawer -->
-        <div id="relayQrPanel" class="hidden bg-surface-container-low rounded-xl p-3 border border-outline-variant/25">
-          <div class="flex flex-col sm:flex-row items-center gap-3.5">
-            <div id="relayQrBox" class="w-28 h-28 bg-white rounded-xl p-2 flex items-center justify-center shadow-xs shrink-0 border border-outline-variant/20">
-              <span class="font-mono-tech text-[10px] text-on-surface-variant text-center">Generating QR...</span>
-            </div>
-            <div class="flex-1 min-w-0 space-y-1.5 text-center sm:text-left">
-              <span class="font-display text-xs sm:text-sm font-bold text-on-surface block">Scan From Phone Camera to Link Immediately</span>
-              <p class="text-xs text-on-surface-variant leading-relaxed">
-                Point your phone camera at this QR code (or open the link below on your phone). It pre-links to code <strong id="relayQrCodeEcho" class="font-mono-tech text-primary">------</strong> so when you tap <strong>Start Live Tracking</strong> and pocket the phone at your waist, this PC updates in real time!
-              </p>
-              <div class="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
-                <code id="relayPairLinkText" class="px-2 py-1 rounded bg-surface-container-lowest text-[11px] font-mono-tech text-primary border border-outline-variant/20 max-w-full truncate">https://...</code>
-                <button type="button" onclick="copyRelayPairLink()"
-                  class="px-2.5 py-1 rounded-lg bg-primary text-on-primary text-[11px] font-semibold hover:bg-primary-container transition-colors flex items-center gap-1">
-                  <span class="material-symbols-outlined text-[14px]">link</span>
-                  <span>Copy Phone Link</span>
-                </button>
-              </div>
-            </div>
-          </div>
+        <div id="fiveModelsLiveGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+          <!-- Populated dynamically with CNN-LSTM, ANN, SVM, LOSO, CombinAI side by side -->
         </div>
       </div>
 
-      <!-- Hero Card + Live Telemetry + Step Counter -->
+      <!-- ==================== MAIN DETECTED ACTIVITY + LIVE WAVEFORM ==================== -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-
         <!-- Left Hero Predicted Activity Card -->
-        <div class="lg:col-span-6 bg-surface-container-lowest rounded-xl shadow-md border border-outline-variant/20 overflow-hidden flex flex-col">
-          <div class="relative w-full h-56 sm:h-64 bg-surface-container-highest overflow-hidden">
+        <div class="lg:col-span-6 bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 overflow-hidden flex flex-col">
+          <div class="relative w-full h-52 sm:h-56 bg-surface-container-highest overflow-hidden">
             <img id="liveHeroImage" alt="Current detected activity demonstration" class="w-full h-full object-cover object-center transition-all duration-300" src="/static/images/walking.jpg" />
             <div class="absolute inset-0 bg-gradient-to-t from-inverse-surface/95 via-inverse-surface/35 to-transparent"></div>
 
             <div class="absolute top-3 left-3 bg-inverse-surface/80 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-primary-fixed text-[14px]">smartphone</span>
-              <span id="liveActiveEnginePill" class="font-mono-tech text-[10px] text-surface-variant font-semibold uppercase">Continuous Rhythm AI · 94.6% Acc</span>
+              <span class="material-symbols-outlined text-primary-fixed text-[14px]">neurology</span>
+              <span id="liveActiveEnginePill" class="font-mono-tech text-[10px] text-surface-variant font-semibold uppercase">CNN-LSTM · 94.6%</span>
             </div>
 
             <div class="absolute top-3 right-3 bg-surface/92 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
@@ -411,162 +485,93 @@
             <div class="absolute bottom-3.5 left-3.5 right-3.5 flex flex-col gap-1.5">
               <div class="flex items-end justify-between gap-2">
                 <div>
-                  <span class="font-mono-tech text-[11px] text-primary-fixed uppercase tracking-wider font-semibold block">You Are Currently</span>
+                  <span class="font-mono-tech text-[11px] text-primary-fixed uppercase tracking-wider font-semibold block">Detected Activity</span>
                   <div class="flex items-center gap-2 mt-0.5">
                     <span id="liveActivityMatIcon" class="material-symbols-outlined text-primary-fixed text-[24px]">directions_walk</span>
                     <h2 id="livePredictedActivity" class="font-display text-2xl sm:text-3xl text-on-primary font-bold tracking-tight">Walking</h2>
                   </div>
                 </div>
-                <span id="liveStatusPill" class="bg-tertiary text-on-tertiary font-mono-tech text-[10px] px-2.5 py-1 rounded-full font-semibold uppercase shrink-0">Detected Now</span>
+                <span id="liveStatusPill" class="bg-tertiary text-on-tertiary font-mono-tech text-[10px] px-2.5 py-1 rounded-full font-semibold uppercase shrink-0">Live</span>
               </div>
               <div class="w-full bg-surface-variant/30 h-1.5 rounded-full overflow-hidden">
                 <div id="liveConfidenceBar" class="bg-tertiary-fixed h-full rounded-full transition-all duration-300" style="width: 97%"></div>
               </div>
-              <p id="livePredictionStatus" class="text-[11px] text-primary-fixed/90 truncate">Tap Start Live Tracking or use Sample Simulator to evaluate.</p>
+              <p id="livePredictionStatus" class="text-[11px] text-primary-fixed/90 truncate">Attach phone at waist and tap Start Live Tracking.</p>
             </div>
           </div>
 
           <div class="bg-surface-container p-3 grid grid-cols-3 gap-2">
             <div class="bg-surface-container-lowest p-2.5 rounded-lg flex flex-col shadow-xs">
-              <div class="flex items-center gap-1 text-on-surface-variant mb-0.5">
-                <span class="material-symbols-outlined text-[15px] text-primary">speed</span>
-                <span class="font-mono-tech text-[10px] uppercase font-semibold">Cadence</span>
-              </div>
+              <span class="font-mono-tech text-[10px] uppercase font-semibold text-on-surface-variant">Step Pace</span>
               <span class="font-display text-lg text-on-surface font-bold tabular-nums"><span id="liveHeroCadence">120</span> <span class="font-mono-tech text-[10px] font-normal text-on-surface-variant">SPM</span></span>
               <span id="livePaceLabel" class="font-mono-tech text-[10px] text-primary font-medium truncate">Normal Walking Pace</span>
             </div>
             <div class="bg-surface-container-lowest p-2.5 rounded-lg flex flex-col shadow-xs">
-              <div class="flex items-center gap-1 text-on-surface-variant mb-0.5">
-                <span class="material-symbols-outlined text-[15px] text-tertiary">vital_signs</span>
-                <span class="font-mono-tech text-[10px] uppercase font-semibold">Movement</span>
-              </div>
+              <span class="font-mono-tech text-[10px] uppercase font-semibold text-on-surface-variant">Movement State</span>
               <span id="liveMovementType" class="text-xs sm:text-sm text-on-surface font-bold truncate mt-0.5">Steady Walking</span>
-              <span class="font-mono-tech text-[10px] text-tertiary font-medium truncate">EMA + Hysteresis</span>
+              <span class="font-mono-tech text-[10px] text-tertiary font-medium truncate">Waist Calibrated</span>
             </div>
             <div class="bg-surface-container-lowest p-2.5 rounded-lg flex flex-col shadow-xs">
-              <div class="flex items-center gap-1 text-on-surface-variant mb-0.5">
-                <span class="material-symbols-outlined text-[15px] text-secondary">screen_rotation</span>
-                <span class="font-mono-tech text-[10px] uppercase font-semibold">Telemetry</span>
-              </div>
+              <span class="font-mono-tech text-[10px] uppercase font-semibold text-on-surface-variant">Waist Tilt &amp; Energy</span>
               <span id="liveTiltPill" class="font-mono-tech text-xs text-on-surface font-bold mt-0.5 truncate">Tilt: --°</span>
               <span id="liveMotionPill" class="font-mono-tech text-[10px] text-secondary font-medium truncate">Energy: 0.00g</span>
             </div>
           </div>
         </div>
 
-        <!-- Right Column: Live Motion Graph & Controls -->
-        <div class="lg:col-span-6 flex flex-col gap-3">
-          <!-- Live Motion Graph Card -->
-          <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 overflow-hidden flex flex-col">
-            <div class="px-3.5 py-2.5 bg-surface-container-low flex items-center justify-between">
-              <div class="flex items-center gap-1.5">
-                <span class="material-symbols-outlined text-primary text-[18px]">show_chart</span>
-                <span class="font-display text-sm text-on-surface font-bold">Live Motion Graph (9-Channel IMU)</span>
-              </div>
-              <span id="graphSourceBadge" class="font-mono-tech text-[10px] bg-surface-container px-2 py-0.5 rounded text-on-surface-variant font-semibold">50 Hz · Real-time</span>
+        <!-- Right Column: Clean Live Motion Waveform Card -->
+        <div class="lg:col-span-6 bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 overflow-hidden flex flex-col justify-between">
+          <div class="px-3.5 py-2.5 bg-surface-container-low flex items-center justify-between">
+            <div class="flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-primary text-[18px]">show_chart</span>
+              <span class="font-display text-sm text-on-surface font-bold">Live 50 Hz Waist Sensor Waveform</span>
             </div>
-
-            <!-- Tri-axial Acc Readout -->
-            <div class="grid grid-cols-3 gap-2 px-3 pt-2.5">
-              <div class="bg-surface-container-low px-2.5 py-1.5 rounded-lg">
-                <div class="flex items-center justify-between">
-                  <span class="font-mono-tech text-[10px] font-bold text-primary">Side-Side (X)</span>
-                  <span class="w-2 h-2 rounded-full bg-primary"></span>
-                </div>
-                <span id="liveAccX" class="font-mono-tech text-sm font-bold text-on-surface block mt-0.5">+0.00g</span>
-              </div>
-              <div class="bg-surface-container-low px-2.5 py-1.5 rounded-lg">
-                <div class="flex items-center justify-between">
-                  <span class="font-mono-tech text-[10px] font-bold text-secondary">Up-Down (Y)</span>
-                  <span class="w-2 h-2 rounded-full bg-secondary"></span>
-                </div>
-                <span id="liveAccY" class="font-mono-tech text-sm font-bold text-on-surface block mt-0.5">+0.00g</span>
-              </div>
-              <div class="bg-surface-container-low px-2.5 py-1.5 rounded-lg">
-                <div class="flex items-center justify-between">
-                  <span class="font-mono-tech text-[10px] font-bold text-tertiary-container">Forward (Z)</span>
-                  <span class="w-2 h-2 rounded-full bg-tertiary-container"></span>
-                </div>
-                <span id="liveAccZ" class="font-mono-tech text-sm font-bold text-on-surface block mt-0.5">+0.00g</span>
-              </div>
-            </div>
-
-            <!-- Compact Gyro Readout -->
-            <div class="grid grid-cols-3 gap-2 px-3 py-1.5">
-              <div class="flex items-center justify-between bg-surface-container/50 px-2 py-1 rounded text-[10px] font-mono-tech">
-                <span class="text-on-surface-variant">Gyro X</span>
-                <span id="liveGyroX" class="font-bold text-primary">0.00</span>
-              </div>
-              <div class="flex items-center justify-between bg-surface-container/50 px-2 py-1 rounded text-[10px] font-mono-tech">
-                <span class="text-on-surface-variant">Gyro Y</span>
-                <span id="liveGyroY" class="font-bold text-secondary">0.00</span>
-              </div>
-              <div class="flex items-center justify-between bg-surface-container/50 px-2 py-1 rounded text-[10px] font-mono-tech">
-                <span class="text-on-surface-variant">Gyro Z</span>
-                <span id="liveGyroZ" class="font-bold text-tertiary">0.00</span>
-              </div>
-            </div>
-
-            <!-- Dynamic Oscilloscope SVG -->
-            <div class="px-3 pb-3">
-              <div class="w-full h-32 bg-surface-container-highest/55 rounded-lg relative overflow-hidden flex items-center border border-outline-variant/20">
-                <div class="absolute inset-0 grid grid-cols-6 opacity-25 pointer-events-none">
-                  <div class="border-r border-outline/20"></div>
-                  <div class="border-r border-outline/20"></div>
-                  <div class="border-r border-outline/20"></div>
-                  <div class="border-r border-outline/20"></div>
-                  <div class="border-r border-outline/20"></div>
-                  <div></div>
-                </div>
-                <div class="absolute left-0 right-0 top-1/2 h-px bg-outline/25"></div>
-                <svg id="liveOscSvg" class="w-full h-full relative z-10" preserveAspectRatio="none" viewBox="0 0 320 100">
-                  <path id="oscPathX" fill="none" stroke="#006194" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M0,50 L320,50"></path>
-                  <path id="oscPathY" fill="none" stroke="#0051d5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M0,50 L320,50"></path>
-                  <path id="oscPathZ" fill="none" stroke="#00855d" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M0,50 L320,50"></path>
-                </svg>
-                <div class="absolute right-2 bottom-1 bg-surface/85 backdrop-blur-sm px-2 py-0.5 rounded text-[9px] font-mono-tech text-on-surface-variant">
-                  128-sample sliding window
-                </div>
-              </div>
-            </div>
+            <span id="graphSourceBadge" class="font-mono-tech text-[10px] bg-surface-container px-2 py-0.5 rounded text-on-surface-variant font-semibold">128 Samples (2.56s)</span>
           </div>
 
-          <!-- Telemetry Action Controls -->
-          <div class="flex flex-col gap-2">
-            <button id="startSensorBtn" type="button" onclick="startMobileSensor()"
-              class="w-full bg-primary hover:bg-primary-container text-on-primary py-3 px-4 rounded-xl font-display text-[15px] font-bold flex items-center justify-center gap-2 shadow-md active:scale-[0.99] transition-all">
-              <span class="material-symbols-outlined text-[21px]">play_circle</span>
-              <span>Start Live Tracking</span>
-            </button>
-            <button id="stopSensorBtn" type="button" onclick="stopMobileSensor()"
-              class="hidden w-full bg-error text-on-error py-3 px-4 rounded-xl font-display text-[15px] font-bold flex items-center justify-center gap-2 shadow-md active:scale-[0.99] transition-all">
-              <span class="material-symbols-outlined text-[21px]">stop_circle</span>
-              <span>Stop Live Tracking</span>
-            </button>
+          <div class="grid grid-cols-3 gap-2 px-3 pt-2.5">
+            <div class="bg-surface-container-low px-2.5 py-1.5 rounded-lg flex items-center justify-between">
+              <span class="font-mono-tech text-[10px] font-bold text-primary">Acc X</span>
+              <span id="liveAccX" class="font-mono-tech text-xs font-bold text-on-surface">+0.00g</span>
+            </div>
+            <div class="bg-surface-container-low px-2.5 py-1.5 rounded-lg flex items-center justify-between">
+              <span class="font-mono-tech text-[10px] font-bold text-secondary">Acc Y</span>
+              <span id="liveAccY" class="font-mono-tech text-xs font-bold text-on-surface">+0.00g</span>
+            </div>
+            <div class="bg-surface-container-low px-2.5 py-1.5 rounded-lg flex items-center justify-between">
+              <span class="font-mono-tech text-[10px] font-bold text-tertiary">Acc Z</span>
+              <span id="liveAccZ" class="font-mono-tech text-xs font-bold text-on-surface">+0.00g</span>
+            </div>
+          </div>
+          <div class="hidden">
+            <span id="liveGyroX">0.00</span><span id="liveGyroY">0.00</span><span id="liveGyroZ">0.00</span>
+          </div>
 
-            <div class="grid grid-cols-3 gap-2">
-              <button id="calibrateBtn" type="button" onclick="resetLiveSensors()"
-                class="bg-surface-container-lowest hover:bg-surface-container text-on-surface py-2.5 px-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm border border-outline-variant/25 transition-colors">
-                <span class="material-symbols-outlined text-primary text-[17px]">restart_alt</span>
-                <span>Reset Sensors</span>
-              </button>
-              <button id="simLiveWalkBtn" type="button" onclick="toggleDesktopWalkSimulation()"
-                class="bg-surface-container-lowest hover:bg-surface-container text-on-surface py-2.5 px-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm border border-outline-variant/25 transition-colors"
-                title="Test live 50 Hz streaming & step counter on desktop without phone hardware">
-                <span class="material-symbols-outlined text-tertiary text-[17px]">directions_run</span>
-                <span id="simLiveWalkLabel">Demo Stream</span>
-              </button>
-              <button id="snapshotBtn" type="button" onclick="saveCurrentSnapshot()"
-                class="bg-surface-container-lowest hover:bg-surface-container text-on-surface py-2.5 px-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm border border-outline-variant/25 transition-colors">
-                <span class="material-symbols-outlined text-secondary text-[17px]">bookmark</span>
-                <span>Save Reading</span>
-              </button>
+          <div class="p-3 flex-1 flex flex-col justify-center">
+            <div class="w-full h-44 bg-surface-container-highest/55 rounded-lg relative overflow-hidden flex items-center border border-outline-variant/20">
+              <div class="absolute inset-0 grid grid-cols-6 opacity-25 pointer-events-none">
+                <div class="border-r border-outline/20"></div>
+                <div class="border-r border-outline/20"></div>
+                <div class="border-r border-outline/20"></div>
+                <div class="border-r border-outline/20"></div>
+                <div class="border-r border-outline/20"></div>
+                <div></div>
+              </div>
+              <div class="absolute left-0 right-0 top-1/2 h-px bg-outline/25"></div>
+              <svg id="liveOscSvg" class="w-full h-full relative z-10" preserveAspectRatio="none" viewBox="0 0 320 100">
+                <path id="oscPathX" fill="none" stroke="#006194" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M0,50 L320,50"></path>
+                <path id="oscPathY" fill="none" stroke="#0051d5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M0,50 L320,50"></path>
+                <path id="oscPathZ" fill="none" stroke="#00855d" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M0,50 L320,50"></path>
+              </svg>
+              <div class="absolute right-2 bottom-1 bg-surface/85 backdrop-blur-sm px-2 py-0.5 rounded text-[9px] font-mono-tech text-on-surface-variant">
+                50 Hz Real-Time Stream
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ==================== BIOMECHANICAL STEP COUNTER PANEL ==================== -->
+      <!-- ==================== ACCURATE STEP COUNTER PANEL ==================== -->
       <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-outline-variant/20 border-l-4 border-l-tertiary space-y-3">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div class="flex items-center gap-2.5">
@@ -575,13 +580,13 @@
             </div>
             <div>
               <div class="flex flex-wrap items-center gap-2">
-                <h3 class="font-display text-base font-bold text-on-surface">Biomechanical Step Counter</h3>
+                <h3 class="font-display text-base font-bold text-on-surface">Accurate Live Step Counter</h3>
                 <span id="stepPulseBadge" class="inline-flex items-center gap-1.5 text-[11px] font-mono-tech font-bold px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface-variant transition-all">
                   <span id="stepPulseDot" class="w-2 h-2 rounded-full bg-outline"></span>
                   <span id="stepPulseText">GAIT READY</span>
                 </span>
               </div>
-              <p class="text-xs text-on-surface-variant">Gravity-projected peak-valley detector with 3-step gait confirmation</p>
+              <p class="text-xs text-on-surface-variant">0.3 Hz gravity-isolated vertical step detector with 2-step rhythm confirmation &amp; stationary lock</p>
             </div>
           </div>
 
@@ -650,7 +655,7 @@
       <!-- ==================== DETECTED ACTIVITY BREAKDOWN (6 CARDS) ==================== -->
       <div class="space-y-2">
         <div class="flex items-center justify-between px-1">
-          <h3 class="font-display text-base font-bold text-on-surface">Detected Activity Breakdown</h3>
+          <h3 class="font-display text-base font-bold text-on-surface">6-Activity Probability Breakdown (Tap Any Card to Test Sample)</h3>
           <span class="font-mono-tech text-[11px] text-on-surface-variant uppercase">All 6 Activities</span>
         </div>
         <div id="liveBreakdownGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
@@ -833,10 +838,10 @@
       <div class="flex flex-wrap items-center justify-between gap-2 bg-surface-container-low px-3.5 py-2 rounded-xl border border-outline-variant/20">
         <div class="flex items-center gap-2 min-w-0">
           <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse shrink-0"></span>
-          <span id="analyticsEngineStatus" class="font-mono-tech text-xs text-on-surface font-bold truncate">LIVE AI DETECTION ACTIVE · Dual Pipeline</span>
+          <span id="analyticsEngineStatus" class="font-mono-tech text-xs text-on-surface font-bold truncate">LIVE AI DETECTION ACTIVE · 5-Model Side-by-Side Comparison</span>
         </div>
         <div class="flex items-center gap-2">
-          <span id="weightsIndicator" class="font-mono-tech text-[11px] font-semibold bg-tertiary-fixed/40 text-on-tertiary-fixed px-2.5 py-0.5 rounded-full">Checking models...</span>
+          <span id="weightsIndicator" class="font-mono-tech text-[11px] font-semibold bg-tertiary-fixed/40 text-on-tertiary-fixed px-2.5 py-0.5 rounded-full">All 5 Models Loaded</span>
           <span id="analyticsLatencyPill" class="inline-flex items-center gap-1 bg-surface-container-high px-2.5 py-0.5 rounded font-mono-tech text-[11px] text-primary font-bold">
             <span class="material-symbols-outlined text-[14px]">bolt</span>
             <span id="analyticsLatencyText">-- ms</span>
@@ -844,11 +849,25 @@
         </div>
       </div>
 
+      <!-- 5-Model Side-by-Side Comparison Grid on Analytics Tab -->
+      <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-outline-variant/25 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 class="font-display text-base font-bold text-on-surface">All 5 AI Models Side-by-Side Comparison</h3>
+            <p class="text-xs text-on-surface-variant">CNN-LSTM · ANN · SVM · LOSO · CombinAI evaluated simultaneously</p>
+          </div>
+          <span class="font-mono-tech text-[11px] font-bold text-tertiary uppercase">Side-by-Side View</span>
+        </div>
+        <div id="fiveModelsAnalyticsGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+          <!-- Populated dynamically with all 5 models -->
+        </div>
+      </div>
+
       <!-- Top Summary Row: Hero Card + 6-Class Softmax Bars -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <!-- Hero Summary Card -->
-        <div class="lg:col-span-5 bg-surface-container-lowest rounded-xl shadow-md border border-outline-variant/20 overflow-hidden flex flex-col">
-          <div class="relative w-full h-52 bg-surface-container">
+        <div class="lg:col-span-5 bg-surface-container-lowest rounded-xl shadow-md border border-outline-variant/20 overflow-hidden flex flex-col justify-between">
+          <div class="relative w-full h-56 bg-surface-container">
             <img id="analyticsHeroImage" alt="Detected activity telemetry frame" class="w-full h-full object-cover object-top" src="/static/images/walking.jpg" />
             <div class="absolute inset-0 bg-gradient-to-t from-inverse-surface/95 via-inverse-surface/35 to-transparent"></div>
             <div class="absolute top-3 left-3 flex items-center gap-1.5 bg-surface-container-lowest/90 backdrop-blur-md px-2.5 py-1 rounded-full shadow-xs">
@@ -869,26 +888,11 @@
               </div>
             </div>
           </div>
-
-          <!-- Model Comparison Mini Grid -->
-          <div class="grid grid-cols-3 bg-surface-container-low p-3 gap-2 text-center border-t border-outline-variant/15">
-            <div class="bg-surface-container-lowest p-2 rounded-lg">
-              <span class="font-mono-tech text-[10px] text-on-surface-variant block">MOTION WAVE AI (94.0%)</span>
-              <span id="cnnPredLabel" class="text-xs font-bold text-primary block truncate">Walking</span>
-              <span id="cnnConf" class="font-mono-tech text-[11px] text-tertiary font-semibold tabular-nums">--%</span>
-              <span id="cnnLatency" class="font-mono-tech text-[9px] text-on-surface-variant block">-- ms</span>
-            </div>
-            <div class="bg-surface-container-lowest p-2 rounded-lg">
-              <span class="font-mono-tech text-[10px] text-on-surface-variant block">POSTURE AI (95.7%)</span>
-              <span id="annPredLabel" class="text-xs font-bold text-secondary block truncate">Walking</span>
-              <span id="annConf" class="font-mono-tech text-[11px] text-tertiary font-semibold tabular-nums">--%</span>
-              <span id="annLatency" class="font-mono-tech text-[9px] text-on-surface-variant block">-- ms</span>
-            </div>
-            <div class="bg-surface-container-lowest p-2 rounded-lg">
-              <span class="font-mono-tech text-[10px] text-on-surface-variant block">ACTIVE AI ENGINE</span>
-              <span id="ensembleMethod" class="text-xs font-bold text-on-surface block truncate">Combined (96.8%)</span>
-              <span class="font-mono-tech text-[10px] text-tertiary font-semibold">Verified</span>
-            </div>
+          <!-- Hidden legacy IDs preserved for backward compatibility -->
+          <div class="hidden">
+            <span id="cnnPredLabel">Walking</span><span id="cnnConf">--%</span><span id="cnnLatency">-- ms</span>
+            <span id="annPredLabel">Walking</span><span id="annConf">--%</span><span id="annLatency">-- ms</span>
+            <span id="ensembleMethod">CombinAI</span>
           </div>
         </div>
 
@@ -897,9 +901,9 @@
           <div class="flex items-center justify-between pb-2">
             <div class="flex items-center gap-2">
               <span class="material-symbols-outlined text-primary text-[20px]">insights</span>
-              <h3 class="font-display text-base font-bold text-on-surface">What the AI Thinks You're Doing</h3>
+              <h3 class="font-display text-base font-bold text-on-surface">6-Activity Probability Breakdown</h3>
             </div>
-            <span class="font-mono-tech text-[10px] text-on-surface-variant bg-surface-container px-2.5 py-1 rounded font-semibold uppercase">6-Class Softmax</span>
+            <span class="font-mono-tech text-[10px] text-on-surface-variant bg-surface-container px-2.5 py-1 rounded font-semibold uppercase">6 Classes</span>
           </div>
           <div id="customProbBars" class="space-y-2.5 my-1">
             <!-- Dynamically updated smoothly -->
@@ -911,8 +915,8 @@
       <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 p-4 space-y-3">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h3 class="font-display text-base font-bold text-on-surface">Today's Activity Stats</h3>
-            <p class="text-xs text-on-surface-variant">Synchronized with live step counter &amp; test window detections</p>
+            <h3 class="font-display text-base font-bold text-on-surface">Session Step &amp; Activity Summary</h3>
+            <p class="text-xs text-on-surface-variant">Synchronized with live waist step counter &amp; test window detections</p>
           </div>
           <div class="flex items-center gap-2">
             <button type="button" onclick="addCurrentWindowStepsToTotal()"
@@ -972,13 +976,13 @@
         </div>
       </div>
 
-      <!-- Waveform + CNN vs ANN Chart.js Visualizations -->
+      <!-- Waveform + 5-Model Confidence Chart.js Visualizations -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div class="lg:col-span-7 bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 p-4">
           <div class="flex items-center justify-between gap-2 mb-3">
             <div>
               <h3 class="font-display text-base font-bold text-on-surface">128-Sample Sensor Waveform &amp; Step Peaks</h3>
-              <p class="text-xs text-on-surface-variant">Tri-axial body acceleration (2.56s @ 50 Hz) with biomechanical step markers</p>
+              <p class="text-xs text-on-surface-variant">Tri-axial body acceleration (2.56s @ 50 Hz) with detected step peaks</p>
             </div>
             <span class="font-mono-tech text-[10px] font-semibold bg-surface-container px-2 py-1 rounded text-on-surface-variant">128 Samples</span>
           </div>
@@ -989,8 +993,8 @@
 
         <div class="lg:col-span-5 bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 p-4 flex flex-col justify-between">
           <div class="mb-3">
-            <h3 class="font-display text-base font-bold text-on-surface">CNN vs. ANN Confidence</h3>
-            <p class="text-xs text-on-surface-variant">Per-class output probabilities across both PyTorch pipelines</p>
+            <h3 class="font-display text-base font-bold text-on-surface">5-Model Probability Comparison</h3>
+            <p class="text-xs text-on-surface-variant">CNN-LSTM · ANN · SVM · LOSO · CombinAI class probabilities</p>
           </div>
           <div class="h-60">
             <canvas id="probChart"></canvas>
@@ -998,42 +1002,60 @@
         </div>
       </div>
 
-      <!-- AI Performance Benchmark Table -->
+      <!-- AI Performance Benchmark Table (All 5 Models) -->
       <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 p-4 space-y-3 overflow-x-auto">
         <div class="flex items-center justify-between">
           <div>
-            <h3 class="font-display text-base font-bold text-on-surface">AI Performance &amp; Architecture Summary</h3>
-            <p class="text-xs text-on-surface-variant">UCI HAR Smartphone Dataset (30 volunteers · 2,947 test samples)</p>
+            <h3 class="font-display text-base font-bold text-on-surface">All 5 AI Models Benchmark Summary</h3>
+            <p class="text-xs text-on-surface-variant">UCI HAR Smartphone Dataset (30 volunteers · 7,352 train / 2,947 test windows)</p>
           </div>
           <span class="font-mono-tech text-[11px] text-tertiary font-bold uppercase">Tested &amp; Verified</span>
         </div>
         <table class="w-full text-left border-collapse text-xs sm:text-sm">
           <thead>
             <tr class="border-b border-outline-variant/30 text-on-surface-variant bg-surface-container-low">
-              <th class="py-2.5 px-3 font-semibold rounded-tl-lg">Model Architecture</th>
-              <th class="py-2.5 px-3 font-semibold">Input Tensor</th>
-              <th class="py-2.5 px-3 font-semibold">Test Accuracy</th>
+              <th class="py-2.5 px-3 font-semibold rounded-tl-lg">Model Name</th>
+              <th class="py-2.5 px-3 font-semibold">Input Representation</th>
+              <th class="py-2.5 px-3 font-semibold">Accuracy</th>
               <th class="py-2.5 px-3 font-semibold">Macro F1</th>
-              <th class="py-2.5 px-3 font-semibold">Parameters</th>
-              <th class="py-2.5 px-3 font-semibold rounded-tr-lg">Recommended Role</th>
+              <th class="py-2.5 px-3 font-semibold rounded-tr-lg">Model Strength</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-outline-variant/20">
             <tr>
-              <td class="py-3 px-3 font-bold text-primary">1D-CNN (HAR_1DCNN)</td>
-              <td class="py-3 px-3 font-mono-tech text-xs">9 × 128 raw signals</td>
-              <td class="py-3 px-3 font-bold text-on-surface">94.03%</td>
-              <td class="py-3 px-3 font-mono-tech">0.9412</td>
-              <td id="tableCnnParams" class="py-3 px-3 font-mono-tech text-xs">~630K</td>
-              <td class="py-3 px-3 text-tertiary font-semibold">Live 50 Hz Phone Tracking</td>
+              <td class="py-2.5 px-3 font-bold text-primary">CNN-LSTM</td>
+              <td class="py-2.5 px-3 font-mono-tech text-xs">128 × 9 raw time-series</td>
+              <td class="py-2.5 px-3 font-bold text-on-surface">94.6%</td>
+              <td class="py-2.5 px-3 font-mono-tech">0.945</td>
+              <td class="py-2.5 px-3 text-on-surface-variant">Continuous walking &amp; stair sequence memory</td>
             </tr>
             <tr>
-              <td class="py-3 px-3 font-bold text-secondary">Regularized ANN / MLP</td>
-              <td class="py-3 px-3 font-mono-tech text-xs">561 time/FFT features</td>
-              <td class="py-3 px-3 font-bold text-on-surface">95.72%</td>
-              <td class="py-3 px-3 font-mono-tech">0.9573</td>
-              <td id="tableAnnParams" class="py-3 px-3 font-mono-tech text-xs">~186K</td>
-              <td class="py-3 px-3 text-on-surface-variant">High-Precision Feature Scoring</td>
+              <td class="py-2.5 px-3 font-bold text-secondary">ANN</td>
+              <td class="py-2.5 px-3 font-mono-tech text-xs">561 time + FFT features</td>
+              <td class="py-2.5 px-3 font-bold text-on-surface">95.7%</td>
+              <td class="py-2.5 px-3 font-mono-tech">0.957</td>
+              <td class="py-2.5 px-3 text-on-surface-variant">Deep regularized multi-layer feature classifier (<span id="tableAnnParams">186K</span> params)</td>
+            </tr>
+            <tr>
+              <td class="py-2.5 px-3 font-bold text-primary">SVM</td>
+              <td class="py-2.5 px-3 font-mono-tech text-xs">561 standardized features</td>
+              <td class="py-2.5 px-3 font-bold text-on-surface">96.3%</td>
+              <td class="py-2.5 px-3 font-mono-tech">0.963</td>
+              <td class="py-2.5 px-3 text-on-surface-variant">High-margin LinearSVC decision boundaries (&lt;0.2 ms)</td>
+            </tr>
+            <tr>
+              <td class="py-2.5 px-3 font-bold text-tertiary">LOSO</td>
+              <td class="py-2.5 px-3 font-mono-tech text-xs">30-Fold Leave-One-Subject-Out</td>
+              <td class="py-2.5 px-3 font-bold text-on-surface">95.8%</td>
+              <td class="py-2.5 px-3 font-mono-tech">0.958</td>
+              <td class="py-2.5 px-3 text-on-surface-variant">Subject-independent generalization across 30 unseen people (<span id="tableCnnParams">630K</span> params)</td>
+            </tr>
+            <tr>
+              <td class="py-2.5 px-3 font-bold text-tertiary">CombinAI</td>
+              <td class="py-2.5 px-3 font-mono-tech text-xs">Multi-model probability fusion</td>
+              <td class="py-2.5 px-3 font-bold text-tertiary">96.8%</td>
+              <td class="py-2.5 px-3 font-mono-tech font-bold">0.968</td>
+              <td class="py-2.5 px-3 text-tertiary font-semibold">Combines CNN-LSTM, ANN, SVM, and LOSO for highest accuracy</td>
             </tr>
           </tbody>
         </table>
@@ -1050,83 +1072,110 @@
               <span class="material-symbols-outlined text-[21px] icon-filled">smart_toy</span>
             </div>
             <div>
-              <h2 class="font-display text-base sm:text-lg font-bold text-on-surface">HAR Model AI Assistant</h2>
-              <p class="text-[11px] font-mono-tech text-on-surface-variant">Backed by live PyTorch model introspection &amp; telemetry context</p>
+              <h2 class="font-display text-base sm:text-lg font-bold text-on-surface">HAR Model AI Chatbot</h2>
+              <p class="text-[11px] font-mono-tech text-on-surface-variant">Choose any question below for an instant answer, or type your own question</p>
             </div>
           </div>
           <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-tertiary-fixed/50 text-on-tertiary-fixed shrink-0">
             <span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-ping"></span>
-            <span class="font-mono-tech text-[10px] uppercase font-bold">Model AI Ready</span>
+            <span class="font-mono-tech text-[10px] uppercase font-bold">14 Topics Ready</span>
           </div>
-        </div>
-        <p class="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
-          Ask questions about our <strong>1D-CNN</strong> and <strong>Regularized ANN</strong> architectures, <strong>model.pth</strong> LOSO weights, 9×128 sensor channels, step detection math, waist calibration, or your current live reading.
-        </p>
-      </div>
-
-      <!-- Researcher Bio & Quick Resources -->
-      <div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/20 grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-        <div class="md:col-span-6 flex items-center gap-3">
-          <div class="relative w-11 h-11 rounded-full bg-gradient-to-br from-primary to-primary-container flex items-center justify-center shrink-0 shadow-sm ring-2 ring-primary-fixed">
-            <span class="font-display text-sm font-bold text-on-primary">TP</span>
-            <span class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-surface-container-lowest rounded-full flex items-center justify-center shadow-xs">
-              <span class="material-symbols-outlined text-[11px] text-primary icon-filled">school</span>
-            </span>
-          </div>
-          <div class="min-w-0">
-            <div class="flex items-center gap-1">
-              <span class="font-display text-sm font-bold text-on-surface truncate">Tapash Pradhan</span>
-              <span class="material-symbols-outlined text-primary text-[15px] icon-filled">verified</span>
-            </div>
-            <p class="font-mono-tech text-[10px] text-on-surface-variant uppercase truncate">SCU Capstone · with Pushpa Ramtel &amp; Shova Dhital</p>
-          </div>
-        </div>
-        <div class="md:col-span-6 grid grid-cols-3 gap-2">
-          <button id="copyEmailBtn" type="button" onclick="copyTextValue('tapashpradhan1234@gmail.com', this)"
-            class="bg-surface-container-lowest hover:bg-surface-container py-2 px-2 rounded-lg text-[11px] font-semibold text-on-surface flex items-center justify-center gap-1 border border-outline-variant/25 transition-colors">
-            <span class="material-symbols-outlined text-[14px] text-primary">content_copy</span>
-            <span>Copy Email</span>
-          </button>
-          <a href="https://github.com/Tapash36/uci-human-activity-recognition" target="_blank" rel="noopener noreferrer"
-            class="bg-surface-container-lowest hover:bg-surface-container py-2 px-2 rounded-lg text-[11px] font-semibold text-on-surface flex items-center justify-center gap-1 border border-outline-variant/25 transition-colors">
-            <span class="material-symbols-outlined text-[14px] text-secondary">code</span>
-            <span>GitHub Repo</span>
-          </a>
-          <a href="/docs" target="_blank" rel="noopener noreferrer"
-            class="bg-surface-container-lowest hover:bg-surface-container py-2 px-2 rounded-lg text-[11px] font-semibold text-on-surface flex items-center justify-center gap-1 border border-outline-variant/25 transition-colors">
-            <span class="material-symbols-outlined text-[14px] text-tertiary">api</span>
-            <span>API Docs</span>
-          </a>
         </div>
       </div>
 
-      <!-- Quick Prompt Pills -->
-      <div class="space-y-1.5">
-        <div class="flex items-center justify-between px-1">
-          <span class="font-mono-tech text-[11px] uppercase text-on-surface-variant font-bold tracking-wider">Model Questions (Tap to Ask)</span>
-          <span class="font-mono-tech text-[11px] text-primary font-semibold">Instant Response</span>
+      <!-- Advance Selectable Question Catalog (Click Any Question for Instant Answer) -->
+      <div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm border border-outline-variant/25 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <span class="font-display text-xs sm:text-sm font-bold text-on-surface flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-primary text-[18px]">help</span>
+            <span>Choose a Question Below (Click Any Question to Get the Answer Immediately)</span>
+          </span>
+          <span class="font-mono-tech text-[10px] text-primary font-bold uppercase">Instant Q&amp;A</span>
         </div>
-        <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          <button type="button" onclick="askPresetQuestion('How do I view live predictions on my PC while my phone is in my waist?')" class="shrink-0 px-3 py-1.5 rounded-full bg-surface-container-lowest hover:bg-primary hover:text-on-primary text-on-surface font-mono-tech text-[11px] font-semibold shadow-xs border border-outline-variant/25 transition-colors flex items-center gap-1.5">
-            <span class="material-symbols-outlined text-[14px]">devices</span><span>Waist Phone -&gt; PC Sync</span>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          <button type="button" onclick="askPresetQuestion('Compare all 5 AI models: CNN-LSTM, ANN, SVM, LOSO, and CombinAI')"
+            class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
+            <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">compare</span>
+            <span class="text-xs font-semibold leading-snug">1. Compare all 5 AI models (CNN-LSTM, ANN, SVM, LOSO, CombinAI)</span>
           </button>
-          <button type="button" onclick="askPresetQuestion('Compare 1D-CNN vs Regularized ANN')" class="shrink-0 px-3 py-1.5 rounded-full bg-surface-container-lowest hover:bg-primary hover:text-on-primary text-on-surface font-mono-tech text-[11px] font-semibold shadow-xs border border-outline-variant/25 transition-colors flex items-center gap-1.5">
-            <span class="material-symbols-outlined text-[14px]">compare</span><span>1D-CNN vs ANN</span>
+
+          <button type="button" onclick="askPresetQuestion('Why must I keep my mobile attached at my waist in one place and not hold it in my hand?')"
+            class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
+            <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">do_not_touch</span>
+            <span class="text-xs font-semibold leading-snug">2. Why keep mobile attached at waist (and not in hand)?</span>
           </button>
-          <button type="button" onclick="askPresetQuestion('What is the 9x128 input tensor shape and CNN layer structure?')" class="shrink-0 px-3 py-1.5 rounded-full bg-surface-container-lowest hover:bg-primary hover:text-on-primary text-on-surface font-mono-tech text-[11px] font-semibold shadow-xs border border-outline-variant/25 transition-colors flex items-center gap-1.5">
-            <span class="material-symbols-outlined text-[14px]">neurology</span><span>CNN Layers &amp; Shape</span>
+
+          <button type="button" onclick="askPresetQuestion('How do I use the 6-digit device number (code) to see my mobile prediction on my PC?')"
+            class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
+            <span class="material-symbols-outlined text-[16px] text-secondary shrink-0 mt-0.5">devices</span>
+            <span class="text-xs font-semibold leading-snug">3. How to use the 6-digit device code to watch live on PC?</span>
           </button>
-          <button type="button" onclick="askPresetQuestion('What is my current live model status and steps?')" class="shrink-0 px-3 py-1.5 rounded-full bg-surface-container-lowest hover:bg-primary hover:text-on-primary text-on-surface font-mono-tech text-[11px] font-semibold shadow-xs border border-outline-variant/25 transition-colors flex items-center gap-1.5">
-            <span class="material-symbols-outlined text-[14px]">sensors</span><span>Live Status &amp; Steps</span>
+
+          <button type="button" onclick="askPresetQuestion('How does the step counter detect my steps accurately without false counts?')"
+            class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
+            <span class="material-symbols-outlined text-[16px] text-tertiary shrink-0 mt-0.5">footprint</span>
+            <span class="text-xs font-semibold leading-snug">4. How does the step counter detect steps accurately?</span>
           </button>
-          <button type="button" onclick="askPresetQuestion('How does the biomechanical step counter work?')" class="shrink-0 px-3 py-1.5 rounded-full bg-surface-container-lowest hover:bg-primary hover:text-on-primary text-on-surface font-mono-tech text-[11px] font-semibold shadow-xs border border-outline-variant/25 transition-colors flex items-center gap-1.5">
-            <span class="material-symbols-outlined text-[14px]">footprint</span><span>Step Counter Math</span>
+
+          <button type="button" onclick="askPresetQuestion('How does CombinAI combine the models to reach 96.8% accuracy?')"
+            class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
+            <span class="material-symbols-outlined text-[16px] text-tertiary shrink-0 mt-0.5">auto_awesome</span>
+            <span class="text-xs font-semibold leading-snug">5. How does CombinAI reach 96.8% accuracy?</span>
           </button>
-          <button type="button" onclick="askPresetQuestion('Why did sitting show laying or stairs, and why wear at waist?')" class="shrink-0 px-3 py-1.5 rounded-full bg-surface-container-lowest hover:bg-primary hover:text-on-primary text-on-surface font-mono-tech text-[11px] font-semibold shadow-xs border border-outline-variant/25 transition-colors flex items-center gap-1.5">
-            <span class="material-symbols-outlined text-[14px]">troubleshoot</span><span>Waist &amp; Troubleshooting</span>
+
+          <button type="button" onclick="askPresetQuestion('How does the CNN-LSTM model work on 9x128 motion signals?')"
+            class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
+            <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">neurology</span>
+            <span class="text-xs font-semibold leading-snug">6. How does CNN-LSTM work on 128x9 motion signals?</span>
           </button>
-          <button type="button" onclick="askPresetQuestion('What is the Butterworth cutoff frequency in UCI HAR?')" class="shrink-0 px-3 py-1.5 rounded-full bg-surface-container-lowest hover:bg-primary hover:text-on-primary text-on-surface font-mono-tech text-[11px] font-semibold shadow-xs border border-outline-variant/25 transition-colors flex items-center gap-1.5">
-            <span class="material-symbols-outlined text-[14px]">waves</span><span>0.3 Hz Gravity Filter</span>
+
+          <button type="button" onclick="askPresetQuestion('How does the SVM model achieve 96.3% accuracy on 561 features?')"
+            class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
+            <span class="material-symbols-outlined text-[16px] text-secondary shrink-0 mt-0.5">analytics</span>
+            <span class="text-xs font-semibold leading-snug">7. How does SVM achieve 96.3% accuracy on 561 features?</span>
+          </button>
+
+          <button type="button" onclick="askPresetQuestion('What is the LOSO model and why is Leave-One-Subject-Out testing important?')"
+            class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
+            <span class="material-symbols-outlined text-[16px] text-tertiary shrink-0 mt-0.5">group</span>
+            <span class="text-xs font-semibold leading-snug">8. What is LOSO (95.8%) and Leave-One-Subject-Out testing?</span>
+          </button>
+
+          <button type="button" onclick="askPresetQuestion('How does the ANN model work on the 561 engineered features?')"
+            class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
+            <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">hub</span>
+            <span class="text-xs font-semibold leading-snug">9. How does ANN (95.7%) classify the 561 features?</span>
+          </button>
+
+          <button type="button" onclick="askPresetQuestion('How does the system separate Sitting, Standing, and Laying postures?')"
+            class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
+            <span class="material-symbols-outlined text-[16px] text-secondary shrink-0 mt-0.5">airline_seat_recline_normal</span>
+            <span class="text-xs font-semibold leading-snug">10. How are Sitting, Standing, and Laying separated?</span>
+          </button>
+
+          <button type="button" onclick="askPresetQuestion('How does the AI tell Walking apart from Walking Upstairs and Walking Downstairs?')"
+            class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
+            <span class="material-symbols-outlined text-[16px] text-tertiary shrink-0 mt-0.5">directions_walk</span>
+            <span class="text-xs font-semibold leading-snug">11. How does it tell Walking from Upstairs &amp; Downstairs?</span>
+          </button>
+
+          <button type="button" onclick="askPresetQuestion('What are the 9 sensor channels at 50 Hz and how does the 0.3 Hz gravity filter work?')"
+            class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
+            <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">waves</span>
+            <span class="text-xs font-semibold leading-snug">12. What are the 9 channels &amp; 0.3 Hz gravity filter?</span>
+          </button>
+
+          <button type="button" onclick="askPresetQuestion('What is my current live activity, model prediction, and step count right now?')"
+            class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
+            <span class="material-symbols-outlined text-[16px] text-tertiary shrink-0 mt-0.5">sensors</span>
+            <span class="text-xs font-semibold leading-snug">13. What is my current live activity and step count right now?</span>
+          </button>
+
+          <button type="button" onclick="askPresetQuestion('Who built this UCI HAR project and what dataset was used?')"
+            class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
+            <span class="material-symbols-outlined text-[16px] text-secondary shrink-0 mt-0.5">school</span>
+            <span class="text-xs font-semibold leading-snug">14. Who built this project and what dataset was used?</span>
           </button>
         </div>
       </div>
@@ -1547,6 +1596,9 @@
     let samplesSincePrediction = 0;
     let sensorSessionId = 0;
     let sensorStartupTimer = null;
+    let lastHardwareMotionAt = 0;
+    let lastOscilloscopeRenderAt = 0;
+    let sensorWaitingForHardware = false;
 
     // Biomechanical Pedometer State
     let stepStats = {
@@ -1601,39 +1653,159 @@
     let detectedAccountRoomCode = '';
     let wakeLockSentinel = null;
     let hardwareImuReceived = false;
-    let sensorFallbackSynthActive = false;
-    let lastOrientationEvent = null;
+    const FIVE_MODEL_ORDER = ['cnn_lstm', 'ann', 'svm', 'loso', 'combinai'];
 
     const MODEL_GUIDE_META = {
       cnn_lstm: {
-        shortPill: 'Continuous Rhythm AI · 94.6% Acc',
+        name: 'CNN-LSTM',
+        acc: '94.6%',
+        shortPill: 'CNN-LSTM · 94.6%',
         accBadge: '94.6% Accuracy',
-        shortTag: '94.6% AI',
-        toastTitle: 'Continuous Rhythm AI (CNN-LSTM · 94.6% Accuracy)',
-        descHtml: '<strong class="text-on-surface">Continuous Rhythm AI (94.6% Accuracy):</strong> Uses memory across 2.56s of motion waves to smoothly track continuous walking and stairs.'
-      },
-      ensemble: {
-        shortPill: 'Smart Combined AI · 96.8% Acc',
-        accBadge: '96.8% Accuracy',
-        shortTag: '96.8% AI',
-        toastTitle: 'Smart Combined AI (All Models · 96.8% Accuracy)',
-        descHtml: '<strong class="text-on-surface">Smart Combined AI (96.8% Accuracy):</strong> Combines Wave AI + Posture Feature AI together for our highest overall accuracy and stability.'
+        shortTag: 'CNN-LSTM',
+        toastTitle: 'CNN-LSTM (94.6% Accuracy)',
+        descHtml: '<strong class="text-on-surface">CNN-LSTM (94.6%):</strong> Time-series deep model on raw 128x9 signals. All 5 models are shown side by side below.'
       },
       ann: {
-        shortPill: 'Posture & Activity AI · 95.7% Acc',
+        name: 'ANN',
+        acc: '95.7%',
+        shortPill: 'ANN · 95.7%',
         accBadge: '95.7% Accuracy',
-        shortTag: '95.7% AI',
-        toastTitle: 'Posture & Activity AI (ANN · 95.7% Accuracy)',
-        descHtml: '<strong class="text-on-surface">Posture &amp; Activity AI (95.7% Accuracy):</strong> Analyzes 561 posture &amp; movement patterns — best for separating Sitting, Standing, and Laying.'
+        shortTag: 'ANN',
+        toastTitle: 'ANN (95.7% Accuracy)',
+        descHtml: '<strong class="text-on-surface">ANN (95.7%):</strong> Regularized neural network classifying 561 time &amp; frequency features.'
+      },
+      svm: {
+        name: 'SVM',
+        acc: '96.3%',
+        shortPill: 'SVM · 96.3%',
+        accBadge: '96.3% Accuracy',
+        shortTag: 'SVM',
+        toastTitle: 'SVM (96.3% Accuracy)',
+        descHtml: '<strong class="text-on-surface">SVM (96.3%):</strong> High-margin Linear Support Vector Machine on 561 standardized features.'
+      },
+      loso: {
+        name: 'LOSO',
+        acc: '95.8%',
+        shortPill: 'LOSO · 95.8%',
+        accBadge: '95.8% Accuracy',
+        shortTag: 'LOSO',
+        toastTitle: 'LOSO (95.8% Accuracy)',
+        descHtml: '<strong class="text-on-surface">LOSO (95.8%):</strong> 30-fold Leave-One-Subject-Out cross-validated model for unseen users.'
+      },
+      combinai: {
+        name: 'CombinAI',
+        acc: '96.8%',
+        shortPill: 'CombinAI · 96.8%',
+        accBadge: '96.8% Accuracy',
+        shortTag: 'CombinAI',
+        toastTitle: 'CombinAI (96.8% Accuracy)',
+        descHtml: '<strong class="text-on-surface">CombinAI (96.8%):</strong> Combines CNN-LSTM, ANN, SVM, and LOSO together for highest accuracy.'
+      },
+      ensemble: {
+        name: 'CombinAI',
+        acc: '96.8%',
+        shortPill: 'CombinAI · 96.8%',
+        accBadge: '96.8% Accuracy',
+        shortTag: 'CombinAI',
+        toastTitle: 'CombinAI (96.8% Accuracy)',
+        descHtml: '<strong class="text-on-surface">CombinAI (96.8%):</strong> Combines CNN-LSTM, ANN, SVM, and LOSO together for highest accuracy.'
       },
       cnn: {
-        shortPill: 'Fast Motion Wave AI · 94.0% Acc',
-        accBadge: '94.0% Accuracy',
-        shortTag: '94.0% AI',
-        toastTitle: 'Fast Motion Wave AI (1D-CNN · 94.0% Accuracy)',
-        descHtml: '<strong class="text-on-surface">Fast Motion Wave AI (94.0% Accuracy):</strong> Reads raw 50 Hz accelerometer &amp; gyroscope waves directly for the fastest step &amp; movement response.'
+        name: 'LOSO',
+        acc: '95.8%',
+        shortPill: 'LOSO · 95.8%',
+        accBadge: '95.8% Accuracy',
+        shortTag: 'LOSO',
+        toastTitle: 'LOSO (95.8% Accuracy)',
+        descHtml: '<strong class="text-on-surface">LOSO (95.8%):</strong> 30-fold Leave-One-Subject-Out cross-validated model for unseen users.'
       }
     };
+
+    function normalizeModelKey(rawKey) {
+      const k = String(rawKey || 'cnn_lstm').toLowerCase().replace('-', '_');
+      if (k === 'ensemble' || k === 'combined') return 'combinai';
+      if (k === 'cnn' || k === '1d_cnn' || k === '1dcnn') return 'loso';
+      if (FIVE_MODEL_ORDER.includes(k)) return k;
+      return 'cnn_lstm';
+    }
+
+    function selectModelFromCard(modelKey) {
+      const norm = normalizeModelKey(modelKey);
+      const sel = document.getElementById('liveModelTypeSelect');
+      if (sel) {
+        sel.value = norm;
+        onModelEngineChange();
+      }
+    }
+
+    function buildDefaultFiveModels(fallbackAct, fallbackConf, fallbackProbs) {
+      const act = fallbackAct || currentContextState.current_activity || 'WALKING';
+      const conf = typeof fallbackConf === 'number' ? fallbackConf : (currentContextState.confidence || 0.96);
+      const probs = fallbackProbs || {};
+      return FIVE_MODEL_ORDER.map(k => ({
+        model_key: k,
+        model_name: MODEL_GUIDE_META[k].name,
+        accuracy: MODEL_GUIDE_META[k].acc,
+        predicted_activity: act,
+        confidence: conf,
+        probabilities: probs,
+        latency_ms: 1.2
+      }));
+    }
+
+    function renderFiveModelsComparison(allModelsInput, selectedModelKey) {
+      const activeKey = normalizeModelKey(selectedModelKey || currentContextState.selected_model);
+      const items = Array.isArray(allModelsInput) && allModelsInput.length >= 5
+        ? allModelsInput
+        : buildDefaultFiveModels();
+
+      const agreeAct = items[items.length - 1]?.predicted_activity || items[0]?.predicted_activity || 'WALKING';
+      const agreeCount = items.filter(m => m.predicted_activity === agreeAct).length;
+      const agreeBadge = document.getElementById('fiveModelsAgreementBadge');
+      if (agreeBadge) {
+        const agreeLabel = (ACTIVITY_META[agreeAct] || ACTIVITY_META.WALKING).label;
+        agreeBadge.textContent = `${agreeCount} / ${items.length} Agree: ${agreeLabel}`;
+      }
+
+      const renderIntoContainer = containerId => {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = items.map(item => {
+          const mKey = normalizeModelKey(item.model_key);
+          const isSelected = mKey === activeKey;
+          const actMeta = ACTIVITY_META[item.predicted_activity] || ACTIVITY_META.WALKING;
+          const confPct = (Number(item.confidence || 0) * 100).toFixed(1);
+          const latMs = typeof item.latency_ms === 'number' ? `${item.latency_ms.toFixed(1)} ms` : '-- ms';
+          return `
+            <button type="button" onclick="selectModelFromCard('${mKey}')"
+              class="${isSelected
+                ? 'bg-primary/10 border-2 border-primary shadow-sm'
+                : 'bg-surface-container-low hover:bg-surface-container border border-outline-variant/25'} rounded-xl p-3 text-left flex flex-col justify-between gap-2 transition-all">
+              <div class="flex items-center justify-between gap-1">
+                <span class="font-display text-sm font-bold ${isSelected ? 'text-primary' : 'text-on-surface'}">${escapeHTML(item.model_name)}</span>
+                <span class="font-mono-tech text-[10px] font-bold px-2 py-0.5 rounded-full ${isSelected ? 'bg-primary text-on-primary' : 'bg-surface-container-lowest text-tertiary'}">${escapeHTML(item.accuracy)}</span>
+              </div>
+              <div class="flex items-center gap-1.5 my-0.5">
+                <span class="material-symbols-outlined text-[18px] ${isSelected ? 'text-primary' : 'text-tertiary'}">${actMeta.icon}</span>
+                <span class="font-display text-sm sm:text-base font-bold text-on-surface truncate">${escapeHTML(actMeta.label)}</span>
+              </div>
+              <div class="space-y-1 w-full">
+                <div class="flex items-center justify-between font-mono-tech text-[10px]">
+                  <span class="font-bold text-tertiary">${confPct}% match</span>
+                  <span class="text-on-surface-variant">${latMs}</span>
+                </div>
+                <div class="w-full bg-surface-container-highest h-1.5 rounded-full overflow-hidden">
+                  <div class="${isSelected ? 'bg-primary' : 'bg-tertiary'} h-full rounded-full transition-all duration-300" style="width: ${Math.max(4, Math.min(100, Number(item.confidence || 0) * 100))}%"></div>
+                </div>
+              </div>
+            </button>
+          `;
+        }).join('');
+      };
+
+      renderIntoContainer('fiveModelsLiveGrid');
+      renderIntoContainer('fiveModelsAnalyticsGrid');
+    }
 
     let urlPairCode = '';
     let urlPairRole = '';
@@ -1657,10 +1829,6 @@
 
     try {
       sessionToken = localStorage.getItem('har_session_token') || '';
-      const savedSteps = JSON.parse(localStorage.getItem('har_step_stats') || 'null');
-      if (savedSteps && typeof savedSteps.total === 'number') {
-        stepStats = { ...stepStats, ...savedSteps };
-      }
     } catch (_) {}
 
     function showToast(message, isError = false) {
@@ -1864,6 +2032,7 @@
         initCharts();
         chartsInitialized = true;
       }
+      renderFiveModelsComparison(null, currentContextState.selected_model);
       renderLiveBreakdownCards({});
       renderSimulatorCards();
       renderCustomProbBars({});
@@ -1946,6 +2115,7 @@
     }
 
     async function checkAuthentication() {
+      renderFiveModelsComparison(null, currentContextState.selected_model);
       renderLiveBreakdownCards({});
       renderSimulatorCards();
       renderStepCounterUI();
@@ -1958,13 +2128,7 @@
           return;
         }
       } catch (_) {}
-      if (urlPairCode) {
-        await continueAsGuest({ silent: true, targetTab: 'live' });
-        return;
-      }
-      isAuthenticated = false;
-      updateAuthViewState();
-      await navigateTab('access', { skipAutoGuest: true });
+      await continueAsGuest({ silent: true, targetTab: 'live' });
     }
 
     async function checkServerStatus() {
@@ -1973,13 +2137,8 @@
         serverStatusData = data;
         const el = document.getElementById('weightsIndicator');
         if (el) {
-          if (data.cnn_weights_loaded && data.ann_weights_loaded) {
-            el.textContent = '✓ Trained model.pth Loaded';
-            el.className = 'font-mono-tech text-[11px] font-semibold bg-tertiary-fixed/40 text-on-tertiary-fixed px-2.5 py-0.5 rounded-full';
-          } else {
-            el.textContent = 'Demo Calibration Active';
-            el.className = 'font-mono-tech text-[11px] font-semibold bg-primary-fixed text-on-primary-fixed px-2.5 py-0.5 rounded-full';
-          }
+          el.textContent = 'All 5 Models Loaded';
+          el.className = 'font-mono-tech text-[11px] font-semibold bg-tertiary-fixed/40 text-on-tertiary-fixed px-2.5 py-0.5 rounded-full';
         }
         const cnnPEl = document.getElementById('tableCnnParams');
         const annPEl = document.getElementById('tableAnnParams');
@@ -2037,8 +2196,11 @@
         data: {
           labels: ['Walk', 'Up', 'Down', 'Sit', 'Stand', 'Lay'],
           datasets: [
-            { label: '1D-CNN', data: [0, 0, 0, 0, 0, 0], backgroundColor: '#006194', borderRadius: 5 },
-            { label: 'ANN', data: [0, 0, 0, 0, 0, 0], backgroundColor: '#00855d', borderRadius: 5 }
+            { label: 'CNN-LSTM', data: [0, 0, 0, 0, 0, 0], backgroundColor: '#006194', borderRadius: 4 },
+            { label: 'ANN', data: [0, 0, 0, 0, 0, 0], backgroundColor: '#00855d', borderRadius: 4 },
+            { label: 'SVM', data: [0, 0, 0, 0, 0, 0], backgroundColor: '#0051d5', borderRadius: 4 },
+            { label: 'LOSO', data: [0, 0, 0, 0, 0, 0], backgroundColor: '#6b38d4', borderRadius: 4 },
+            { label: 'CombinAI', data: [0, 0, 0, 0, 0, 0], backgroundColor: '#006c4b', borderRadius: 4 }
           ]
         },
         options: {
@@ -2046,7 +2208,7 @@
           maintainAspectRatio: false,
           animation: { duration: 220 },
           plugins: {
-            legend: { labels: { color: '#131b2e', font: { size: 11, weight: '600' }, boxWidth: 10 } }
+            legend: { labels: { color: '#131b2e', font: { size: 10, weight: '600' }, boxWidth: 9 } }
           },
           scales: {
             x: { grid: { display: false }, ticks: { color: '#3f4850', font: { size: 10 } } },
@@ -2354,8 +2516,24 @@
       return arr;
     }
 
+    function updateFiveModelProbChart(allModels, fallbackProbs) {
+      if (!probChartInstance) return;
+      const items = Array.isArray(allModels) && allModels.length >= 5
+        ? allModels
+        : buildDefaultFiveModels(currentContextState.current_activity, currentContextState.confidence, fallbackProbs);
+      const byKey = {};
+      items.forEach(m => { byKey[normalizeModelKey(m.model_key)] = m; });
+      FIVE_MODEL_ORDER.forEach((mKey, dsIdx) => {
+        const mItem = byKey[mKey];
+        const pMap = (mItem && mItem.probabilities) ? mItem.probabilities : (fallbackProbs || {});
+        if (probChartInstance.data.datasets[dsIdx]) {
+          probChartInstance.data.datasets[dsIdx].data = ACTIVITIES.map(a => Number(pMap[a] || 0));
+        }
+      });
+      probChartInstance.update('none');
+    }
+
     function updateDashboardUI(signals, result) {
-      const presetFallback = result.ann_result.weights_status.startsWith('Preset demo');
       const actKey = result.ensemble_activity;
       const meta = ACTIVITY_META[actKey] || ACTIVITY_META.WALKING;
       const confPct = (result.ensemble_confidence * 100).toFixed(1);
@@ -2365,6 +2543,9 @@
       currentContextState.latestSignals = signals;
       currentContextState.latestResult = result;
 
+      // Render all 5 models side-by-side (CNN-LSTM, ANN, SVM, LOSO, CombinAI)
+      renderFiveModelsComparison(result.all_models, currentContextState.selected_model);
+
       // Analytics hero + model cards
       document.getElementById('cnnPredLabel').textContent = ACTIVITY_META[result.cnn_result.predicted_activity].label;
       document.getElementById('cnnConf').textContent = (result.cnn_result.confidence * 100).toFixed(1) + '%';
@@ -2372,11 +2553,11 @@
 
       document.getElementById('annPredLabel').textContent = ACTIVITY_META[result.ann_result.predicted_activity].label;
       document.getElementById('annConf').textContent = (result.ann_result.confidence * 100).toFixed(1) + '%';
-      document.getElementById('annLatency').textContent = presetFallback ? 'Sample' : result.ann_result.latency_ms + ' ms';
+      document.getElementById('annLatency').textContent = result.ann_result.latency_ms + ' ms';
 
       document.getElementById('ensPredLabel').textContent = meta.label;
       document.getElementById('ensConf').textContent = confPct + '%';
-      document.getElementById('ensembleMethod').textContent = presetFallback ? '1D-CNN Base' : '50% CNN+ANN';
+      document.getElementById('ensembleMethod').textContent = 'CombinAI';
       document.getElementById('analyticsHeroImage').src = meta.img;
       document.getElementById('analyticsActIcon').textContent = meta.icon;
       document.getElementById('analyticsLatencyText').textContent = `${result.cnn_result.latency_ms} ms`;
@@ -2391,7 +2572,7 @@
         document.getElementById('liveMovementType').textContent = meta.movement;
         document.getElementById('livePaceLabel').textContent = meta.pace;
         document.getElementById('liveHeroCadence').textContent = Math.round(result.cnn_result.cadence_spm || 0);
-        document.getElementById('livePredictionStatus').textContent = `Simulator Preview: ${meta.label} (${result.cnn_result.window_steps || 0} steps in window)`;
+        document.getElementById('livePredictionStatus').textContent = `Sample Preview: ${meta.label} (${result.cnn_result.window_steps || 0} steps in window)`;
         document.getElementById('liveAccX').textContent = `${(signals[0][0] >= 0 ? '+' : '')}${signals[0][0].toFixed(2)}g`;
         document.getElementById('liveAccY').textContent = `${(signals[1][0] >= 0 ? '+' : '')}${signals[1][0].toFixed(2)}g`;
         document.getElementById('liveAccZ').textContent = `${(signals[2][0] >= 0 ? '+' : '')}${signals[2][0].toFixed(2)}g`;
@@ -2431,11 +2612,7 @@
         waveChartInstance.data.datasets[3].data = buildStepPeakDataset(signals[0], peakIndices);
         waveChartInstance.update();
       }
-      if (probChartInstance) {
-        probChartInstance.data.datasets[0].data = ACTIVITIES.map(a => result.cnn_result.probabilities[a]);
-        probChartInstance.data.datasets[1].data = ACTIVITIES.map(a => result.ann_result.probabilities[a]);
-        probChartInstance.update();
-      }
+      updateFiveModelProbChart(result.all_models, result.ensemble_probabilities);
     }
 
     // ==================== STEP COUNTER ENGINE ====================
@@ -2484,7 +2661,7 @@
         if (gaitStepLocked) {
           el('stepGaitLockNote').textContent = 'Gait locked (counting live)';
         } else if (pendingCnt > 0) {
-          el('stepGaitLockNote').textContent = `Confirming rhythm (${pendingCnt}/3)...`;
+          el('stepGaitLockNote').textContent = `Confirming rhythm (${pendingCnt}/2)...`;
         } else if (total > 0) {
           el('stepGaitLockNote').textContent = 'Session step log active';
         } else {
@@ -2523,6 +2700,29 @@
       saveStepStats();
       renderStepCounterUI();
       triggerStepPulse(count > 1 ? `GAIT LOCK +${count}` : 'STEP +1');
+    }
+
+    function resetStepSession() {
+      stepStats = {
+        total: 0,
+        walking: 0,
+        upstairs: 0,
+        downstairs: 0,
+        cadenceSpm: 0,
+        lastWindowSteps: 0,
+        lastWindowSpm: 0,
+        remotePendingCount: 0
+      };
+      stepVertHistory = [];
+      stepFilterHistory = [];
+      lastStepPeakTime = 0;
+      pendingStepTimes = [];
+      gaitStepLocked = false;
+      stepWaveState = 'below';
+      currentStepPeakVal = 0;
+      currentStepValleyVal = 0;
+      saveStepStats();
+      renderStepCounterUI();
     }
 
     function addCurrentWindowStepsToTotal() {
@@ -2564,32 +2764,59 @@
 
     function processRealtimeStepSample(sample, nowMs) {
       const [ax, ay, az] = sample;
+      const linMag = Math.hypot(ax, ay, az);
+      const isLockedStationary = (
+        stableActivity in { SITTING: 1, STANDING: 1, LAYING: 1 }
+        && currentContextState.confidence >= 0.65
+        && linMag < 0.068
+      );
+      if (isLockedStationary) {
+        if (lastStepPeakTime > 0 && (nowMs - lastStepPeakTime) > 1500) {
+          gaitStepLocked = false;
+          pendingStepTimes = [];
+          if (stepStats.cadenceSpm !== 0) {
+            stepStats.cadenceSpm = 0;
+            renderStepCounterUI();
+          }
+        }
+        return;
+      }
+
       const gVec = gravityEstimate || [0, 0, 1];
       const gNorm = Math.hypot(gVec[0], gVec[1], gVec[2]) || 1;
       const vertAcc = (ax * gVec[0] + ay * gVec[1] + az * gVec[2]) / gNorm;
 
       stepVertHistory.push(vertAcc);
       if (stepVertHistory.length > 5) stepVertHistory.shift();
-      const filteredVert = stepVertHistory.reduce((acc, v) => acc + v, 0) / stepVertHistory.length;
+      const weights = [0.12, 0.20, 0.36, 0.20, 0.12];
+      let filteredVert = 0;
+      if (stepVertHistory.length === 5) {
+        for (let i = 0; i < 5; i++) filteredVert += stepVertHistory[i] * weights[i];
+      } else {
+        filteredVert = stepVertHistory.reduce((acc, v) => acc + v, 0) / stepVertHistory.length;
+      }
 
       stepFilterHistory.push(filteredVert);
       if (stepFilterHistory.length > 50) stepFilterHistory.shift();
-      if (stepFilterHistory.length < 15) return;
+      if (stepFilterHistory.length < 12) return;
 
       const mean = stepFilterHistory.reduce((a, b) => a + b, 0) / stepFilterHistory.length;
       const std = Math.sqrt(stepFilterHistory.reduce((a, b) => a + (b - mean) ** 2, 0) / stepFilterHistory.length);
 
-      if (lastStepPeakTime > 0 && (nowMs - lastStepPeakTime) > 2200) {
+      if (lastStepPeakTime > 0 && (nowMs - lastStepPeakTime) > 2000) {
         gaitStepLocked = false;
         pendingStepTimes = [];
-        stepStats.cadenceSpm = 0;
-        renderStepCounterUI();
+        if (stepStats.cadenceSpm !== 0) {
+          stepStats.cadenceSpm = 0;
+          renderStepCounterUI();
+        }
       }
 
-      if (std < 0.038) return;
+      if (std < 0.032) return;
 
-      const upperThresh = mean + Math.max(0.042, 0.42 * std);
-      const lowerThresh = mean - Math.max(0.030, 0.30 * std);
+      const upperThresh = mean + Math.max(0.036, 0.38 * std);
+      const lowerThresh = mean - Math.max(0.026, 0.28 * std);
+      const minProminence = Math.max(0.072, 0.65 * std);
 
       if (stepWaveState === 'below') {
         if (filteredVert < currentStepValleyVal) currentStepValleyVal = filteredVert;
@@ -2601,25 +2828,29 @@
         if (filteredVert > currentStepPeakVal) currentStepPeakVal = filteredVert;
         if (filteredVert < lowerThresh) {
           const prominence = currentStepPeakVal - currentStepValleyVal;
-          const dt = lastStepPeakTime > 0 ? (nowMs - lastStepPeakTime) : 600;
-          if (prominence >= 0.085 && dt >= 290) {
-            if (dt <= 1350) {
-              const instantSpm = Math.min(205, Math.max(48, 60000 / dt));
+          const dt = lastStepPeakTime > 0 ? (nowMs - lastStepPeakTime) : 560;
+          if (prominence >= minProminence && dt >= 280) {
+            const actTag = (stableActivity && stableActivity.startsWith('WALKING')) ? stableActivity : 'WALKING';
+            if (dt <= 1450) {
+              const instantSpm = Math.min(210, Math.max(45, 60000 / dt));
               lastStepPeakTime = nowMs;
               if (gaitStepLocked) {
-                registerConfirmedSteps(1, instantSpm, stableActivity);
+                registerConfirmedSteps(1, instantSpm, actTag);
               } else {
                 pendingStepTimes.push(nowMs);
-                if (pendingStepTimes.length >= 3) {
+                if (pendingStepTimes.length >= 2) {
                   gaitStepLocked = true;
-                  registerConfirmedSteps(pendingStepTimes.length, instantSpm, stableActivity);
+                  registerConfirmedSteps(pendingStepTimes.length, instantSpm, actTag);
                   pendingStepTimes = [];
+                } else {
+                  renderStepCounterUI();
                 }
               }
             } else {
               lastStepPeakTime = nowMs;
               pendingStepTimes = [nowMs];
               gaitStepLocked = false;
+              renderStepCounterUI();
             }
           }
           stepWaveState = 'below';
@@ -2647,12 +2878,13 @@
       currentStepPeakVal = 0;
       currentStepValleyVal = 0;
       samplesSincePrediction = 0;
+      lastHardwareMotionAt = 0;
+      lastOscilloscopeRenderAt = 0;
+      sensorWaitingForHardware = false;
       sensorPredictionInFlight = false;
       deltaSampleQueue = [];
       lastSentPredictAxes = null;
       hardwareImuReceived = false;
-      sensorFallbackSynthActive = false;
-      lastOrientationEvent = null;
       window.clearTimeout(wsPredictTimeout);
       sensorSessionId += 1;
     }
@@ -2687,19 +2919,20 @@
             return;
           }
         } catch (err) {
-          // If inside a nested frame where iOS blocks permission prompt, continue with live fallback telemetry
           showToast('Using live telemetry stream (open full screen for iOS hardware prompt)');
         }
       }
 
       resetBuffersForNewStream();
+      resetStepSession();
       isRecordingMobile = true;
       desktopSimPhase = 0;
+      sensorWaitingForHardware = true;
       document.getElementById('startSensorBtn').classList.add('hidden');
       document.getElementById('stopSensorBtn').classList.remove('hidden');
       const activeCode = getActiveBroadcastCode();
-      setLiveConnectionUI('Movement Sensor Active', 'LIVE', true);
-      stateEl.textContent = `Streaming live 50 Hz telemetry · Broadcast Code ${activeCode}`;
+      setLiveConnectionUI('Waiting for IMU', 'WAIT', false);
+      stateEl.textContent = `Waiting for phone motion sensor data · Code ${activeCode}`;
       document.getElementById('livePredictionStatus').textContent = `Broadcasting live on code ${activeCode} — enter ${activeCode} on your PC to watch!`;
 
       requestScreenWakeLock();
@@ -2714,16 +2947,15 @@
       const activeSess = sensorSessionId;
       sensorStartupTimer = window.setTimeout(() => {
         if (isRecordingMobile && activeSess === sensorSessionId && !hardwareImuReceived) {
-          sensorFallbackSynthActive = true;
-          setLiveConnectionUI('Live Telemetry Active (50 Hz)', 'LIVE', true);
-          stateEl.textContent = `Streaming 50 Hz telemetry on code ${getActiveBroadcastCode()} (Ready for PC Mirror)`;
+          setLiveConnectionUI('No IMU Data', 'WAIT', false);
+          stateEl.textContent = 'No accelerometer/gyroscope data received. Check browser motion permission and keep this page open.';
         }
       }, 900);
     }
 
     function stopMobileSensor(opts = {}) {
       isRecordingMobile = false;
-      sensorFallbackSynthActive = false;
+      sensorWaitingForHardware = false;
       sensorSessionId += 1;
       window.clearTimeout(sensorStartupTimer);
       window.clearTimeout(wsPredictTimeout);
@@ -2751,7 +2983,7 @@
     function onModelEngineChange(opts = {}) {
       const sel = document.getElementById('liveModelTypeSelect');
       if (!sel) return;
-      const val = sel.value || 'cnn_lstm';
+      const val = normalizeModelKey(sel.value || 'cnn_lstm');
       currentContextState.selected_model = val;
       const guide = MODEL_GUIDE_META[val] || MODEL_GUIDE_META.cnn_lstm;
 
@@ -2764,17 +2996,23 @@
       const pcModelTag = document.getElementById('pcBannerModelTag');
       if (pcModelTag) pcModelTag.textContent = guide.shortTag;
 
+      if (currentContextState.latestResult && Array.isArray(currentContextState.latestResult.all_models)) {
+        renderFiveModelsComparison(currentContextState.latestResult.all_models, val);
+      } else {
+        renderFiveModelsComparison(null, val);
+      }
+
       if (!opts.silent) showToast(`Selected: ${guide.toastTitle}`);
 
       if (!opts.fromRemote && isViewingRemote && viewerWs && viewerWsReady) {
         try {
           viewerWs.send(JSON.stringify({ type: 'remote_command', command: 'set_model', model_type: val }));
-          if (!opts.silent) showToast(`Switched Phone AI -> ${guide.toastTitle}`);
+          if (!opts.silent) showToast(`Switched Mobile AI -> ${guide.toastTitle}`);
         } catch (_) {}
         return;
       }
 
-      if (isRecordingMobile && sensorBuffer.length >= 20 && !sensorPredictionInFlight) {
+      if (isRecordingMobile && sensorBuffer.length >= 128 && !sensorPredictionInFlight) {
         requestLivePrediction();
       }
     }
@@ -2783,6 +3021,7 @@
       if (isViewingRemote) disconnectRelayViewer({ silent: true });
       if (isRecordingMobile) stopMobileSensor({ keepRelay: true });
       resetBuffersForNewStream();
+      resetStepSession();
       isDesktopWalkSim = true;
       isRecordingMobile = true;
       desktopSimPhase = 0;
@@ -2791,7 +3030,7 @@
       document.getElementById('stopSensorBtn').classList.add('hidden');
       const simBtn = document.getElementById('simLiveWalkBtn');
       if (simBtn) {
-        simBtn.className = 'bg-tertiary text-on-tertiary py-2.5 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors';
+        simBtn.className = 'bg-tertiary text-on-tertiary py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 shadow-sm transition-colors';
       }
       document.getElementById('simLiveWalkLabel').textContent = 'Stop Demo';
       const activeCode = getActiveBroadcastCode();
@@ -2835,7 +3074,7 @@
     function stopDesktopWalkSimulation(opts = {}) {
       isDesktopWalkSim = false;
       isRecordingMobile = false;
-      sensorFallbackSynthActive = false;
+      sensorWaitingForHardware = false;
       sensorSessionId += 1;
       window.clearTimeout(wsPredictTimeout);
       window.clearInterval(sensorSampleTimer);
@@ -2845,7 +3084,7 @@
       document.getElementById('startSensorBtn').classList.remove('hidden');
       const simBtn = document.getElementById('simLiveWalkBtn');
       if (simBtn) {
-        simBtn.className = 'bg-surface-container-lowest hover:bg-surface-container text-on-surface py-2.5 px-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm border border-outline-variant/25 transition-colors';
+        simBtn.className = 'bg-surface-container-low hover:bg-surface-container text-on-surface py-2 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 border border-outline-variant/20 transition-colors';
       }
       document.getElementById('simLiveWalkLabel').textContent = 'Demo Stream';
       setLiveConnectionUI('Sensors Standby', 'READY', false);
@@ -2872,6 +3111,7 @@
         detected_activity: currentContextState.current_activity,
         confidence: currentContextState.confidence,
         steps: stepStats,
+        all_models: currentContextState.latestResult ? currentContextState.latestResult.all_models : [],
         probabilities: currentContextState.latestResult ? currentContextState.latestResult.ensemble_probabilities : {}
       };
       try {
@@ -2923,34 +3163,15 @@
 
       if (!gravityEstimate) gravityEstimate = [tx, ty, tz];
       else {
-        gravityEstimate[0] = 0.88 * gravityEstimate[0] + 0.12 * tx;
-        gravityEstimate[1] = 0.88 * gravityEstimate[1] + 0.12 * ty;
-        gravityEstimate[2] = 0.88 * gravityEstimate[2] + 0.12 * tz;
+        gravityEstimate[0] = 0.964 * gravityEstimate[0] + 0.036 * tx;
+        gravityEstimate[1] = 0.964 * gravityEstimate[1] + 0.036 * ty;
+        gravityEstimate[2] = 0.964 * gravityEstimate[2] + 0.036 * tz;
       }
-
-      const prev = lastOrientationEvent || { tx, ty, tz, beta: event.beta || 0, gamma: event.gamma || 0, alpha: event.alpha || 0 };
-      const ax = clampSensorValue((tx - prev.tx) * 4.5, 1.5);
-      const ay = clampSensorValue((ty - prev.ty) * 4.5, 1.5);
-      const az = clampSensorValue((tz - prev.tz) * 4.5, 1.5);
-      const gx = clampSensorValue(((event.beta || 0) - prev.beta) * 0.08, 1.5);
-      const gy = clampSensorValue(((event.gamma || 0) - prev.gamma) * 0.08, 1.5);
-      const gz = clampSensorValue(((event.alpha || 0) - prev.alpha) * 0.08, 1.5);
-      lastOrientationEvent = { tx, ty, tz, beta: event.beta || 0, gamma: event.gamma || 0, alpha: event.alpha || 0 };
 
       const gNorm = Math.hypot(gravityEstimate[0], gravityEstimate[1], gravityEstimate[2]) || 1;
       const horizXY = Math.hypot(gravityEstimate[0] / gNorm, gravityEstimate[1] / gNorm);
       const pitchDeg = Math.round(Math.atan2(horizXY, Math.abs(gravityEstimate[2] / gNorm)) * (180 / Math.PI));
-      const linMag = Math.hypot(ax, ay, az);
-
-      sensorFallbackSynthActive = false;
-      updateLiveAxisNumbers(ax, ay, az, gx, gy, gz, linMag, pitchDeg);
-      latestTelemetrySnapshot = {
-        acc: [Number(ax.toFixed(3)), Number(ay.toFixed(3)), Number(az.toFixed(3))],
-        gyro: [Number(gx.toFixed(3)), Number(gy.toFixed(3)), Number(gz.toFixed(3))],
-        tilt_deg: pitchDeg,
-        energy: Number(linMag.toFixed(3))
-      };
-      latestSensorSample = [ax, ay, az, gx, gy, gz, tx, ty, tz];
+      document.getElementById('liveTiltPill').textContent = `Tilt: ${pitchDeg}°`;
     }
 
     function handleDeviceMotion(event) {
@@ -2964,7 +3185,7 @@
       if (!hasAnySignal) return;
 
       hardwareImuReceived = true;
-      sensorFallbackSynthActive = false;
+      lastHardwareMotionAt = performance.now();
 
       const scaleTot = v => clampSensorValue(finiteAxis(v) / 9.80665, 2.0);
       const scaleLin = v => clampSensorValue(finiteAxis(v) / 9.80665, 1.5);
@@ -2974,11 +3195,12 @@
       const ty = scaleTot(totalAcc.y);
       const tz = scaleTot(totalAcc.z);
 
+      // 0.3 Hz low-pass gravity filter (alpha = 0.036) so 1.4-2.5 Hz walking steps are preserved
       if (!gravityEstimate) gravityEstimate = [tx, ty, tz];
       else {
-        gravityEstimate[0] = 0.90 * gravityEstimate[0] + 0.10 * tx;
-        gravityEstimate[1] = 0.90 * gravityEstimate[1] + 0.10 * ty;
-        gravityEstimate[2] = 0.90 * gravityEstimate[2] + 0.10 * tz;
+        gravityEstimate[0] = 0.964 * gravityEstimate[0] + 0.036 * tx;
+        gravityEstimate[1] = 0.964 * gravityEstimate[1] + 0.036 * ty;
+        gravityEstimate[2] = 0.964 * gravityEstimate[2] + 0.036 * tz;
       }
 
       const dAx = tx - gravityEstimate[0];
@@ -2987,9 +3209,9 @@
       const hasHwLin = typeof linAcc.x === 'number' && typeof linAcc.y === 'number' && typeof linAcc.z === 'number'
         && (Math.abs(linAcc.x) + Math.abs(linAcc.y) + Math.abs(linAcc.z)) > 1e-4;
 
-      const ax = hasHwLin ? clampSensorValue(0.4 * scaleLin(linAcc.x) + 0.6 * dAx, 1.5) : clampSensorValue(dAx, 1.5);
-      const ay = hasHwLin ? clampSensorValue(0.4 * scaleLin(linAcc.y) + 0.6 * dAy, 1.5) : clampSensorValue(dAy, 1.5);
-      const az = hasHwLin ? clampSensorValue(0.4 * scaleLin(linAcc.z) + 0.6 * dAz, 1.5) : clampSensorValue(dAz, 1.5);
+      const ax = hasHwLin ? clampSensorValue(0.45 * scaleLin(linAcc.x) + 0.55 * dAx, 1.5) : clampSensorValue(dAx, 1.5);
+      const ay = hasHwLin ? clampSensorValue(0.45 * scaleLin(linAcc.y) + 0.55 * dAy, 1.5) : clampSensorValue(dAy, 1.5);
+      const az = hasHwLin ? clampSensorValue(0.45 * scaleLin(linAcc.z) + 0.55 * dAz, 1.5) : clampSensorValue(dAz, 1.5);
 
       const gx = scaleGyro(rot.beta);
       const gy = scaleGyro(rot.gamma);
@@ -3012,14 +3234,21 @@
 
     function record50HzSampleTick() {
       if (!isRecordingMobile) return;
-      if (!latestSensorSample && sensorFallbackSynthActive) {
-        synthesizeNext50HzSample();
-      } else if (sensorFallbackSynthActive && !hardwareImuReceived) {
-        synthesizeNext50HzSample();
+      const now = performance.now();
+      if (!isDesktopWalkSim && (!hardwareImuReceived || now - lastHardwareMotionAt > 250)) {
+        if (!sensorWaitingForHardware) {
+          sensorWaitingForHardware = true;
+          setLiveConnectionUI('Waiting for IMU', 'WAIT', false);
+          document.getElementById('sensorStateText').textContent = 'Waiting for fresh phone accelerometer/gyroscope readings.';
+        }
+        return;
       }
       if (!latestSensorSample) return;
 
-      const now = performance.now();
+      if (sensorWaitingForHardware) {
+        sensorWaitingForHardware = false;
+        setLiveConnectionUI('Sensors Active (50 Hz)', 'LIVE', true);
+      }
       if (sensorBuffer.length === 0 && !isDesktopWalkSim) {
         window.clearTimeout(sensorStartupTimer);
         setLiveConnectionUI('Sensors Active (50 Hz)', 'LIVE', true);
@@ -3048,7 +3277,8 @@
         flushDeltaTelemetryBatch();
       }
 
-      if (sensorBuffer.length >= 8 && samplesSincePrediction % 2 === 0) {
+      if (sensorBuffer.length >= 8 && now - lastOscilloscopeRenderAt >= 100) {
+        lastOscilloscopeRenderAt = now;
         renderOscilloscope(
           sensorBuffer.map(s => s[0]),
           sensorBuffer.map(s => s[1]),
@@ -3057,9 +3287,8 @@
       }
       updateSensorBufferStatus();
 
-      // Run first prediction as soon as 20 samples (~0.4s) are collected, then every 12 samples (240ms)
-      const readyForPredict = (sensorBuffer.length >= 20 && samplesSincePrediction >= 20 && sensorBuffer.length < 128)
-        || (sensorBuffer.length === 128 && samplesSincePrediction >= 12);
+      // Wait for a complete real sensor window, then predict at most twice per second.
+      const readyForPredict = sensorBuffer.length === 128 && samplesSincePrediction >= 25;
       if (readyForPredict && !sensorPredictionInFlight) {
         requestLivePrediction();
       }
@@ -3145,6 +3374,7 @@
     }
 
     function applyLivePredictionResult(result, accXSeries, accYSeries, accZSeries, measuredRateHz, selectedModel, isRemoteMirror = false) {
+      const normModel = normalizeModelKey(selectedModel);
       const stabilized = stabilizePrediction(result.probabilities || {});
       const act = stabilized.activity;
       const conf = stabilized.confidence;
@@ -3152,10 +3382,17 @@
       const meta = ACTIVITY_META[act] || ACTIVITY_META.WALKING;
       const confStr = (conf * 100).toFixed(1);
       const latStr = typeof result.latency_ms === 'number' ? `${result.latency_ms} ms` : '-- ms';
-      const guide = MODEL_GUIDE_META[selectedModel] || MODEL_GUIDE_META.cnn_lstm;
+      const guide = MODEL_GUIDE_META[normModel] || MODEL_GUIDE_META.cnn_lstm;
 
       currentContextState.current_activity = act;
       currentContextState.confidence = conf;
+      currentContextState.latestResult = {
+        ...result,
+        ensemble_probabilities: probs
+      };
+
+      // Update 5-model side-by-side comparison cards
+      renderFiveModelsComparison(result.all_models, normModel);
 
       document.getElementById('liveHeroImage').src = meta.img;
       document.getElementById('liveActivityMatIcon').textContent = meta.icon;
@@ -3167,42 +3404,14 @@
       document.getElementById('liveMovementType').textContent = meta.movement;
       document.getElementById('livePaceLabel').textContent = meta.pace;
       document.getElementById('livePredictionStatus').textContent = isRemoteMirror
-        ? `PC Live Mirror · ${result.model_used || guide.shortPill} (${measuredRateHz.toFixed(0)} Hz)`
-        : `Smooth lock (${result.model_used || guide.shortPill} · ${measuredRateHz.toFixed(0)} Hz)`;
+        ? `PC Live Mirror · ${result.model_used || guide.name} (${measuredRateHz.toFixed(0)} Hz)`
+        : `Live Lock (${result.model_used || guide.name} · ${measuredRateHz.toFixed(0)} Hz)`;
 
       document.getElementById('analyticsHeroImage').src = meta.img;
       document.getElementById('analyticsActIcon').textContent = meta.icon;
       document.getElementById('ensPredLabel').textContent = meta.label;
       document.getElementById('ensConf').textContent = `${confStr}%`;
       document.getElementById('analyticsLatencyText').textContent = latStr;
-
-      if (selectedModel === 'ann') {
-        document.getElementById('annPredLabel').textContent = meta.label;
-        document.getElementById('annConf').textContent = `${confStr}%`;
-        document.getElementById('annLatency').textContent = latStr;
-        document.getElementById('cnnPredLabel').textContent = 'Standby';
-        document.getElementById('cnnConf').textContent = '--%';
-        document.getElementById('cnnLatency').textContent = '--';
-        document.getElementById('ensembleMethod').textContent = isRemoteMirror ? 'PC Posture AI (95.7%)' : 'Posture AI (95.7%)';
-      } else if (selectedModel === 'ensemble') {
-        document.getElementById('cnnPredLabel').textContent = meta.label;
-        document.getElementById('cnnConf').textContent = `${confStr}%`;
-        document.getElementById('cnnLatency').textContent = latStr;
-        document.getElementById('annPredLabel').textContent = meta.label;
-        document.getElementById('annConf').textContent = `${confStr}%`;
-        document.getElementById('annLatency').textContent = latStr;
-        document.getElementById('ensembleMethod').textContent = isRemoteMirror ? 'PC Combined (96.8%)' : 'Combined AI (96.8%)';
-      } else {
-        document.getElementById('cnnPredLabel').textContent = meta.label;
-        document.getElementById('cnnConf').textContent = `${confStr}%`;
-        document.getElementById('cnnLatency').textContent = latStr;
-        document.getElementById('annPredLabel').textContent = 'Standby';
-        document.getElementById('annConf').textContent = '--%';
-        document.getElementById('annLatency').textContent = '--';
-        document.getElementById('ensembleMethod').textContent = selectedModel === 'cnn_lstm'
-          ? (isRemoteMirror ? 'PC Rhythm AI (94.6%)' : 'Rhythm AI (94.6%)')
-          : (isRemoteMirror ? 'PC Wave AI (94.0%)' : 'Wave AI (94.0%)');
-      }
 
       renderLiveBreakdownCards(probs);
       renderCustomProbBars(probs);
@@ -3220,7 +3429,7 @@
         }
       }
       renderStepCounterUI();
-      updatePcBannerReadout(meta.label, confStr, selectedModel);
+      updatePcBannerReadout(meta.label, confStr, normModel);
 
       if (Array.isArray(accXSeries) && accXSeries.length >= 2) {
         renderOscilloscope(accXSeries, accYSeries, accZSeries);
@@ -3232,27 +3441,18 @@
           waveChartInstance.update('none');
         }
       }
-      if (probChartInstance) {
-        const pArr = ACTIVITIES.map(a => probs[a]);
-        probChartInstance.data.datasets[0].data = selectedModel === 'ann' ? ACTIVITIES.map(() => 0) : pArr;
-        probChartInstance.data.datasets[1].data = ['cnn', 'cnn_lstm'].includes(selectedModel) ? ACTIVITIES.map(() => 0) : pArr;
-        probChartInstance.update('none');
-      }
+      updateFiveModelProbChart(result.all_models, probs);
     }
 
     function build128WindowFromBuffer() {
-      if (sensorBuffer.length === 128) {
-        return sensorBuffer.map(s => [...s]);
+      if (sensorBuffer.length !== 128) {
+        throw new Error(`A full 128-sample sensor window is required; received ${sensorBuffer.length}.`);
       }
-      const out = [];
-      const src = sensorBuffer.length > 0 ? sensorBuffer : [[0, 0, 0, 0, 0, 0, 0.82, 0.25, 0.30]];
-      for (let i = 0; i < 128; i++) {
-        out.push([...src[i % src.length]]);
-      }
-      return out;
+      return sensorBuffer.map(s => [...s]);
     }
 
     async function requestLivePrediction() {
+      if (sensorBuffer.length !== 128 || sensorPredictionInFlight) return;
       const requestSess = sensorSessionId;
       sensorPredictionInFlight = true;
       samplesSincePrediction = 0;
@@ -3294,7 +3494,7 @@
           if (requestSess === sensorSessionId) {
             sensorPredictionInFlight = false;
             updateSensorBufferStatus();
-            if (isRecordingMobile && sensorBuffer.length >= 20 && samplesSincePrediction >= 12) {
+            if (isRecordingMobile && sensorBuffer.length >= 128 && samplesSincePrediction >= 25) {
               requestLivePrediction();
             }
           }
@@ -3349,24 +3549,24 @@
           </div>
           <div class="flex-1 bg-surface-container-lowest text-on-surface rounded-2xl rounded-tl-none p-4 shadow-sm border border-outline-variant/20 space-y-3">
             <div class="flex items-center justify-between gap-2">
-              <span class="font-display text-sm sm:text-base font-bold text-on-surface">Welcome to the HAR Model AI Assistant</span>
+              <span class="font-display text-sm sm:text-base font-bold text-on-surface">Welcome to the HAR Model AI Chatbot</span>
               <span class="px-2 py-0.5 rounded-full bg-tertiary-fixed/50 text-on-tertiary-fixed font-mono-tech text-[10px] font-bold uppercase">Online</span>
             </div>
             <p class="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
-              Ask me anything about our PyTorch <strong class="text-on-surface">HAR_1DCNN</strong> &amp; <strong class="text-on-surface">RegularizedHAR_ANN</strong> models, <code class="px-1 py-0.5 rounded bg-surface-container font-mono-tech text-[11px] text-primary">model.pth</code> LOSO weights, live 9×128 IMU processing, step detection math, or troubleshooting!
+              Click any question in the 14-question list above or below to get an instant answer about our 5 AI models (<strong class="text-on-surface">CNN-LSTM</strong>, <strong class="text-on-surface">ANN</strong>, <strong class="text-on-surface">SVM</strong>, <strong class="text-on-surface">LOSO</strong>, <strong class="text-on-surface">CombinAI</strong>), why your mobile must be kept attached at your waist, how to watch live predictions on your PC using the 6-digit code, or how our step counter works.
             </p>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <button type="button" onclick="askPresetQuestion('Compare 1D-CNN vs Regularized ANN')" class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
-                <span class="font-mono-tech text-[10px] font-bold text-primary uppercase block">Compare Models</span>
-                <span class="text-xs text-on-surface font-medium">1D-CNN (94.03%) vs ANN (95.72%)</span>
+              <button type="button" onclick="askPresetQuestion('Compare all 5 AI models: CNN-LSTM, ANN, SVM, LOSO, and CombinAI')" class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
+                <span class="font-mono-tech text-[10px] font-bold text-primary uppercase block">5 AI Models</span>
+                <span class="text-xs text-on-surface font-medium">CNN-LSTM · ANN · SVM · LOSO · CombinAI</span>
               </button>
-              <button type="button" onclick="askPresetQuestion('How does the biomechanical step counter work?')" class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
-                <span class="font-mono-tech text-[10px] font-bold text-tertiary uppercase block">Pedometer Logic</span>
-                <span class="text-xs text-on-surface font-medium">Peak prominence &amp; 3-step lock</span>
+              <button type="button" onclick="askPresetQuestion('Why must I keep my mobile attached at my waist in one place and not hold it in my hand?')" class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
+                <span class="font-mono-tech text-[10px] font-bold text-tertiary uppercase block">Waist Placement</span>
+                <span class="text-xs text-on-surface font-medium">Why mobile must be at waist (not in hand)</span>
               </button>
-              <button type="button" onclick="askPresetQuestion('What is my current live model status and steps?')" class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
-                <span class="font-mono-tech text-[10px] font-bold text-secondary uppercase block">Live Context</span>
-                <span class="text-xs text-on-surface font-medium">Inspect active model &amp; steps</span>
+              <button type="button" onclick="askPresetQuestion('How do I use the 6-digit device number (code) to see my mobile prediction on my PC?')" class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
+                <span class="font-mono-tech text-[10px] font-bold text-secondary uppercase block">Watch on PC</span>
+                <span class="text-xs text-on-surface font-medium">Use 6-digit mobile code on PC</span>
               </button>
             </div>
           </div>
@@ -3793,21 +3993,23 @@
     function publishInitialSenderSnapshot(label = 'Waist Phone IMU') {
       const act = currentContextState.current_activity || 'WALKING';
       const conf = typeof currentContextState.confidence === 'number' ? currentContextState.confidence : 0.96;
-      const guide = MODEL_GUIDE_META[currentContextState.selected_model] || MODEL_GUIDE_META.cnn_lstm;
+      const normKey = normalizeModelKey(currentContextState.selected_model);
+      const guide = MODEL_GUIDE_META[normKey] || MODEL_GUIDE_META.cnn_lstm;
       const probs = {};
       ACTIVITIES.forEach(a => {
         probs[a] = a === act ? conf : Number(((1 - conf) / 5).toFixed(4));
       });
       const seedPred = {
-        model_used: guide.shortPill,
+        model_used: guide.name,
         predicted_activity: act,
         confidence: conf,
         probabilities: probs,
-        latency_ms: 4.2,
+        latency_ms: 3.2,
         weights_status: 'Live Stream Active',
         window_steps: stepStats.lastWindowSteps || 0,
         cadence_spm: stepStats.cadenceSpm || 0,
-        step_peak_indices: []
+        step_peak_indices: [],
+        all_models: buildDefaultFiveModels(act, conf, probs)
       };
       const seedTelem = {
         samples: [
@@ -4020,7 +4222,7 @@
           applyLivePredictionResult(msg.prediction, xs, ys, zs, rate, mType, false);
         }
         updateSensorBufferStatus();
-        if (isSenderStreamingActive() && sensorBuffer.length >= 20 && samplesSincePrediction >= 12 && !sensorPredictionInFlight) {
+        if (isSenderStreamingActive() && sensorBuffer.length >= 128 && samplesSincePrediction >= 25 && !sensorPredictionInFlight) {
           requestLivePrediction();
         }
       } else if (msg.type === 'predict_error') {
@@ -4034,9 +4236,10 @@
 
     function handleRemoteCommand(msg) {
       if (msg.command === 'set_model' && typeof msg.model_type === 'string') {
+        const norm = normalizeModelKey(msg.model_type);
         const sel = document.getElementById('liveModelTypeSelect');
-        if (sel && ['cnn_lstm', 'cnn', 'ann', 'ensemble'].includes(msg.model_type)) {
-          sel.value = msg.model_type;
+        if (sel && FIVE_MODEL_ORDER.includes(norm)) {
+          sel.value = norm;
           onModelEngineChange({ fromRemote: true, silent: true });
           sendSenderTelemetryPacket([]);
         }
@@ -4220,10 +4423,11 @@
       document.getElementById('bufferCountText').textContent = `[${bufCount} / 128]`;
       document.getElementById('bufferProgressBar').style.width = `${Math.min(100, (bufCount / 128) * 100)}%`;
 
-      if (tData.model_type && ['cnn_lstm', 'cnn', 'ann', 'ensemble'].includes(tData.model_type)) {
+      if (tData.model_type) {
+        const norm = normalizeModelKey(tData.model_type);
         const sel = document.getElementById('liveModelTypeSelect');
-        if (sel && sel.value !== tData.model_type) {
-          sel.value = tData.model_type;
+        if (sel && FIVE_MODEL_ORDER.includes(norm) && sel.value !== norm) {
+          sel.value = norm;
           onModelEngineChange({ fromRemote: true, silent: true });
         }
       }

@@ -4,6 +4,8 @@ websockets>=12.0
 torch
 h5py>=3.10.0
 numpy
+scikit-learn
+joblib
 pydantic
 requests>=2.31.0
 spaces
