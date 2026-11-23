@@ -1770,37 +1770,77 @@
       const renderIntoContainer = containerId => {
         const container = document.getElementById(containerId);
         if (!container) return;
-        container.innerHTML = items.map(item => {
+        if (!container.dataset.initialized) {
+          container.innerHTML = FIVE_MODEL_ORDER.map(mKey => {
+            const meta = MODEL_GUIDE_META[mKey] || MODEL_GUIDE_META.cnn_lstm;
+            return `
+              <button type="button" data-mcard="${mKey}" onclick="selectModelFromCard('${mKey}')"
+                class="bg-surface-container-low hover:bg-surface-container border border-outline-variant/25 rounded-xl p-3 text-left flex flex-col justify-between gap-2 transition-all">
+                <div class="flex items-center justify-between gap-1">
+                  <span data-mname="${mKey}" class="font-display text-sm font-bold text-on-surface">${escapeHTML(meta.name)}</span>
+                  <span data-macc="${mKey}" class="font-mono-tech text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-container-lowest text-tertiary">${escapeHTML(meta.acc)}</span>
+                </div>
+                <div class="flex items-center gap-1.5 my-0.5">
+                  <span data-micon="${mKey}" class="material-symbols-outlined text-[18px] text-tertiary">directions_walk</span>
+                  <span data-mlabel="${mKey}" class="font-display text-sm sm:text-base font-bold text-on-surface truncate">Walking</span>
+                </div>
+                <div class="space-y-1 w-full">
+                  <div class="flex items-center justify-between font-mono-tech text-[10px]">
+                    <span data-mconf="${mKey}" class="font-bold text-tertiary">96.0% match</span>
+                    <span data-mlat="${mKey}" class="text-on-surface-variant">1.0 ms</span>
+                  </div>
+                  <div class="w-full bg-surface-container-highest h-1.5 rounded-full overflow-hidden">
+                    <div data-mbar="${mKey}" class="bg-tertiary h-full rounded-full transition-all duration-200" style="width: 96%"></div>
+                  </div>
+                </div>
+              </button>
+            `;
+          }).join('');
+          container.dataset.initialized = 'true';
+        }
+
+        items.forEach(item => {
           const mKey = normalizeModelKey(item.model_key);
           const isSelected = mKey === activeKey;
           const actMeta = ACTIVITY_META[item.predicted_activity] || ACTIVITY_META.WALKING;
-          const confPct = (Number(item.confidence || 0) * 100).toFixed(1);
+          const confNum = Number(item.confidence || 0);
+          const confPct = (confNum * 100).toFixed(1);
           const latMs = typeof item.latency_ms === 'number' ? `${item.latency_ms.toFixed(1)} ms` : '-- ms';
-          return `
-            <button type="button" onclick="selectModelFromCard('${mKey}')"
-              class="${isSelected
-                ? 'bg-primary/10 border-2 border-primary shadow-sm'
-                : 'bg-surface-container-low hover:bg-surface-container border border-outline-variant/25'} rounded-xl p-3 text-left flex flex-col justify-between gap-2 transition-all">
-              <div class="flex items-center justify-between gap-1">
-                <span class="font-display text-sm font-bold ${isSelected ? 'text-primary' : 'text-on-surface'}">${escapeHTML(item.model_name)}</span>
-                <span class="font-mono-tech text-[10px] font-bold px-2 py-0.5 rounded-full ${isSelected ? 'bg-primary text-on-primary' : 'bg-surface-container-lowest text-tertiary'}">${escapeHTML(item.accuracy)}</span>
-              </div>
-              <div class="flex items-center gap-1.5 my-0.5">
-                <span class="material-symbols-outlined text-[18px] ${isSelected ? 'text-primary' : 'text-tertiary'}">${actMeta.icon}</span>
-                <span class="font-display text-sm sm:text-base font-bold text-on-surface truncate">${escapeHTML(actMeta.label)}</span>
-              </div>
-              <div class="space-y-1 w-full">
-                <div class="flex items-center justify-between font-mono-tech text-[10px]">
-                  <span class="font-bold text-tertiary">${confPct}% match</span>
-                  <span class="text-on-surface-variant">${latMs}</span>
-                </div>
-                <div class="w-full bg-surface-container-highest h-1.5 rounded-full overflow-hidden">
-                  <div class="${isSelected ? 'bg-primary' : 'bg-tertiary'} h-full rounded-full transition-all duration-300" style="width: ${Math.max(4, Math.min(100, Number(item.confidence || 0) * 100))}%"></div>
-                </div>
-              </div>
-            </button>
-          `;
-        }).join('');
+
+          const card = container.querySelector(`[data-mcard="${mKey}"]`);
+          const nameEl = container.querySelector(`[data-mname="${mKey}"]`);
+          const accEl = container.querySelector(`[data-macc="${mKey}"]`);
+          const iconEl = container.querySelector(`[data-micon="${mKey}"]`);
+          const labelEl = container.querySelector(`[data-mlabel="${mKey}"]`);
+          const confEl = container.querySelector(`[data-mconf="${mKey}"]`);
+          const latEl = container.querySelector(`[data-mlat="${mKey}"]`);
+          const barEl = container.querySelector(`[data-mbar="${mKey}"]`);
+
+          if (card) {
+            card.className = `${isSelected
+              ? 'bg-primary/10 border-2 border-primary shadow-sm'
+              : 'bg-surface-container-low hover:bg-surface-container border border-outline-variant/25'} rounded-xl p-3 text-left flex flex-col justify-between gap-2 transition-all`;
+          }
+          if (nameEl) {
+            nameEl.textContent = item.model_name || (MODEL_GUIDE_META[mKey] && MODEL_GUIDE_META[mKey].name) || mKey;
+            nameEl.className = `font-display text-sm font-bold ${isSelected ? 'text-primary' : 'text-on-surface'}`;
+          }
+          if (accEl) {
+            accEl.textContent = item.accuracy || (MODEL_GUIDE_META[mKey] && MODEL_GUIDE_META[mKey].acc) || '';
+            accEl.className = `font-mono-tech text-[10px] font-bold px-2 py-0.5 rounded-full ${isSelected ? 'bg-primary text-on-primary' : 'bg-surface-container-lowest text-tertiary'}`;
+          }
+          if (iconEl) {
+            iconEl.textContent = actMeta.icon;
+            iconEl.className = `material-symbols-outlined text-[18px] ${isSelected ? 'text-primary' : 'text-tertiary'}`;
+          }
+          if (labelEl) labelEl.textContent = actMeta.label;
+          if (confEl) confEl.textContent = `${confPct}% match`;
+          if (latEl) latEl.textContent = latMs;
+          if (barEl) {
+            barEl.className = `${isSelected ? 'bg-primary' : 'bg-tertiary'} h-full rounded-full transition-all duration-200`;
+            barEl.style.width = `${Math.max(4, Math.min(100, confNum * 100))}%`;
+          }
+        });
       };
 
       renderIntoContainer('fiveModelsLiveGrid');
@@ -3012,7 +3052,7 @@
         return;
       }
 
-      if (isRecordingMobile && sensorBuffer.length >= 128 && !sensorPredictionInFlight) {
+      if (isRecordingMobile && sensorBuffer.length >= 32 && !sensorPredictionInFlight) {
         requestLivePrediction();
       }
     }
@@ -3232,10 +3272,12 @@
       latestSensorSample = [ax, ay, az, gx, gy, gz, tx, ty, tz];
     }
 
+    let lastPredictionStartedAt = 0;
+
     function record50HzSampleTick() {
       if (!isRecordingMobile) return;
       const now = performance.now();
-      if (!isDesktopWalkSim && (!hardwareImuReceived || now - lastHardwareMotionAt > 250)) {
+      if (!isDesktopWalkSim && !hardwareImuReceived) {
         if (!sensorWaitingForHardware) {
           sensorWaitingForHardware = true;
           setLiveConnectionUI('Waiting for IMU', 'WAIT', false);
@@ -3244,6 +3286,24 @@
         return;
       }
       if (!latestSensorSample) return;
+
+      // When stationary (Sitting / Standing / Laying) or when the screen dims in a waist pocket,
+      // mobile browsers may throttle devicemotion callbacks when acceleration delta is ~0.
+      // Smoothly decay linear acceleration and gyro toward 0 while preserving the gravity posture vector
+      // so the 50 Hz stream and live predictions never freeze.
+      if (!isDesktopWalkSim && hardwareImuReceived && (now - lastHardwareMotionAt > 120)) {
+        latestSensorSample[0] *= 0.82;
+        latestSensorSample[1] *= 0.82;
+        latestSensorSample[2] *= 0.82;
+        latestSensorSample[3] *= 0.80;
+        latestSensorSample[4] *= 0.80;
+        latestSensorSample[5] *= 0.80;
+        if (gravityEstimate) {
+          latestSensorSample[6] = gravityEstimate[0] + latestSensorSample[0];
+          latestSensorSample[7] = gravityEstimate[1] + latestSensorSample[1];
+          latestSensorSample[8] = gravityEstimate[2] + latestSensorSample[2];
+        }
+      }
 
       if (sensorWaitingForHardware) {
         sensorWaitingForHardware = false;
@@ -3287,8 +3347,13 @@
       }
       updateSensorBufferStatus();
 
-      // Wait for a complete real sensor window, then predict at most twice per second.
-      const readyForPredict = sensorBuffer.length === 128 && samplesSincePrediction >= 25;
+      // Watchdog: never allow an in-flight flag to stall predictions for more than 1.0s
+      if (sensorPredictionInFlight && (now - lastPredictionStartedAt > 1000)) {
+        sensorPredictionInFlight = false;
+      }
+
+      // Fast warm-up: start predicting as soon as 32 samples (0.64s) are collected, then update every 15 samples (300ms)
+      const readyForPredict = sensorBuffer.length >= 32 && samplesSincePrediction >= 15;
       if (readyForPredict && !sensorPredictionInFlight) {
         requestLivePrediction();
       }
@@ -3304,14 +3369,14 @@
       } else if (isRecordingMobile && !sensorPredictionInFlight) {
         const pairCode = getActiveBroadcastCode();
         const relaySuffix = ` · Code ${pairCode}`;
-        document.getElementById('sensorStateText').textContent = count < 128
-          ? `Streaming live 50 Hz (${count} / 128)${relaySuffix}...`
+        document.getElementById('sensorStateText').textContent = count < 32
+          ? `Warming up 50 Hz stream (${count} / 32)${relaySuffix}...`
           : `Live 50 Hz AI Tracking (${isDesktopWalkSim ? 'Demo Walk' : 'Phone IMU'})${relaySuffix}`;
       }
     }
 
     function stabilizePrediction(rawProbs) {
-      const alpha = 0.45;
+      const alpha = 0.75;
       if (!smoothedProbabilities) {
         smoothedProbabilities = {};
         ACTIVITIES.forEach(a => { smoothedProbabilities[a] = typeof rawProbs[a] === 'number' ? rawProbs[a] : 0; });
@@ -3345,7 +3410,7 @@
         if (topAct === candidateActivity) candidateStreak += 1;
         else { candidateActivity = topAct; candidateStreak = 1; }
         const curProb = smoothedProbabilities[stableActivity] || 0;
-        if (candidateStreak >= 2 || (topProb - curProb >= 0.25 && topProb >= 0.70)) {
+        if (topProb >= 0.45 || candidateStreak >= 2 || (topProb - curProb >= 0.12)) {
           stableActivity = topAct;
           candidateStreak = 0;
         }
@@ -3445,16 +3510,28 @@
     }
 
     function build128WindowFromBuffer() {
-      if (sensorBuffer.length !== 128) {
-        throw new Error(`A full 128-sample sensor window is required; received ${sensorBuffer.length}.`);
+      const len = sensorBuffer.length;
+      if (len < 32) {
+        throw new Error(`At least 32 sensor samples are required; received ${len}.`);
       }
-      return sensorBuffer.map(s => [...s]);
+      if (len === 128) {
+        return sensorBuffer.map(s => [...s]);
+      }
+      // Tile continuously so the last `len` samples of the 128-sample window are the exact newest samples
+      const offset = (128 - len) % len;
+      const out = new Array(128);
+      for (let k = 0; k < 128; k++) {
+        const idx = (k - offset + len * 8) % len;
+        out[k] = [...sensorBuffer[idx]];
+      }
+      return out;
     }
 
     async function requestLivePrediction() {
-      if (sensorBuffer.length !== 128 || sensorPredictionInFlight) return;
+      if (sensorBuffer.length < 32 || sensorPredictionInFlight) return;
       const requestSess = sensorSessionId;
       sensorPredictionInFlight = true;
+      lastPredictionStartedAt = performance.now();
       samplesSincePrediction = 0;
 
       const windowCopy = build128WindowFromBuffer();
@@ -3479,7 +3556,7 @@
               window: windowCopy,
               model_type: selectedModel,
               sample_rate_hz: Number(measuredRateHz.toFixed(2)),
-              previous_activity: stableActivity,
+              previous_activity: null,
               room_code: getActiveBroadcastCode()
             })
           });
@@ -3494,14 +3571,14 @@
           if (requestSess === sensorSessionId) {
             sensorPredictionInFlight = false;
             updateSensorBufferStatus();
-            if (isRecordingMobile && sensorBuffer.length >= 128 && samplesSincePrediction >= 25) {
+            if (isRecordingMobile && sensorBuffer.length >= 32 && samplesSincePrediction >= 15) {
               requestLivePrediction();
             }
           }
         }
       };
 
-      // Fast Path: 1-hop binary/JSON frame over already-open WebSocket, with automatic 1.2s HTTP fallback if stalled
+      // Fast Path: 1-hop binary/JSON frame over already-open WebSocket, with automatic 650ms HTTP fallback if stalled
       if (senderWs && senderWsReady && senderWs.readyState === WebSocket.OPEN) {
         lastSentPredictAxes = {
           x: accXSeries,
@@ -3517,7 +3594,7 @@
             window: windowCopy,
             model_type: selectedModel,
             sample_rate_hz: Number(measuredRateHz.toFixed(2)),
-            previous_activity: stableActivity,
+            previous_activity: null,
             steps: buildStepsSyncPayload(),
             client_ts: Math.round(performance.now())
           }));
@@ -3527,7 +3604,7 @@
               senderWsReady = false;
               runHttpPredict();
             }
-          }, 1200);
+          }, 650);
           return;
         } catch (_) {
           senderWsReady = false;
@@ -4138,16 +4215,19 @@
         model_type: currentContextState.selected_model
       };
 
+      let sentViaWs = false;
       if (senderWs && senderWsReady && senderWs.readyState === WebSocket.OPEN) {
         try {
           senderWs.send(JSON.stringify(payload));
+          sentViaWs = true;
         } catch (_) {
           senderWsReady = false;
         }
       }
 
       const now = performance.now();
-      if (now - senderHttpFallbackLastTs >= 420) {
+      const fallbackInterval = sentViaWs ? 2200 : 350;
+      if (now - senderHttpFallbackLastTs >= fallbackInterval) {
         senderHttpFallbackLastTs = now;
         publishRelayHttpFallback(null, payload);
       }
@@ -4222,7 +4302,7 @@
           applyLivePredictionResult(msg.prediction, xs, ys, zs, rate, mType, false);
         }
         updateSensorBufferStatus();
-        if (isSenderStreamingActive() && sensorBuffer.length >= 128 && samplesSincePrediction >= 25 && !sensorPredictionInFlight) {
+        if (isSenderStreamingActive() && sensorBuffer.length >= 32 && samplesSincePrediction >= 15 && !sensorPredictionInFlight) {
           requestLivePrediction();
         }
       } else if (msg.type === 'predict_error') {
@@ -4438,8 +4518,11 @@
       }
     }
 
+    let lastViewerWsMsgAt = 0;
+
     function handleViewerRelayMessage(msg) {
       if (!msg || typeof msg !== 'object' || !isViewingRemote) return;
+      lastViewerWsMsgAt = performance.now();
       const bannerTitle = document.getElementById('pcViewerTitle');
       const bannerSub = document.getElementById('pcViewerSubtext');
 
@@ -4533,6 +4616,10 @@
       }
       const pollOnce = async () => {
         if (!isViewingRemote || viewerRoomCode !== code) return;
+        // Skip redundant HTTP polling while WebSocket is actively delivering frames (<1.4s since last WS packet)
+        if (viewerWsReady && relayLastSeq > 0 && (performance.now() - lastViewerWsMsgAt < 1400)) {
+          return;
+        }
         try {
           const t0 = performance.now();
           const data = await apiJson(`/api/relay/${encodeURIComponent(code)}/latest?since_seq=${relayLastSeq}`);
