@@ -41,21 +41,21 @@
             'error-container': '#ffdad6',
             'on-error': '#ffffff',
             'on-error-container': '#93000a',
-            'background': '#faf8ff',
-            'surface': '#faf8ff',
-            'surface-bright': '#faf8ff',
+            'background': '#eaf0f8',
+            'surface': '#eaf0f8',
+            'surface-bright': '#f3f7fc',
             'surface-container-lowest': '#ffffff',
-            'surface-container-low': '#f2f3ff',
-            'surface-container': '#eaedff',
-            'surface-container-high': '#e2e7ff',
-            'surface-container-highest': '#dae2fd',
-            'surface-variant': '#dae2fd',
-            'on-surface': '#131b2e',
-            'on-surface-variant': '#3f4850',
-            'outline': '#707881',
-            'outline-variant': '#bfc7d2',
-            'inverse-surface': '#283044',
-            'inverse-on-surface': '#eef0ff'
+            'surface-container-low': '#f2f6fc',
+            'surface-container': '#e4ecf7',
+            'surface-container-high': '#d8e3f2',
+            'surface-container-highest': '#cbd9ec',
+            'surface-variant': '#d5e1f2',
+            'on-surface': '#0f172a',
+            'on-surface-variant': '#334155',
+            'outline': '#64748b',
+            'outline-variant': '#b6c4d6',
+            'inverse-surface': '#1e293b',
+            'inverse-on-surface': '#f1f5f9'
           },
           fontFamily: {
             'display': ['Space Grotesk', 'sans-serif'],
@@ -71,8 +71,8 @@
       min-height: 100%;
       margin: 0;
       padding: 0;
-      background-color: #faf8ff;
-      color: #131b2e;
+      background-color: #eaf0f8;
+      color: #0f172a;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       overscroll-behavior-y: none;
       -webkit-tap-highlight-color: transparent;
@@ -93,14 +93,13 @@
       font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
     }
     .studio-mesh-bg {
-      background-color: #faf8ff;
+      background-color: #eaf0f8;
       background-image:
-        radial-gradient(at 0% 0%, rgba(0, 97, 148, 0.055) 0px, transparent 48%),
-        radial-gradient(at 100% 25%, rgba(0, 81, 213, 0.04) 0px, transparent 50%),
-        radial-gradient(at 50% 85%, rgba(0, 105, 72, 0.035) 0px, transparent 55%),
-        linear-gradient(rgba(0, 97, 148, 0.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 97, 148, 0.025) 1px, transparent 1px);
-      background-size: 100% 100%, 100% 100%, 100% 100%, 24px 24px, 24px 24px;
+        radial-gradient(at 8% 6%, rgba(0, 97, 148, 0.11) 0px, transparent 52%),
+        radial-gradient(at 92% 18%, rgba(49, 107, 243, 0.09) 0px, transparent 50%),
+        radial-gradient(at 50% 90%, rgba(0, 133, 93, 0.08) 0px, transparent 58%),
+        linear-gradient(160deg, #eef4fb 0%, #e6eef8 52%, #e9f2f4 100%);
+      background-attachment: fixed;
     }
     @keyframes fadeSlideIn {
       from { opacity: 0; transform: translateY(6px); }
@@ -176,59 +175,58 @@
     <!-- ==================== TAB 1: LIVE SMARTPHONE TRACKING ==================== -->
     <section id="view-live" class="tab-view hidden space-y-4 view-animate">
 
-      <!-- ==================== CLEAR USER GUIDELINES (SIMPLE LANGUAGE) ==================== -->
-      <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-outline-variant/25 space-y-3">
+      <!-- ==================== CLEAR USER GUIDELINES (CONCISE & EASY TO SCAN) ==================== -->
+      <div class="bg-surface-container-lowest rounded-xl p-3.5 shadow-sm border border-outline-variant/25 space-y-2.5">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-lg bg-primary text-on-primary flex items-center justify-center shrink-0">
-              <span class="material-symbols-outlined text-[18px]">menu_book</span>
+            <div class="w-7 h-7 rounded-lg bg-primary text-on-primary flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[17px]">menu_book</span>
             </div>
             <div>
-              <h2 class="font-display text-sm sm:text-base font-bold text-on-surface">How to Use This Website (Simple Guide)</h2>
-              <p class="text-xs text-on-surface-variant">Follow these 4 simple guidelines for accurate live activity &amp; step prediction</p>
+              <h2 class="font-display text-sm font-bold text-on-surface">Quick Start Guide</h2>
             </div>
           </div>
-          <span class="bg-tertiary-fixed/50 text-on-tertiary-fixed font-mono-tech text-[10px] px-2.5 py-1 rounded-full font-bold uppercase">5 AI Models Side-by-Side</span>
+          <span class="bg-tertiary-fixed/50 text-on-tertiary-fixed font-mono-tech text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase">4 Base Predictors + CombinAI Ensemble</span>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
-          <div class="bg-surface-container-low rounded-xl p-3 space-y-1 border border-outline-variant/15">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+          <div class="bg-surface-container-low rounded-xl p-2.5 space-y-0.5 border border-outline-variant/15">
             <div class="font-display font-bold text-primary flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-[16px]">psychology</span>
-              <span>1. What We Are Doing</span>
+              <span class="material-symbols-outlined text-[15px]">psychology</span>
+              <span>1. What It Does</span>
             </div>
-            <p class="text-on-surface-variant leading-relaxed">
-              We read your phone's motion sensors (50 times per second) to detect <strong>Walking, Upstairs, Downstairs, Sitting, Standing, and Laying</strong>, count your <strong>live steps</strong>, and compare all 5 AI models (<strong>CNN-LSTM, ANN, SVM, LOSO, CombinAI</strong>) side by side.
+            <p class="text-on-surface-variant leading-snug">
+              Streams 50 Hz motion sensors to detect <strong>6 activities &amp; live steps</strong> across 4 base predictors and <strong>CombinAI (Ensemble)</strong>.
             </p>
           </div>
 
-          <div class="bg-primary-fixed/35 rounded-xl p-3 space-y-1 border border-primary/25">
+          <div class="bg-primary-fixed/35 rounded-xl p-2.5 space-y-0.5 border border-primary/25">
             <div class="font-display font-bold text-primary flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-[16px]">do_not_touch</span>
-              <span>2. Where to Keep Mobile</span>
+              <span class="material-symbols-outlined text-[15px]">do_not_touch</span>
+              <span>2. Keep Mobile at Waist</span>
             </div>
-            <p class="text-on-surface leading-relaxed">
-              <strong>Do NOT hold your mobile in your hand.</strong> Hand movement causes false readings. You must keep your mobile <strong>attached at your waist in one fixed place</strong> (belt clip, waistband, or tight front waist pocket).
+            <p class="text-on-surface leading-snug">
+              <strong>Do NOT hold in your hand.</strong> Keep your mobile <strong>attached at your waist in one place</strong> (belt clip, waistband, or tight pocket).
             </p>
           </div>
 
-          <div class="bg-surface-container-low rounded-xl p-3 space-y-1 border border-outline-variant/15">
+          <div class="bg-surface-container-low rounded-xl p-2.5 space-y-0.5 border border-outline-variant/15">
             <div class="font-display font-bold text-tertiary flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-[16px]">play_circle</span>
-              <span>3. What to Do on Mobile</span>
+              <span class="material-symbols-outlined text-[15px]">play_circle</span>
+              <span>3. Start on Mobile</span>
             </div>
-            <p class="text-on-surface-variant leading-relaxed">
-              Open this page on your mobile, check your <strong>6-digit Device Number (Code)</strong> in <strong>Box 1</strong> below, tap <strong>Start Live Tracking</strong>, and attach the mobile firmly at your waist in one place.
+            <p class="text-on-surface-variant leading-snug">
+              Note your <strong>6-digit Code in Box 1</strong> below, tap <strong>Start Live Tracking</strong>, and clip the phone at your waist.
             </p>
           </div>
 
-          <div class="bg-surface-container-low rounded-xl p-3 space-y-1 border border-outline-variant/15">
+          <div class="bg-surface-container-low rounded-xl p-2.5 space-y-0.5 border border-outline-variant/15">
             <div class="font-display font-bold text-secondary flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-[16px]">desktop_windows</span>
-              <span>4. How to See Live on PC</span>
+              <span class="material-symbols-outlined text-[15px]">desktop_windows</span>
+              <span>4. Watch Live on PC</span>
             </div>
-            <p class="text-on-surface-variant leading-relaxed">
-              Since your mobile is at your waist, open this page on your PC. Take the <strong>6-digit number (code) from your mobile (Box 1)</strong>, type it into <strong>Box 2 on your PC</strong>, and click <strong>Watch on PC</strong> to see live predictions!
+            <p class="text-on-surface-variant leading-snug">
+              Enter your mobile's <strong>Box 1 code</strong> into <strong>Box 2 on your PC</strong> and click <strong>Watch on PC</strong> for live readings.
             </p>
           </div>
         </div>
@@ -399,19 +397,23 @@
 
           <div class="space-y-1">
             <div class="flex items-center justify-between gap-2">
-              <label for="liveModelTypeSelect" class="font-mono-tech text-[10px] uppercase font-bold text-primary shrink-0">Primary Highlighted Model:</label>
-              <span id="liveModelAccBadge" class="font-mono-tech text-[10px] font-bold bg-tertiary-fixed/60 text-on-tertiary-fixed px-2 py-0.5 rounded-full">94.6% Accuracy</span>
+              <label for="liveModelTypeSelect" class="font-mono-tech text-[10px] uppercase font-bold text-primary shrink-0">Highlighted Live Predictor:</label>
+              <span id="liveModelAccBadge" class="font-mono-tech text-[10px] font-bold bg-tertiary-fixed/60 text-on-tertiary-fixed px-2 py-0.5 rounded-full">Test 90.57% · LOSO 90.14%±10.25%</span>
             </div>
             <select id="liveModelTypeSelect" onchange="onModelEngineChange()"
               class="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-2.5 py-2 text-xs font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30">
-              <option value="cnn_lstm" selected>CNN-LSTM (94.6% Accuracy)</option>
-              <option value="ann">ANN (95.7% Accuracy)</option>
-              <option value="svm">SVM (96.3% Accuracy)</option>
-              <option value="loso">LOSO (95.8% Accuracy)</option>
-              <option value="combinai">CombinAI (96.8% Accuracy)</option>
+              <optgroup label="4 Live Base Predictors">
+                <option value="cnn_lstm" selected>CNN-LSTM (Test: 90.57% · 30-Fold LOSO: 90.14% ± 10.25%)</option>
+                <option value="ann">Regularized ANN (Test: 96.06% · 30-Fold LOSO: 94.13% ± 5.85%)</option>
+                <option value="svm">Linear SVM (Test: 96.20% · 30-Fold LOSO: 95.83% ± 4.84%)</option>
+                <option value="loso">1D-CNN + LOSO-SVM Hybrid (Base Hybrid · Not independently validated)</option>
+              </optgroup>
+              <optgroup label="Live Multi-Model Ensemble">
+                <option value="combinai">CombinAI (Ensemble of 4 Base Predictors · Not independently validated)</option>
+              </optgroup>
             </select>
             <p id="liveModelDescText" class="text-[11px] text-on-surface-variant leading-snug pt-0.5">
-              <strong class="text-on-surface">CNN-LSTM (94.6%):</strong> Time-series deep model on raw 128x9 signals. All 5 models are shown side by side below.
+              <strong class="text-on-surface">CNN-LSTM:</strong> Leak-free raw 128×9 sequence model (Held-out Test: 90.57% · 30-Fold LOSO: 90.14% ± 10.25%).
             </p>
           </div>
 
@@ -449,18 +451,18 @@
         </div>
       </div>
 
-      <!-- ==================== SIDE-BY-SIDE 5 AI MODELS COMPARISON ==================== -->
-      <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-outline-variant/25 space-y-3">
+      <!-- ==================== SIDE-BY-SIDE 4 BASE PREDICTORS + COMBINAI ENSEMBLE ==================== -->
+      <div class="bg-surface-container-lowest rounded-xl p-3.5 shadow-sm border border-outline-variant/25 space-y-2.5">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h3 class="font-display text-base font-bold text-on-surface">All 5 AI Models Side-by-Side Prediction Comparison</h3>
-            <p class="text-xs text-on-surface-variant">Live comparison of CNN-LSTM, ANN, SVM, LOSO, and CombinAI on the current 2.56s sensor window (click any model to select)</p>
+            <h3 class="font-display text-sm sm:text-base font-bold text-on-surface">Live Predictors Side-by-Side (4 Base Predictors + CombinAI Ensemble)</h3>
+            <p class="text-[11px] text-on-surface-variant">Cards show each predictor's offline benchmark accuracy (Held-Out Test &amp; 30-Fold LOSO) separately from live per-window confidence</p>
           </div>
-          <span id="fiveModelsAgreementBadge" class="font-mono-tech text-[11px] font-bold px-2.5 py-1 rounded-full bg-tertiary-fixed/50 text-on-tertiary-fixed">5 / 5 Models Ready</span>
+          <span id="fiveModelsAgreementBadge" class="font-mono-tech text-[11px] font-bold px-2.5 py-1 rounded-full bg-tertiary-fixed/50 text-on-tertiary-fixed">5 / 5 Predictors Ready</span>
         </div>
 
-        <div id="fiveModelsLiveGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
-          <!-- Populated dynamically with CNN-LSTM, ANN, SVM, LOSO, CombinAI side by side -->
+        <div id="fiveModelsLiveGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+          <!-- Populated dynamically with 4 Base Predictors + CombinAI (Ensemble) -->
         </div>
       </div>
 
@@ -474,7 +476,7 @@
 
             <div class="absolute top-3 left-3 bg-inverse-surface/80 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1.5">
               <span class="material-symbols-outlined text-primary-fixed text-[14px]">neurology</span>
-              <span id="liveActiveEnginePill" class="font-mono-tech text-[10px] text-surface-variant font-semibold uppercase">CNN-LSTM · 94.6%</span>
+              <span id="liveActiveEnginePill" class="font-mono-tech text-[10px] text-surface-variant font-semibold uppercase">CNN-LSTM · Test 90.57%</span>
             </div>
 
             <div class="absolute top-3 right-3 bg-surface/92 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
@@ -849,17 +851,17 @@
         </div>
       </div>
 
-      <!-- 5-Model Side-by-Side Comparison Grid on Analytics Tab -->
-      <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-outline-variant/25 space-y-3">
+      <!-- 4 Base Predictors + CombinAI Ensemble Side-by-Side Grid on Analytics Tab -->
+      <div class="bg-surface-container-lowest rounded-xl p-3.5 shadow-sm border border-outline-variant/25 space-y-2.5">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h3 class="font-display text-base font-bold text-on-surface">All 5 AI Models Side-by-Side Comparison</h3>
-            <p class="text-xs text-on-surface-variant">CNN-LSTM · ANN · SVM · LOSO · CombinAI evaluated simultaneously</p>
+            <h3 class="font-display text-sm sm:text-base font-bold text-on-surface">Live Predictors Side-by-Side (4 Base Predictors + CombinAI Ensemble)</h3>
+            <p class="text-[11px] text-on-surface-variant">CNN-LSTM · Regularized ANN · Linear SVM · 1D-CNN + LOSO-SVM Hybrid · CombinAI (Ensemble)</p>
           </div>
-          <span class="font-mono-tech text-[11px] font-bold text-tertiary uppercase">Side-by-Side View</span>
+          <span class="font-mono-tech text-[11px] font-bold text-tertiary uppercase">4 Base + Ensemble</span>
         </div>
-        <div id="fiveModelsAnalyticsGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
-          <!-- Populated dynamically with all 5 models -->
+        <div id="fiveModelsAnalyticsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+          <!-- Populated dynamically with 4 Base Predictors + CombinAI (Ensemble) -->
         </div>
       </div>
 
@@ -993,8 +995,8 @@
 
         <div class="lg:col-span-5 bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 p-4 flex flex-col justify-between">
           <div class="mb-3">
-            <h3 class="font-display text-base font-bold text-on-surface">5-Model Probability Comparison</h3>
-            <p class="text-xs text-on-surface-variant">CNN-LSTM · ANN · SVM · LOSO · CombinAI class probabilities</p>
+            <h3 class="font-display text-base font-bold text-on-surface">Live Per-Window Probability Comparison</h3>
+            <p class="text-xs text-on-surface-variant">CNN-LSTM · Regularized ANN · Linear SVM · 1D-CNN + LOSO-SVM Hybrid · CombinAI (Ensemble)</p>
           </div>
           <div class="h-60">
             <canvas id="probChart"></canvas>
@@ -1002,60 +1004,86 @@
         </div>
       </div>
 
-      <!-- AI Performance Benchmark Table (All 5 Models) -->
+      <!-- Validated Benchmark Models vs. Live Predictors Summary Table -->
       <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 p-4 space-y-3 overflow-x-auto">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h3 class="font-display text-base font-bold text-on-surface">All 5 AI Models Benchmark Summary</h3>
-            <p class="text-xs text-on-surface-variant">UCI HAR Smartphone Dataset (30 volunteers · 7,352 train / 2,947 test windows)</p>
+            <h3 class="font-display text-base font-bold text-on-surface">Validated Benchmark Models &amp; Live Predictors Reference</h3>
+            <p class="text-xs text-on-surface-variant">Separates Held-Out Test Split (2,947 windows) from 30-Fold Leave-One-Subject-Out (LOSO) cross-validation protocol</p>
           </div>
-          <span class="font-mono-tech text-[11px] text-tertiary font-bold uppercase">Tested &amp; Verified</span>
+          <span class="font-mono-tech text-[11px] text-tertiary font-bold uppercase">Leak-Free Audit Verified</span>
         </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
+          <div class="bg-surface-container-low rounded-lg p-2.5 border border-outline-variant/20">
+            <strong class="text-primary font-display">Evaluation Protocols (Test vs. 30-Fold LOSO):</strong>
+            <span class="text-on-surface-variant"> <strong>LOSO (Leave-One-Subject-Out)</strong> is a 30-fold subject-independent evaluation protocol (train on 29 subjects, test on 1 unseen subject), not a standalone model architecture.</span>
+          </div>
+          <div class="bg-surface-container-low rounded-lg p-2.5 border border-outline-variant/20">
+            <strong class="text-secondary font-display">Benchmarked Models vs. Live Predictors:</strong>
+            <span class="text-on-surface-variant"> Standalone <strong>HAR 1D-CNN</strong> is benchmarked offline; in live tracking, its probabilities are blended with a LOSO-trained Linear SVM inside the <strong>1D-CNN + LOSO-SVM Hybrid</strong> predictor.</span>
+          </div>
+        </div>
+
         <table class="w-full text-left border-collapse text-xs sm:text-sm">
           <thead>
             <tr class="border-b border-outline-variant/30 text-on-surface-variant bg-surface-container-low">
-              <th class="py-2.5 px-3 font-semibold rounded-tl-lg">Model Name</th>
-              <th class="py-2.5 px-3 font-semibold">Input Representation</th>
-              <th class="py-2.5 px-3 font-semibold">Accuracy</th>
-              <th class="py-2.5 px-3 font-semibold">Macro F1</th>
-              <th class="py-2.5 px-3 font-semibold rounded-tr-lg">Model Strength</th>
+              <th class="py-2.5 px-3 font-semibold rounded-tl-lg">Model / Predictor</th>
+              <th class="py-2.5 px-3 font-semibold">Category &amp; Role</th>
+              <th class="py-2.5 px-3 font-semibold">Input</th>
+              <th class="py-2.5 px-3 font-semibold">Held-Out Test Accuracy</th>
+              <th class="py-2.5 px-3 font-semibold">Test Macro F1</th>
+              <th class="py-2.5 px-3 font-semibold rounded-tr-lg">30-Fold LOSO (Mean ± SD)</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-outline-variant/20">
             <tr>
-              <td class="py-2.5 px-3 font-bold text-primary">CNN-LSTM</td>
-              <td class="py-2.5 px-3 font-mono-tech text-xs">128 × 9 raw time-series</td>
-              <td class="py-2.5 px-3 font-bold text-on-surface">94.6%</td>
-              <td class="py-2.5 px-3 font-mono-tech">0.945</td>
-              <td class="py-2.5 px-3 text-on-surface-variant">Continuous walking &amp; stair sequence memory</td>
+              <td class="py-2.5 px-3 font-bold text-primary">Linear SVM (Leak-Free Tuned)</td>
+              <td class="py-2.5 px-3 text-xs text-on-surface-variant">Benchmarked &amp; Live Base Predictor</td>
+              <td class="py-2.5 px-3 font-mono-tech text-xs">561 features</td>
+              <td class="py-2.5 px-3 font-bold text-on-surface font-mono-tech">96.20%</td>
+              <td class="py-2.5 px-3 font-mono-tech">96.29%</td>
+              <td class="py-2.5 px-3 font-mono-tech font-semibold text-tertiary">95.83% ± 4.84%</td>
             </tr>
             <tr>
-              <td class="py-2.5 px-3 font-bold text-secondary">ANN</td>
-              <td class="py-2.5 px-3 font-mono-tech text-xs">561 time + FFT features</td>
-              <td class="py-2.5 px-3 font-bold text-on-surface">95.7%</td>
-              <td class="py-2.5 px-3 font-mono-tech">0.957</td>
-              <td class="py-2.5 px-3 text-on-surface-variant">Deep regularized multi-layer feature classifier (<span id="tableAnnParams">186K</span> params)</td>
+              <td class="py-2.5 px-3 font-bold text-secondary">Regularized ANN</td>
+              <td class="py-2.5 px-3 text-xs text-on-surface-variant">Benchmarked &amp; Live Base Predictor (<span id="tableAnnParams">186K</span> params)</td>
+              <td class="py-2.5 px-3 font-mono-tech text-xs">561 features</td>
+              <td class="py-2.5 px-3 font-bold text-on-surface font-mono-tech">96.06%</td>
+              <td class="py-2.5 px-3 font-mono-tech">96.06%</td>
+              <td class="py-2.5 px-3 font-mono-tech font-semibold text-tertiary">94.13% ± 5.85%</td>
             </tr>
             <tr>
-              <td class="py-2.5 px-3 font-bold text-primary">SVM</td>
-              <td class="py-2.5 px-3 font-mono-tech text-xs">561 standardized features</td>
-              <td class="py-2.5 px-3 font-bold text-on-surface">96.3%</td>
-              <td class="py-2.5 px-3 font-mono-tech">0.963</td>
-              <td class="py-2.5 px-3 text-on-surface-variant">High-margin LinearSVC decision boundaries (&lt;0.2 ms)</td>
+              <td class="py-2.5 px-3 font-bold text-on-surface">HAR 1D-CNN (Standalone)</td>
+              <td class="py-2.5 px-3 text-xs text-on-surface-variant">Benchmarked Standalone (<span id="tableCnnParams">630K</span> params · in Live Hybrid)</td>
+              <td class="py-2.5 px-3 font-mono-tech text-xs">9 × 128 raw signals</td>
+              <td class="py-2.5 px-3 font-bold text-on-surface font-mono-tech">93.93%</td>
+              <td class="py-2.5 px-3 font-mono-tech">93.99%</td>
+              <td class="py-2.5 px-3 font-mono-tech font-semibold text-tertiary">93.51% ± 7.78%</td>
             </tr>
             <tr>
-              <td class="py-2.5 px-3 font-bold text-tertiary">LOSO</td>
-              <td class="py-2.5 px-3 font-mono-tech text-xs">30-Fold Leave-One-Subject-Out</td>
-              <td class="py-2.5 px-3 font-bold text-on-surface">95.8%</td>
-              <td class="py-2.5 px-3 font-mono-tech">0.958</td>
-              <td class="py-2.5 px-3 text-on-surface-variant">Subject-independent generalization across 30 unseen people (<span id="tableCnnParams">630K</span> params)</td>
+              <td class="py-2.5 px-3 font-bold text-primary">CNN-LSTM (Leak-Free)</td>
+              <td class="py-2.5 px-3 text-xs text-on-surface-variant">Benchmarked &amp; Live Base Predictor</td>
+              <td class="py-2.5 px-3 font-mono-tech text-xs">9 × 128 raw signals</td>
+              <td class="py-2.5 px-3 font-bold text-on-surface font-mono-tech">90.57%</td>
+              <td class="py-2.5 px-3 font-mono-tech">90.60%</td>
+              <td class="py-2.5 px-3 font-mono-tech font-semibold text-tertiary">90.14% ± 10.25%</td>
             </tr>
-            <tr>
-              <td class="py-2.5 px-3 font-bold text-tertiary">CombinAI</td>
-              <td class="py-2.5 px-3 font-mono-tech text-xs">Multi-model probability fusion</td>
-              <td class="py-2.5 px-3 font-bold text-tertiary">96.8%</td>
-              <td class="py-2.5 px-3 font-mono-tech font-bold">0.968</td>
-              <td class="py-2.5 px-3 text-tertiary font-semibold">Combines CNN-LSTM, ANN, SVM, and LOSO for highest accuracy</td>
+            <tr class="bg-surface-container-low/60">
+              <td class="py-2.5 px-3 font-bold text-tertiary">1D-CNN + LOSO-SVM Hybrid</td>
+              <td class="py-2.5 px-3 text-xs text-on-surface-variant">Live Base Predictor (45% HAR 1D-CNN + 55% LOSO-SVM)</td>
+              <td class="py-2.5 px-3 font-mono-tech text-xs">9 × 128 + 561 features</td>
+              <td class="py-2.5 px-3 font-mono-tech text-xs text-on-surface-variant">Not independently validated</td>
+              <td class="py-2.5 px-3 font-mono-tech text-xs text-on-surface-variant">—</td>
+              <td class="py-2.5 px-3 font-mono-tech text-xs text-on-surface-variant">Not independently validated</td>
+            </tr>
+            <tr class="bg-surface-container-low/60">
+              <td class="py-2.5 px-3 font-bold text-tertiary">CombinAI (Ensemble)</td>
+              <td class="py-2.5 px-3 text-xs text-on-surface-variant">Live Ensemble of 4 Base Predictors (20/25/30/25%)</td>
+              <td class="py-2.5 px-3 font-mono-tech text-xs">Multi-model fusion</td>
+              <td class="py-2.5 px-3 font-mono-tech text-xs text-on-surface-variant">Not independently validated</td>
+              <td class="py-2.5 px-3 font-mono-tech text-xs text-on-surface-variant">—</td>
+              <td class="py-2.5 px-3 font-mono-tech text-xs text-on-surface-variant">Not independently validated</td>
             </tr>
           </tbody>
         </table>
@@ -1094,10 +1122,10 @@
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-          <button type="button" onclick="askPresetQuestion('Compare all 5 AI models: CNN-LSTM, ANN, SVM, LOSO, and CombinAI')"
+          <button type="button" onclick="askPresetQuestion('Compare the 4 live base predictors, CombinAI ensemble, and validated benchmark results')"
             class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
             <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">compare</span>
-            <span class="text-xs font-semibold leading-snug">1. Compare all 5 AI models (CNN-LSTM, ANN, SVM, LOSO, CombinAI)</span>
+            <span class="text-xs font-semibold leading-snug">1. Compare 4 base predictors, CombinAI ensemble &amp; benchmark protocols</span>
           </button>
 
           <button type="button" onclick="askPresetQuestion('Why must I keep my mobile attached at my waist in one place and not hold it in my hand?')"
@@ -1118,34 +1146,34 @@
             <span class="text-xs font-semibold leading-snug">4. How does the step counter detect steps accurately?</span>
           </button>
 
-          <button type="button" onclick="askPresetQuestion('How does CombinAI combine the models to reach 96.8% accuracy?')"
+          <button type="button" onclick="askPresetQuestion('How does the CombinAI ensemble combine the 4 base predictors and why is it marked not independently validated?')"
             class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
             <span class="material-symbols-outlined text-[16px] text-tertiary shrink-0 mt-0.5">auto_awesome</span>
-            <span class="text-xs font-semibold leading-snug">5. How does CombinAI reach 96.8% accuracy?</span>
+            <span class="text-xs font-semibold leading-snug">5. How does CombinAI (Ensemble) work &amp; why is it unvalidated?</span>
           </button>
 
-          <button type="button" onclick="askPresetQuestion('How does the CNN-LSTM model work on 9x128 motion signals?')"
+          <button type="button" onclick="askPresetQuestion('How does the leak-free CNN-LSTM model work on 9x128 motion signals?')"
             class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
             <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">neurology</span>
-            <span class="text-xs font-semibold leading-snug">6. How does CNN-LSTM work on 128x9 motion signals?</span>
+            <span class="text-xs font-semibold leading-snug">6. CNN-LSTM (90.57% Test · 90.14% ± 10.25% LOSO) on 128×9 signals</span>
           </button>
 
-          <button type="button" onclick="askPresetQuestion('How does the SVM model achieve 96.3% accuracy on 561 features?')"
+          <button type="button" onclick="askPresetQuestion('How does the leak-free tuned Linear SVM achieve 96.20% test and 95.83% LOSO accuracy?')"
             class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
             <span class="material-symbols-outlined text-[16px] text-secondary shrink-0 mt-0.5">analytics</span>
-            <span class="text-xs font-semibold leading-snug">7. How does SVM achieve 96.3% accuracy on 561 features?</span>
+            <span class="text-xs font-semibold leading-snug">7. Linear SVM (96.20% Test · 95.83% ± 4.84% LOSO) on 561 features</span>
           </button>
 
-          <button type="button" onclick="askPresetQuestion('What is the LOSO model and why is Leave-One-Subject-Out testing important?')"
+          <button type="button" onclick="askPresetQuestion('What does LOSO mean, what is the 1D-CNN + LOSO-SVM Hybrid predictor, and how does it differ from standalone HAR 1D-CNN?')"
             class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
             <span class="material-symbols-outlined text-[16px] text-tertiary shrink-0 mt-0.5">group</span>
-            <span class="text-xs font-semibold leading-snug">8. What is LOSO (95.8%) and Leave-One-Subject-Out testing?</span>
+            <span class="text-xs font-semibold leading-snug">8. LOSO protocol vs. 1D-CNN + LOSO-SVM Hybrid &amp; standalone HAR 1D-CNN</span>
           </button>
 
-          <button type="button" onclick="askPresetQuestion('How does the ANN model work on the 561 engineered features?')"
+          <button type="button" onclick="askPresetQuestion('How does Regularized ANN achieve 96.06% test accuracy and 94.13% LOSO mean on 561 features?')"
             class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface border border-outline-variant/20 transition-colors flex items-start gap-2">
             <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">hub</span>
-            <span class="text-xs font-semibold leading-snug">9. How does ANN (95.7%) classify the 561 features?</span>
+            <span class="text-xs font-semibold leading-snug">9. Regularized ANN (96.06% Test · 94.13% ± 5.85% LOSO)</span>
           </button>
 
           <button type="button" onclick="askPresetQuestion('How does the system separate Sitting, Standing, and Laying postures?')"
@@ -1214,7 +1242,7 @@
                 <span class="material-symbols-outlined text-primary text-[17px]">directions_walk</span>
                 <span class="font-mono-tech text-[11px] text-on-surface-variant font-semibold">Waist-Level Movement Detection</span>
               </div>
-              <span class="font-mono-tech text-[10px] text-tertiary font-bold uppercase">LOSO Weights Active</span>
+              <span class="font-mono-tech text-[10px] text-tertiary font-bold uppercase">4 Base + Ensemble</span>
             </div>
           </div>
 
@@ -1228,8 +1256,8 @@
             <div class="grid grid-cols-3 gap-2">
               <div class="bg-surface-container-lowest rounded-lg p-2.5 text-center shadow-xs">
                 <span class="material-symbols-outlined text-primary text-[19px]">verified</span>
-                <span class="font-mono-tech text-xs font-bold text-on-surface block">95.7%</span>
-                <span class="font-mono-tech text-[9px] text-on-surface-variant uppercase">Model Acc</span>
+                <span class="font-mono-tech text-xs font-bold text-on-surface block">96.20%</span>
+                <span class="font-mono-tech text-[9px] text-on-surface-variant uppercase">SVM Test Acc</span>
               </div>
               <div class="bg-surface-container-lowest rounded-lg p-2.5 text-center shadow-xs">
                 <span class="material-symbols-outlined text-secondary text-[19px]">bolt</span>
@@ -1658,73 +1686,96 @@
     const MODEL_GUIDE_META = {
       cnn_lstm: {
         name: 'CNN-LSTM',
-        acc: '94.6%',
-        shortPill: 'CNN-LSTM · 94.6%',
-        accBadge: '94.6% Accuracy',
+        role: 'Base Predictor',
+        testAcc: '90.57%',
+        losoAcc: '90.14% ± 10.25%',
+        acc: 'Test 90.57% · LOSO 90.14%±10.25%',
+        shortPill: 'CNN-LSTM · Test 90.57%',
+        accBadge: 'Test 90.57% · LOSO 90.14%±10.25%',
         shortTag: 'CNN-LSTM',
-        toastTitle: 'CNN-LSTM (94.6% Accuracy)',
-        descHtml: '<strong class="text-on-surface">CNN-LSTM (94.6%):</strong> Time-series deep model on raw 128x9 signals. All 5 models are shown side by side below.'
+        toastTitle: 'CNN-LSTM (Test: 90.57% · LOSO: 90.14% ± 10.25%)',
+        descHtml: '<strong class="text-on-surface">CNN-LSTM:</strong> Leak-free raw 128×9 sequence model (Held-out Test: 90.57% · 30-Fold LOSO: 90.14% ± 10.25%).'
       },
       ann: {
-        name: 'ANN',
-        acc: '95.7%',
-        shortPill: 'ANN · 95.7%',
-        accBadge: '95.7% Accuracy',
-        shortTag: 'ANN',
-        toastTitle: 'ANN (95.7% Accuracy)',
-        descHtml: '<strong class="text-on-surface">ANN (95.7%):</strong> Regularized neural network classifying 561 time &amp; frequency features.'
+        name: 'Regularized ANN',
+        role: 'Base Predictor',
+        testAcc: '96.06%',
+        losoAcc: '94.13% ± 5.85%',
+        acc: 'Test 96.06% · LOSO 94.13%±5.85%',
+        shortPill: 'Regularized ANN · Test 96.06%',
+        accBadge: 'Test 96.06% · LOSO 94.13%±5.85%',
+        shortTag: 'Regularized ANN',
+        toastTitle: 'Regularized ANN (Test: 96.06% · LOSO: 94.13% ± 5.85%)',
+        descHtml: '<strong class="text-on-surface">Regularized ANN:</strong> 561-feature deep MLP (Held-out Test: 96.06% · 30-Fold LOSO: 94.13% ± 5.85%).'
       },
       svm: {
-        name: 'SVM',
-        acc: '96.3%',
-        shortPill: 'SVM · 96.3%',
-        accBadge: '96.3% Accuracy',
-        shortTag: 'SVM',
-        toastTitle: 'SVM (96.3% Accuracy)',
-        descHtml: '<strong class="text-on-surface">SVM (96.3%):</strong> High-margin Linear Support Vector Machine on 561 standardized features.'
+        name: 'Linear SVM',
+        role: 'Base Predictor',
+        testAcc: '96.20%',
+        losoAcc: '95.83% ± 4.84%',
+        acc: 'Test 96.20% · LOSO 95.83%±4.84%',
+        shortPill: 'Linear SVM · Test 96.20%',
+        accBadge: 'Test 96.20% · LOSO 95.83%±4.84%',
+        shortTag: 'Linear SVM',
+        toastTitle: 'Linear SVM (Test: 96.20% · LOSO: 95.83% ± 4.84%)',
+        descHtml: '<strong class="text-on-surface">Linear SVM:</strong> Leak-free tuned 561-feature LinearSVC (Held-out Test: 96.20% · 30-Fold LOSO: 95.83% ± 4.84%).'
       },
       loso: {
-        name: 'LOSO',
-        acc: '95.8%',
-        shortPill: 'LOSO · 95.8%',
-        accBadge: '95.8% Accuracy',
-        shortTag: 'LOSO',
-        toastTitle: 'LOSO (95.8% Accuracy)',
-        descHtml: '<strong class="text-on-surface">LOSO (95.8%):</strong> 30-fold Leave-One-Subject-Out cross-validated model for unseen users.'
+        name: '1D-CNN + LOSO-SVM Hybrid',
+        role: 'Base Predictor (Hybrid)',
+        testAcc: 'Not independently validated',
+        losoAcc: 'Not independently validated',
+        acc: 'Hybrid · Not independently validated',
+        shortPill: '1D-CNN + LOSO-SVM Hybrid',
+        accBadge: 'Hybrid · Not independently validated',
+        shortTag: '1D-CNN + LOSO-SVM Hybrid',
+        toastTitle: '1D-CNN + LOSO-SVM Hybrid (Not independently validated)',
+        descHtml: '<strong class="text-on-surface">1D-CNN + LOSO-SVM Hybrid:</strong> Blends standalone HAR 1D-CNN (93.93% test / 93.51%±7.78% LOSO) with LOSO-trained Linear SVM (95.83%±4.84% LOSO). LOSO is the 30-fold evaluation protocol; this hybrid blend is not independently validated.'
       },
       combinai: {
-        name: 'CombinAI',
-        acc: '96.8%',
-        shortPill: 'CombinAI · 96.8%',
-        accBadge: '96.8% Accuracy',
-        shortTag: 'CombinAI',
-        toastTitle: 'CombinAI (96.8% Accuracy)',
-        descHtml: '<strong class="text-on-surface">CombinAI (96.8%):</strong> Combines CNN-LSTM, ANN, SVM, and LOSO together for highest accuracy.'
+        name: 'CombinAI (Ensemble)',
+        role: 'Ensemble (4 Base)',
+        testAcc: 'Not independently validated',
+        losoAcc: 'Not independently validated',
+        acc: 'Ensemble · Not independently validated',
+        shortPill: 'CombinAI (Ensemble)',
+        accBadge: 'Ensemble · Not independently validated',
+        shortTag: 'CombinAI (Ensemble)',
+        toastTitle: 'CombinAI (Ensemble · Not independently validated)',
+        descHtml: '<strong class="text-on-surface">CombinAI (Ensemble):</strong> Weighted probability ensemble of the 4 live base predictors (20% CNN-LSTM, 25% Regularized ANN, 30% Linear SVM, 25% 1D-CNN + LOSO-SVM Hybrid). Not independently validated.'
       },
       ensemble: {
-        name: 'CombinAI',
-        acc: '96.8%',
-        shortPill: 'CombinAI · 96.8%',
-        accBadge: '96.8% Accuracy',
-        shortTag: 'CombinAI',
-        toastTitle: 'CombinAI (96.8% Accuracy)',
-        descHtml: '<strong class="text-on-surface">CombinAI (96.8%):</strong> Combines CNN-LSTM, ANN, SVM, and LOSO together for highest accuracy.'
+        name: 'CombinAI (Ensemble)',
+        role: 'Ensemble (4 Base)',
+        testAcc: 'Not independently validated',
+        losoAcc: 'Not independently validated',
+        acc: 'Ensemble · Not independently validated',
+        shortPill: 'CombinAI (Ensemble)',
+        accBadge: 'Ensemble · Not independently validated',
+        shortTag: 'CombinAI (Ensemble)',
+        toastTitle: 'CombinAI (Ensemble · Not independently validated)',
+        descHtml: '<strong class="text-on-surface">CombinAI (Ensemble):</strong> Weighted probability ensemble of the 4 live base predictors. Not independently validated.'
       },
       cnn: {
-        name: 'LOSO',
-        acc: '95.8%',
-        shortPill: 'LOSO · 95.8%',
-        accBadge: '95.8% Accuracy',
-        shortTag: 'LOSO',
-        toastTitle: 'LOSO (95.8% Accuracy)',
-        descHtml: '<strong class="text-on-surface">LOSO (95.8%):</strong> 30-fold Leave-One-Subject-Out cross-validated model for unseen users.'
+        name: '1D-CNN + LOSO-SVM Hybrid',
+        role: 'Base Predictor (Hybrid)',
+        testAcc: 'Not independently validated',
+        losoAcc: 'Not independently validated',
+        acc: 'Hybrid · Not independently validated',
+        shortPill: '1D-CNN + LOSO-SVM Hybrid',
+        accBadge: 'Hybrid · Not independently validated',
+        shortTag: '1D-CNN + LOSO-SVM Hybrid',
+        toastTitle: '1D-CNN + LOSO-SVM Hybrid (Not independently validated)',
+        descHtml: '<strong class="text-on-surface">1D-CNN + LOSO-SVM Hybrid:</strong> Blends standalone HAR 1D-CNN with LOSO-trained Linear SVM. Not independently validated.'
       }
     };
 
     function normalizeModelKey(rawKey) {
       const k = String(rawKey || 'cnn_lstm').toLowerCase().replace('-', '_');
       if (k === 'ensemble' || k === 'combined') return 'combinai';
-      if (k === 'cnn' || k === '1d_cnn' || k === '1dcnn') return 'loso';
+      if (k === 'cnn' || k === '1d_cnn' || k === '1dcnn' || k === 'hybrid') return 'loso';
+      if (k === 'regularized_ann' || k === 'reg_ann') return 'ann';
+      if (k === 'linear_svm') return 'svm';
       if (FIVE_MODEL_ORDER.includes(k)) return k;
       return 'cnn_lstm';
     }
@@ -1745,7 +1796,10 @@
       return FIVE_MODEL_ORDER.map(k => ({
         model_key: k,
         model_name: MODEL_GUIDE_META[k].name,
+        role: MODEL_GUIDE_META[k].role,
         accuracy: MODEL_GUIDE_META[k].acc,
+        held_out_test_accuracy: MODEL_GUIDE_META[k].testAcc,
+        loso_accuracy: MODEL_GUIDE_META[k].losoAcc,
         predicted_activity: act,
         confidence: conf,
         probabilities: probs,
@@ -1775,18 +1829,24 @@
             const meta = MODEL_GUIDE_META[mKey] || MODEL_GUIDE_META.cnn_lstm;
             return `
               <button type="button" data-mcard="${mKey}" onclick="selectModelFromCard('${mKey}')"
-                class="bg-surface-container-low hover:bg-surface-container border border-outline-variant/25 rounded-xl p-3 text-left flex flex-col justify-between gap-2 transition-all">
-                <div class="flex items-center justify-between gap-1">
-                  <span data-mname="${mKey}" class="font-display text-sm font-bold text-on-surface">${escapeHTML(meta.name)}</span>
-                  <span data-macc="${mKey}" class="font-mono-tech text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-container-lowest text-tertiary">${escapeHTML(meta.acc)}</span>
+                class="bg-surface-container-low hover:bg-surface-container border border-outline-variant/25 rounded-xl p-3 text-left flex flex-col justify-between gap-1.5 transition-all">
+                <div class="space-y-0.5">
+                  <div class="flex items-start justify-between gap-1">
+                    <span data-mname="${mKey}" class="font-display text-xs sm:text-sm font-bold text-on-surface leading-tight">${escapeHTML(meta.name)}</span>
+                    <span data-mrole="${mKey}" class="font-mono-tech text-[9px] font-semibold px-1.5 py-0.5 rounded bg-surface-container-lowest text-on-surface-variant shrink-0">${escapeHTML(meta.role)}</span>
+                  </div>
+                  <div data-mbench="${mKey}" class="font-mono-tech text-[10px] text-on-surface-variant leading-tight space-y-0.5 pt-0.5">
+                    <div>Test: <strong data-mtest="${mKey}" class="text-on-surface">${escapeHTML(meta.testAcc)}</strong></div>
+                    <div>LOSO: <strong data-mloso="${mKey}" class="text-tertiary">${escapeHTML(meta.losoAcc)}</strong></div>
+                  </div>
                 </div>
-                <div class="flex items-center gap-1.5 my-0.5">
+                <div class="flex items-center gap-1.5 my-0.5 pt-1 border-t border-outline-variant/20">
                   <span data-micon="${mKey}" class="material-symbols-outlined text-[18px] text-tertiary">directions_walk</span>
-                  <span data-mlabel="${mKey}" class="font-display text-sm sm:text-base font-bold text-on-surface truncate">Walking</span>
+                  <span data-mlabel="${mKey}" class="font-display text-sm font-bold text-on-surface truncate">Walking</span>
                 </div>
                 <div class="space-y-1 w-full">
                   <div class="flex items-center justify-between font-mono-tech text-[10px]">
-                    <span data-mconf="${mKey}" class="font-bold text-tertiary">96.0% match</span>
+                    <span data-mconf="${mKey}" class="font-bold text-primary">96.0% live conf</span>
                     <span data-mlat="${mKey}" class="text-on-surface-variant">1.0 ms</span>
                   </div>
                   <div class="w-full bg-surface-container-highest h-1.5 rounded-full overflow-hidden">
@@ -1801,15 +1861,21 @@
 
         items.forEach(item => {
           const mKey = normalizeModelKey(item.model_key);
+          const meta = MODEL_GUIDE_META[mKey] || MODEL_GUIDE_META.cnn_lstm;
           const isSelected = mKey === activeKey;
           const actMeta = ACTIVITY_META[item.predicted_activity] || ACTIVITY_META.WALKING;
           const confNum = Number(item.confidence || 0);
           const confPct = (confNum * 100).toFixed(1);
           const latMs = typeof item.latency_ms === 'number' ? `${item.latency_ms.toFixed(1)} ms` : '-- ms';
+          const testAccStr = item.held_out_test_accuracy || meta.testAcc;
+          const losoAccStr = item.loso_accuracy || meta.losoAcc;
+          const roleStr = item.role || meta.role;
 
           const card = container.querySelector(`[data-mcard="${mKey}"]`);
           const nameEl = container.querySelector(`[data-mname="${mKey}"]`);
-          const accEl = container.querySelector(`[data-macc="${mKey}"]`);
+          const roleEl = container.querySelector(`[data-mrole="${mKey}"]`);
+          const testEl = container.querySelector(`[data-mtest="${mKey}"]`);
+          const losoEl = container.querySelector(`[data-mloso="${mKey}"]`);
           const iconEl = container.querySelector(`[data-micon="${mKey}"]`);
           const labelEl = container.querySelector(`[data-mlabel="${mKey}"]`);
           const confEl = container.querySelector(`[data-mconf="${mKey}"]`);
@@ -1819,22 +1885,24 @@
           if (card) {
             card.className = `${isSelected
               ? 'bg-primary/10 border-2 border-primary shadow-sm'
-              : 'bg-surface-container-low hover:bg-surface-container border border-outline-variant/25'} rounded-xl p-3 text-left flex flex-col justify-between gap-2 transition-all`;
+              : 'bg-surface-container-low hover:bg-surface-container border border-outline-variant/25'} rounded-xl p-3 text-left flex flex-col justify-between gap-1.5 transition-all`;
           }
           if (nameEl) {
-            nameEl.textContent = item.model_name || (MODEL_GUIDE_META[mKey] && MODEL_GUIDE_META[mKey].name) || mKey;
-            nameEl.className = `font-display text-sm font-bold ${isSelected ? 'text-primary' : 'text-on-surface'}`;
+            nameEl.textContent = item.model_name || meta.name;
+            nameEl.className = `font-display text-xs sm:text-sm font-bold leading-tight ${isSelected ? 'text-primary' : 'text-on-surface'}`;
           }
-          if (accEl) {
-            accEl.textContent = item.accuracy || (MODEL_GUIDE_META[mKey] && MODEL_GUIDE_META[mKey].acc) || '';
-            accEl.className = `font-mono-tech text-[10px] font-bold px-2 py-0.5 rounded-full ${isSelected ? 'bg-primary text-on-primary' : 'bg-surface-container-lowest text-tertiary'}`;
+          if (roleEl) {
+            roleEl.textContent = roleStr;
+            roleEl.className = `font-mono-tech text-[9px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${isSelected ? 'bg-primary text-on-primary' : 'bg-surface-container-lowest text-on-surface-variant'}`;
           }
+          if (testEl) testEl.textContent = testAccStr;
+          if (losoEl) losoEl.textContent = losoAccStr;
           if (iconEl) {
             iconEl.textContent = actMeta.icon;
             iconEl.className = `material-symbols-outlined text-[18px] ${isSelected ? 'text-primary' : 'text-tertiary'}`;
           }
           if (labelEl) labelEl.textContent = actMeta.label;
-          if (confEl) confEl.textContent = `${confPct}% match`;
+          if (confEl) confEl.textContent = `${confPct}% live conf`;
           if (latEl) latEl.textContent = latMs;
           if (barEl) {
             barEl.className = `${isSelected ? 'bg-primary' : 'bg-tertiary'} h-full rounded-full transition-all duration-200`;
@@ -2237,10 +2305,10 @@
           labels: ['Walk', 'Up', 'Down', 'Sit', 'Stand', 'Lay'],
           datasets: [
             { label: 'CNN-LSTM', data: [0, 0, 0, 0, 0, 0], backgroundColor: '#006194', borderRadius: 4 },
-            { label: 'ANN', data: [0, 0, 0, 0, 0, 0], backgroundColor: '#00855d', borderRadius: 4 },
-            { label: 'SVM', data: [0, 0, 0, 0, 0, 0], backgroundColor: '#0051d5', borderRadius: 4 },
-            { label: 'LOSO', data: [0, 0, 0, 0, 0, 0], backgroundColor: '#6b38d4', borderRadius: 4 },
-            { label: 'CombinAI', data: [0, 0, 0, 0, 0, 0], backgroundColor: '#006c4b', borderRadius: 4 }
+            { label: 'Regularized ANN', data: [0, 0, 0, 0, 0, 0], backgroundColor: '#00855d', borderRadius: 4 },
+            { label: 'Linear SVM', data: [0, 0, 0, 0, 0, 0], backgroundColor: '#0051d5', borderRadius: 4 },
+            { label: '1D-CNN + LOSO-SVM Hybrid', data: [0, 0, 0, 0, 0, 0], backgroundColor: '#6b38d4', borderRadius: 4 },
+            { label: 'CombinAI (Ensemble)', data: [0, 0, 0, 0, 0, 0], backgroundColor: '#006c4b', borderRadius: 4 }
           ]
         },
         options: {
@@ -3630,16 +3698,16 @@
               <span class="px-2 py-0.5 rounded-full bg-tertiary-fixed/50 text-on-tertiary-fixed font-mono-tech text-[10px] font-bold uppercase">Online</span>
             </div>
             <p class="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
-              Click any question in the 14-question list above or below to get an instant answer about our 5 AI models (<strong class="text-on-surface">CNN-LSTM</strong>, <strong class="text-on-surface">ANN</strong>, <strong class="text-on-surface">SVM</strong>, <strong class="text-on-surface">LOSO</strong>, <strong class="text-on-surface">CombinAI</strong>), why your mobile must be kept attached at your waist, how to watch live predictions on your PC using the 6-digit code, or how our step counter works.
+              Click any question above or below to learn about our 4 live base predictors (<strong class="text-on-surface">CNN-LSTM</strong>, <strong class="text-on-surface">Regularized ANN</strong>, <strong class="text-on-surface">Linear SVM</strong>, <strong class="text-on-surface">1D-CNN + LOSO-SVM Hybrid</strong>), the <strong class="text-on-surface">CombinAI (Ensemble)</strong>, our <strong class="text-on-surface">Held-Out Test vs. 30-Fold LOSO</strong> benchmark results (including standalone <strong class="text-on-surface">HAR 1D-CNN</strong>), waist phone placement, or PC live mirroring.
             </p>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <button type="button" onclick="askPresetQuestion('Compare all 5 AI models: CNN-LSTM, ANN, SVM, LOSO, and CombinAI')" class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
-                <span class="font-mono-tech text-[10px] font-bold text-primary uppercase block">5 AI Models</span>
-                <span class="text-xs text-on-surface font-medium">CNN-LSTM · ANN · SVM · LOSO · CombinAI</span>
+              <button type="button" onclick="askPresetQuestion('Compare the 4 live base predictors, CombinAI ensemble, and validated benchmark results')" class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
+                <span class="font-mono-tech text-[10px] font-bold text-primary uppercase block">Models &amp; Benchmarks</span>
+                <span class="text-xs text-on-surface font-medium">4 Base Predictors · CombinAI · Test vs. LOSO</span>
               </button>
-              <button type="button" onclick="askPresetQuestion('Why must I keep my mobile attached at my waist in one place and not hold it in my hand?')" class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
-                <span class="font-mono-tech text-[10px] font-bold text-tertiary uppercase block">Waist Placement</span>
-                <span class="text-xs text-on-surface font-medium">Why mobile must be at waist (not in hand)</span>
+              <button type="button" onclick="askPresetQuestion('What does LOSO mean, what is the 1D-CNN + LOSO-SVM Hybrid predictor, and how does it differ from standalone HAR 1D-CNN?')" class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
+                <span class="font-mono-tech text-[10px] font-bold text-tertiary uppercase block">LOSO Protocol &amp; Hybrid</span>
+                <span class="text-xs text-on-surface font-medium">30-Fold LOSO vs. 1D-CNN + LOSO-SVM Hybrid</span>
               </button>
               <button type="button" onclick="askPresetQuestion('How do I use the 6-digit device number (code) to see my mobile prediction on my PC?')" class="text-left p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors">
                 <span class="font-mono-tech text-[10px] font-bold text-secondary uppercase block">Watch on PC</span>
