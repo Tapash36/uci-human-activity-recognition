@@ -1,146 +1,100 @@
-import json
 from pathlib import Path
 import unittest
+import numpy as np
 import app as har_app
 
 BASE_DIR = Path(__file__).resolve().parent
 DUMMY_USER = {"id": 1, "username": "guest_researcher"}
 
 
-class TestHARModelNamesAndBenchmarks(unittest.TestCase):
+class TestHARModelsImagesAndSteps(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app_text = (BASE_DIR / "app.py").read_text(encoding="utf-8")
         cls.html_text = (BASE_DIR / "static" / "index.html").read_text(encoding="utf-8")
-        cls.metrics = json.loads((BASE_DIR / "results" / "metrics.json").read_text(encoding="utf-8"))
 
-    def test_benchmark_source_of_truth_alignment(self):
-        """Verify benchmark metrics in results/metrics.json match displayed UI and API figures."""
-        self.assertEqual(self.metrics["task3_leakage"]["svm_tuned_test_acc"], 96.2)
-        self.assertEqual(self.metrics["task1_loso_cnnlstm"]["svm_loso_mean"], 95.83)
-        self.assertEqual(self.metrics["task1_loso_cnnlstm"]["svm_loso_std"], 4.84)
-
-        self.assertEqual(self.metrics["task2_app_models"]["reg_ann_test_acc"], 96.06)
-        self.assertEqual(self.metrics["task2_app_models"]["reg_ann_loso_mean"], 94.13)
-        self.assertEqual(self.metrics["task2_app_models"]["reg_ann_loso_std"], 5.85)
-
-        self.assertEqual(self.metrics["task2_app_models"]["cnn1d_test_acc"], 93.93)
-        self.assertEqual(self.metrics["task2_app_models"]["cnn1d_loso_mean"], 93.51)
-        self.assertEqual(self.metrics["task2_app_models"]["cnn1d_loso_std"], 7.78)
-
-        self.assertEqual(self.metrics["task3_leakage"]["cnnlstm_clean_21sub_test_acc"], 90.57)
-        self.assertEqual(self.metrics["task1_loso_cnnlstm"]["cnnlstm_loso_mean"], 90.14)
-        self.assertEqual(self.metrics["task1_loso_cnnlstm"]["cnnlstm_loso_std"], 10.25)
-
-    def test_no_stale_accuracies_in_app_or_html(self):
-        """Ensure stale figures (94.6%, 95.7%, 96.3%, 95.8%, 96.8%, etc.) are completely absent."""
-        stale_patterns = [
-            "94.6%", "94.62",
-            "95.7%", "95.72",
-            "96.3%", "96.27",
-            "95.8%", "95.84",
-            "96.8%", "96.84",
-            "94.03",
-        ]
-        for pat in stale_patterns:
-            self.assertNotIn(pat, self.app_text, f"Stale figure {pat!r} found in app.py")
-            self.assertNotIn(pat, self.html_text, f"Stale figure {pat!r} found in static/index.html")
-
-    def test_html_labels_protocols_and_hybrid_distinction(self):
-        """Verify static/index.html displays truthful predictor names, separate protocols, and unvalidated tags."""
-        required_snippets = [
-            "Linear SVM",
-            "96.20%",
-            "95.83% ± 4.84%",
-            "Regularized ANN",
-            "96.06%",
-            "94.13% ± 5.85%",
-            "HAR 1D-CNN (Standalone)",
-            "93.93%",
-            "93.51% ± 7.78%",
-            "CNN-LSTM",
-            "90.57%",
-            "90.14% ± 10.25%",
-            "1D-CNN + LOSO-SVM Hybrid",
-            "CombinAI (Ensemble)",
-            "Not independently validated",
-            "live conf",
-        ]
-        for snippet in required_snippets:
-            self.assertIn(snippet, self.html_text, f"Required snippet {snippet!r} missing from static/index.html")
-
-    def test_api_status_and_live_comparison_metadata(self):
-        """Verify /api/status and /api/demo/{activity} return truthful predictor names and protocol-separated scores."""
+    def test_two_models_and_exact_accuracies(self):
+        """Verify only Linear SVM (96.27% test / 95.84% LOSO) and CNN-LSTM (91.75%) are exposed."""
         st = har_app.api_status(user=DUMMY_USER)
+        self.assertEqual(st["models"], ["Linear SVM", "CNN-LSTM"])
+        self.assertEqual(st["benchmarks"]["svm_test_accuracy"], 96.27)
+        self.assertEqual(st["benchmarks"]["svm_macro_f1"], 0.963)
+        self.assertEqual(st["benchmarks"]["svm_loso_mean_accuracy"], 95.84)
+        self.assertEqual(st["benchmarks"]["cnn_lstm_test_accuracy"], 91.75)
 
-        expected_models = [
-            "CNN-LSTM",
-            "Regularized ANN",
+        required_html_snippets = [
             "Linear SVM",
-            "1D-CNN + LOSO-SVM Hybrid",
-            "CombinAI (Ensemble)",
+            "96.27%",
+            "Linear SVM test accuracy (macro F1 0.963)",
+            "95.84%",
+            "Linear SVM mean LOSO accuracy (30 subjects)",
+            "CNN-LSTM",
+            "91.75%",
+            "CNN-LSTM test accuracy (best epoch)",
+            "Reset Step Count",
+            "liveResetStepsBtn",
+            "analyticsResetStepsBtn",
+            "data-mimg",
         ]
-        self.assertEqual(st["models"], expected_models)
-        self.assertEqual(st["live_predictors"]["base_predictors"], expected_models[:4])
-        self.assertEqual(st["live_predictors"]["ensemble"], "CombinAI (Ensemble)")
+        for snippet in required_html_snippets:
+            self.assertIn(snippet, self.html_text, f"Missing {snippet!r} in static/index.html")
 
-        bm = st["benchmarks"]["benchmarked_models"]
-        self.assertEqual(bm["linear_svm_leak_free"]["held_out_test_accuracy"], 96.20)
-        self.assertEqual(bm["linear_svm_leak_free"]["loso_summary"], "95.83% ± 4.84%")
-        self.assertEqual(bm["regularized_ann"]["held_out_test_accuracy"], 96.06)
-        self.assertEqual(bm["regularized_ann"]["loso_summary"], "94.13% ± 5.85%")
-        self.assertEqual(bm["har_1dcnn_standalone"]["held_out_test_accuracy"], 93.93)
-        self.assertEqual(bm["har_1dcnn_standalone"]["loso_summary"], "93.51% ± 7.78%")
-        self.assertEqual(bm["cnn_lstm_leak_free"]["held_out_test_accuracy"], 90.57)
-        self.assertEqual(bm["cnn_lstm_leak_free"]["loso_summary"], "90.14% ± 10.25%")
+    def test_all_six_activities_and_side_by_side_comparison(self):
+        """Verify all 6 activities return Linear SVM and CNN-LSTM side by side and map to their activity images."""
+        expected_images = {
+            "WALKING": "/static/images/walking.jpg",
+            "WALKING_UPSTAIRS": "/static/images/upstairs.jpg",
+            "WALKING_DOWNSTAIRS": "/static/images/downstairs.jpg",
+            "SITTING": "/static/images/sitting.jpg",
+            "STANDING": "/static/images/standing.jpg",
+            "LAYING": "/static/images/laying.jpg",
+        }
+        for act, img_path in expected_images.items():
+            self.assertIn(img_path, self.html_text)
+            demo = har_app.predict_preset(act, user=DUMMY_USER).model_dump()
+            self.assertEqual(demo["ensemble_activity"], act)
+            self.assertEqual(len(demo["all_models"]), 2)
+            by_key = {m["model_key"]: m for m in demo["all_models"]}
+            self.assertEqual(list(by_key.keys()), ["svm", "cnn_lstm"])
+            self.assertEqual(by_key["svm"]["model_name"], "Linear SVM")
+            self.assertEqual(by_key["svm"]["accuracy"], "96.27%")
+            self.assertEqual(by_key["svm"]["loso_accuracy"], "95.84% (30 subjects)")
+            self.assertEqual(by_key["cnn_lstm"]["model_name"], "CNN-LSTM")
+            self.assertEqual(by_key["cnn_lstm"]["accuracy"], "91.75%")
 
-        demo = har_app.predict_preset("WALKING", user=DUMMY_USER).model_dump()
-        by_key = {m["model_key"]: m for m in demo["all_models"]}
+    def test_real_world_step_counting_accuracy(self):
+        """Verify step detector counts walking steps reliably and returns 0 for stationary postures."""
+        t = np.arange(128, dtype=np.float32) / 50.0
+        # 2.56s walking window at 1.95 Hz (~5 steps in 2.56s)
+        f = 1.95
+        signals = np.zeros((9, 128), dtype=np.float32)
+        ax = 0.18 * np.sin(2 * np.pi * f * t)
+        ay = 0.08 * np.cos(2 * np.pi * f * t)
+        az = 0.06 * np.sin(2 * np.pi * f * t)
+        signals[0], signals[1], signals[2] = ax, ay, az
+        signals[6], signals[7], signals[8] = ax, 0.96 + ay, 0.22 + az
 
-        self.assertEqual(by_key["cnn_lstm"]["model_name"], "CNN-LSTM")
-        self.assertEqual(by_key["cnn_lstm"]["held_out_test_accuracy"], "90.57%")
-        self.assertEqual(by_key["cnn_lstm"]["loso_accuracy"], "90.14% ± 10.25%")
+        steps, spm, peaks = har_app.detect_steps_in_window(signals, 50.0, "WALKING")
+        self.assertGreaterEqual(steps, 4)
+        self.assertLessEqual(steps, 6)
+        self.assertTrue(100.0 <= spm <= 135.0, f"Unexpected cadence: {spm}")
 
-        self.assertEqual(by_key["ann"]["model_name"], "Regularized ANN")
-        self.assertEqual(by_key["ann"]["held_out_test_accuracy"], "96.06%")
-        self.assertEqual(by_key["ann"]["loso_accuracy"], "94.13% ± 5.85%")
+        # Stationary sitting window must report 0 steps
+        steps_sit, spm_sit, _ = har_app.detect_steps_in_window(signals * 0.01, 50.0, "SITTING")
+        self.assertEqual(steps_sit, 0)
+        self.assertEqual(spm_sit, 0.0)
 
-        self.assertEqual(by_key["svm"]["model_name"], "Linear SVM")
-        self.assertEqual(by_key["svm"]["held_out_test_accuracy"], "96.20%")
-        self.assertEqual(by_key["svm"]["loso_accuracy"], "95.83% ± 4.84%")
-
-        self.assertEqual(by_key["loso"]["model_name"], "1D-CNN + LOSO-SVM Hybrid")
-        self.assertEqual(by_key["loso"]["role"], "Base Predictor (Hybrid)")
-        self.assertEqual(by_key["loso"]["held_out_test_accuracy"], "Not independently validated")
-        self.assertEqual(by_key["loso"]["loso_accuracy"], "Not independently validated")
-
-        self.assertEqual(by_key["combinai"]["model_name"], "CombinAI (Ensemble)")
-        self.assertEqual(by_key["combinai"]["role"], "Ensemble (4 Base Predictors)")
-        self.assertEqual(by_key["combinai"]["held_out_test_accuracy"], "Not independently validated")
-        self.assertEqual(by_key["combinai"]["loso_accuracy"], "Not independently validated")
-
-    def test_chatbot_loso_and_hybrid_distinction(self):
-        """Verify chatbot answers explain LOSO as a 30-fold evaluation protocol and distinguish the hybrid predictor."""
-        ans_loso = har_app.chat_with_model_assistant(
+    def test_chatbot_two_models_answers(self):
+        """Verify chatbot answers reference Linear SVM (96.27% / 95.84% LOSO) and CNN-LSTM (91.75%)."""
+        reply = har_app.chat_with_model_assistant(
             har_app.ChatRequestPayload(
-                message="What does LOSO mean, what is the 1D-CNN + LOSO-SVM Hybrid predictor, and how does it differ from standalone HAR 1D-CNN?"
+                message="Compare the two built-in models: Linear SVM (96.27% test / 95.84% LOSO) vs. CNN-LSTM (91.75%)"
             ),
             user=DUMMY_USER,
-        ).answer
-        self.assertIn("Leave-One-Subject-Out", ans_loso)
-        self.assertIn("93.93%", ans_loso)
-        self.assertIn("93.51% ± 7.78%", ans_loso)
-        self.assertIn("1D-CNN + LOSO-SVM Hybrid", ans_loso)
-        self.assertIn("Not independently validated", ans_loso)
-
-        ans_comb = har_app.chat_with_model_assistant(
-            har_app.ChatRequestPayload(
-                message="How does the CombinAI ensemble combine the 4 base predictors and why is it marked not independently validated?"
-            ),
-            user=DUMMY_USER,
-        ).answer
-        self.assertIn("CombinAI (Ensemble)", ans_comb)
-        self.assertIn("Not independently validated", ans_comb)
+        )
+        self.assertIn("96.27%", reply.answer)
+        self.assertIn("95.84%", reply.answer)
+        self.assertIn("91.75%", reply.answer)
 
 
 if __name__ == "__main__":

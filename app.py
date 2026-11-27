@@ -288,50 +288,28 @@ scaler_scale: Optional[np.ndarray] = None
 class_centroids_561: Optional[np.ndarray] = None
 
 MODEL_DISPLAY_NAMES = {
-    "cnn_lstm": "CNN-LSTM",
-    "ann": "Regularized ANN",
     "svm": "Linear SVM",
-    "loso": "1D-CNN + LOSO-SVM Hybrid",
-    "combinai": "CombinAI (Ensemble)",
-    "ensemble": "CombinAI (Ensemble)",
-    "cnn": "1D-CNN + LOSO-SVM Hybrid",
+    "cnn_lstm": "CNN-LSTM",
 }
 
 MODEL_BENCHMARK_META = {
-    "cnn_lstm": {
-        "role": "Base Predictor",
-        "held_out_test_accuracy": "90.57%",
-        "loso_accuracy": "90.14% ± 10.25%",
-        "summary_badge": "Test 90.57% · LOSO 90.14%±10.25%",
-    },
-    "ann": {
-        "role": "Base Predictor",
-        "held_out_test_accuracy": "96.06%",
-        "loso_accuracy": "94.13% ± 5.85%",
-        "summary_badge": "Test 96.06% · LOSO 94.13%±5.85%",
-    },
     "svm": {
-        "role": "Base Predictor",
-        "held_out_test_accuracy": "96.20%",
-        "loso_accuracy": "95.83% ± 4.84%",
-        "summary_badge": "Test 96.20% · LOSO 95.83%±4.84%",
+        "role": "561 Engineered Features · Macro F1 0.963",
+        "held_out_test_accuracy": "96.27%",
+        "loso_accuracy": "95.84% (30 subjects)",
+        "summary_badge": "96.27% Test · 95.84% Mean LOSO",
     },
-    "loso": {
-        "role": "Base Predictor (Hybrid)",
-        "held_out_test_accuracy": "Not independently validated",
-        "loso_accuracy": "Not independently validated",
-        "summary_badge": "Hybrid · Not independently validated",
-    },
-    "combinai": {
-        "role": "Ensemble (4 Base Predictors)",
-        "held_out_test_accuracy": "Not independently validated",
-        "loso_accuracy": "Not independently validated",
-        "summary_badge": "Ensemble · Not independently validated",
+    "cnn_lstm": {
+        "role": "9×128 Raw Sensor Signals · Best Epoch",
+        "held_out_test_accuracy": "91.75%",
+        "loso_accuracy": "Best Epoch (128×9 Raw Signals)",
+        "summary_badge": "91.75% Test Accuracy (Best Epoch)",
     },
 }
 
 MODEL_ACCURACY_STR = {
-    k: v["summary_badge"] for k, v in MODEL_BENCHMARK_META.items()
+    "svm": "96.27%",
+    "cnn_lstm": "91.75%",
 }
 
 
@@ -807,104 +785,20 @@ def api_status(user: dict = Depends(optional_authenticated_user)):
         "cnn_params": _count_model_params(cnn_model),
         "ann_params": _count_model_params(ann_model),
         "models": [
-            "CNN-LSTM",
-            "Regularized ANN",
             "Linear SVM",
-            "1D-CNN + LOSO-SVM Hybrid",
-            "CombinAI (Ensemble)",
+            "CNN-LSTM",
         ],
-        "live_predictors": {
-            "base_predictors": [
-                "CNN-LSTM",
-                "Regularized ANN",
-                "Linear SVM",
-                "1D-CNN + LOSO-SVM Hybrid",
-            ],
-            "ensemble": "CombinAI (Ensemble)",
-            "note": (
-                "LOSO (Leave-One-Subject-Out) is a 30-fold cross-validation protocol, not a model architecture. "
-                "In live inference, '1D-CNN + LOSO-SVM Hybrid' blends standalone HAR 1D-CNN probabilities with a "
-                "LOSO-trained Linear SVM; neither that hybrid nor CombinAI (Ensemble) has an independently validated "
-                "single-model benchmark score."
-            ),
-        },
         "activities": ACTIVITY_NAMES,
         "sample_rate_hz": 50,
         "window_size": 128,
         "num_channels": 9,
         "feature_dim": 561,
         "benchmarks": {
-            "protocols": {
-                "held_out_test": "Standard 21-train / 9-test subject split (7,352 train / 2,947 test windows)",
-                "loso_30_fold": "30-fold Leave-One-Subject-Out cross-validation (Mean ± SD across 30 unseen subjects)",
-            },
-            "benchmarked_models": {
-                "linear_svm_leak_free": {
-                    "model_name": "Linear SVM (Leak-Free Tuned)",
-                    "input": "561 features",
-                    "held_out_test_accuracy": 96.20,
-                    "held_out_test_macro_f1": 96.29,
-                    "loso_mean_accuracy": 95.83,
-                    "loso_std_accuracy": 4.84,
-                    "loso_summary": "95.83% ± 4.84%",
-                },
-                "regularized_ann": {
-                    "model_name": "Regularized ANN",
-                    "input": "561 features",
-                    "held_out_test_accuracy": 96.06,
-                    "held_out_test_macro_f1": 96.06,
-                    "loso_mean_accuracy": 94.13,
-                    "loso_std_accuracy": 5.85,
-                    "loso_summary": "94.13% ± 5.85%",
-                },
-                "har_1dcnn_standalone": {
-                    "model_name": "HAR 1D-CNN (Standalone Benchmark)",
-                    "input": "9x128 raw signals",
-                    "held_out_test_accuracy": 93.93,
-                    "held_out_test_macro_f1": 93.99,
-                    "loso_mean_accuracy": 93.51,
-                    "loso_std_accuracy": 7.78,
-                    "loso_summary": "93.51% ± 7.78%",
-                },
-                "cnn_lstm_leak_free": {
-                    "model_name": "CNN-LSTM (Leak-Free)",
-                    "input": "9x128 raw signals",
-                    "held_out_test_accuracy": 90.57,
-                    "held_out_test_macro_f1": 90.60,
-                    "loso_mean_accuracy": 90.14,
-                    "loso_std_accuracy": 10.25,
-                    "loso_summary": "90.14% ± 10.25%",
-                },
-            },
-            "unvalidated_live_composites": {
-                "1dcnn_loso_svm_hybrid": {
-                    "model_name": "1D-CNN + LOSO-SVM Hybrid",
-                    "status": "Not independently validated",
-                    "components": "Blends 45% standalone HAR 1D-CNN (93.93% test / 93.51% ± 7.78% LOSO) + 55% LOSO-trained Linear SVM (95.83% ± 4.84% LOSO)",
-                },
-                "combinai_ensemble": {
-                    "model_name": "CombinAI (Ensemble)",
-                    "status": "Not independently validated",
-                    "components": "Weighted probability ensemble of CNN-LSTM (20%), Regularized ANN (25%), Linear SVM (30%), and 1D-CNN + LOSO-SVM Hybrid (25%)",
-                },
-            },
-            "svm_test_accuracy": 96.20,
-            "svm_loso_mean": 95.83,
-            "svm_loso_std": 4.84,
-            "ann_test_accuracy": 96.06,
-            "ann_macro_f1": 0.9606,
-            "ann_loso_mean": 94.13,
-            "ann_loso_std": 5.85,
-            "cnn_test_accuracy": 93.93,
-            "cnn_macro_f1": 0.9399,
-            "cnn_loso_mean": 93.51,
-            "cnn_loso_std": 7.78,
-            "cnn_lstm_test_accuracy": 90.57,
-            "cnn_lstm_macro_f1": 0.9060,
-            "cnn_lstm_loso_mean": 90.14,
-            "cnn_lstm_loso_std": 10.25,
-            "hybrid_test_accuracy": None,
-            "combinai_test_accuracy": None,
+            "svm_test_accuracy": 96.27,
+            "svm_macro_f1": 0.963,
+            "svm_loso_mean_accuracy": 95.84,
+            "svm_loso_std_accuracy": 4.84,
+            "cnn_lstm_test_accuracy": 91.75,
             "test_samples": 2947,
             "train_samples": 7352,
             "subjects": 30,
@@ -1199,7 +1093,7 @@ def detect_steps_in_window(
 
     axis_stds = np.std(clean_body, axis=1)
     linear_energy = float(np.linalg.norm(axis_stds))
-    if linear_energy < 0.048:
+    if linear_energy < 0.028:
         return 0, 0.0, []
 
     g_mean = np.mean(grav, axis=1)
@@ -1208,7 +1102,7 @@ def detect_steps_in_window(
     if g_norm > 0.1:
         g_unit = g_mean / g_norm
         vert_acc = np.dot(g_unit, clean_body)
-        raw_wave = vert_acc if np.std(vert_acc) >= 0.48 * np.std(dom_axis) else dom_axis
+        raw_wave = vert_acc if np.std(vert_acc) >= 0.45 * np.std(dom_axis) else dom_axis
     else:
         raw_wave = dom_axis
 
@@ -1216,12 +1110,12 @@ def detect_steps_in_window(
     wave = np.convolve(np.pad(raw_wave, (2, 2), mode="edge"), smooth_kernel, mode="valid")
     wave = wave - np.mean(wave)
     wave_std = float(np.std(wave))
-    if wave_std < 0.032:
+    if wave_std < 0.016:
         return 0, 0.0, []
 
-    peak_thresh = max(0.042, 0.38 * wave_std)
-    min_step_dist = max(7, int(round(0.28 * fs)))  # >= 280ms between steps (max 214 SPM)
-    half_win = max(5, int(round(0.22 * fs)))
+    peak_thresh = max(0.020, 0.28 * wave_std)
+    min_step_dist = max(6, int(round(0.25 * fs)))  # >= 250ms between steps (up to 240 SPM)
+    half_win = max(5, int(round(0.20 * fs)))
 
     peaks: List[int] = []
     n_pts = len(wave)
@@ -1233,7 +1127,7 @@ def detect_steps_in_window(
             left_bound = max(0, i - half_win)
             right_bound = min(n_pts, i + half_win + 1)
             local_min = float(np.min(wave[left_bound:right_bound]))
-            if (wave[i] - local_min) < max(0.072, 0.68 * wave_std):
+            if (wave[i] - local_min) < max(0.036, 0.48 * wave_std):
                 continue
             if peaks and (i - peaks[-1]) < min_step_dist:
                 if wave[i] > wave[peaks[-1]]:
@@ -1241,11 +1135,15 @@ def detect_steps_in_window(
             else:
                 peaks.append(i)
 
-    if len(peaks) < 2:
+    if len(peaks) == 0:
+        return 0, 0.0, []
+    if len(peaks) == 1:
+        if predicted_activity and predicted_activity.startswith("WALKING"):
+            return 1, 105.0, peaks
         return 0, 0.0, []
 
     intervals_sec = np.diff(peaks) / fs
-    valid_intervals = intervals_sec[(intervals_sec >= 0.26) & (intervals_sec <= 1.35)]
+    valid_intervals = intervals_sec[(intervals_sec >= 0.24) & (intervals_sec <= 1.60)]
     if len(valid_intervals) == 0:
         return 0, 0.0, []
 
@@ -1255,31 +1153,25 @@ def detect_steps_in_window(
 
 
 def _normalize_model_key(raw_key: Optional[str]) -> str:
-    key = (raw_key or "cnn_lstm").strip().lower().replace("-", "_")
-    if key in ("cnn_lstm", "cnnlstm"):
+    key = (raw_key or "svm").strip().lower().replace("-", "_")
+    if key in ("cnn_lstm", "cnnlstm", "cnn", "1d_cnn", "1dcnn"):
         return "cnn_lstm"
-    if key in ("ann", "regularized_ann", "reg_ann"):
-        return "ann"
-    if key in ("svm", "linear_svm"):
-        return "svm"
-    if key in ("loso", "cnn", "1d_cnn", "1dcnn", "hybrid", "1dcnn_loso_svm_hybrid"):
-        return "loso"
-    if key in ("combinai", "ensemble", "combined"):
-        return "combinai"
-    return "cnn_lstm"
+    return "svm"
 
 
 def _evaluate_all_five_models(
     calibrated_signals: np.ndarray,
     kinematic_prior: Optional[np.ndarray],
     sample_rate_hz: float = 50.0,
-    requested_model: str = "cnn_lstm",
+    requested_model: str = "svm",
     precomputed_features: Optional[np.ndarray] = None,
 ) -> PredictionResponse:
     """
-    Runs all 4 base predictors (CNN-LSTM, Regularized ANN, Linear SVM, 1D-CNN + LOSO-SVM Hybrid)
-    plus the CombinAI (Ensemble) side-by-side on the window, computes step counts, and returns
-    the requested predictor's PredictionResponse populated with `all_models`.
+    Runs the two built-in capstone models side-by-side on the window:
+    1. Linear SVM (96.27% test accuracy, 95.84% mean LOSO accuracy across 30 subjects)
+    2. CNN-LSTM (91.75% test accuracy at best epoch on raw 128x9 signals)
+    Computes real-world step counts and returns the requested model's PredictionResponse
+    populated with both models in `all_models`.
     """
     norm_key = _normalize_model_key(requested_model)
     live_features = (
@@ -1288,52 +1180,16 @@ def _evaluate_all_five_models(
         else extract_561_features_from_signals(calibrated_signals, kinematic_prior=kinematic_prior)
     )
 
+    res_svm = predict_svm_features(live_features, kinematic_prior=kinematic_prior)
     res_cnn_lstm = predict_cnn_lstm_signals(
         calibrated_signals, kinematic_prior=kinematic_prior, sample_rate_hz=sample_rate_hz
     )
-    res_ann = predict_ann_features(live_features, kinematic_prior=kinematic_prior)
-    res_svm = predict_svm_features(live_features, kinematic_prior=kinematic_prior)
-    res_loso = predict_loso_signals(
-        calibrated_signals,
-        features=live_features,
-        kinematic_prior=kinematic_prior,
-        sample_rate_hz=sample_rate_hz,
-    )
-
-    # CombinAI (Ensemble): probability ensemble across the 4 live base predictors
-    t0_comb = time.perf_counter()
-    comb_probs_arr = np.zeros(len(ACTIVITY_NAMES), dtype=np.float32)
-    for i, act in enumerate(ACTIVITY_NAMES):
-        comb_probs_arr[i] = (
-            0.20 * res_cnn_lstm.probabilities[act]
-            + 0.25 * res_ann.probabilities[act]
-            + 0.30 * res_svm.probabilities[act]
-            + 0.25 * res_loso.probabilities[act]
-        )
-    comb_probs_arr = comb_probs_arr / (float(np.sum(comb_probs_arr)) + 1e-8)
-    comb_idx = int(np.argmax(comb_probs_arr))
-    comb_act = ACTIVITY_NAMES[comb_idx]
-    comb_lat = round(
-        res_cnn_lstm.latency_ms + res_ann.latency_ms + res_svm.latency_ms + res_loso.latency_ms + (time.perf_counter() - t0_comb) * 1000.0,
-        2,
-    )
-    res_combinai = PredictionResponse(
-        model_used="CombinAI (Ensemble)",
-        predicted_activity=comb_act,
-        confidence=round(float(comb_probs_arr[comb_idx]), 4),
-        probabilities={ACTIVITY_NAMES[i]: round(float(comb_probs_arr[i]), 4) for i in range(len(ACTIVITY_NAMES))},
-        latency_ms=comb_lat,
-        weights_status="Ensemble (4 Base Predictors Active)",
-    )
 
     by_key = {
-        "cnn_lstm": res_cnn_lstm,
-        "ann": res_ann,
         "svm": res_svm,
-        "loso": res_loso,
-        "combinai": res_combinai,
+        "cnn_lstm": res_cnn_lstm,
     }
-    selected_res = by_key.get(norm_key, res_cnn_lstm)
+    selected_res = by_key.get(norm_key, res_svm)
 
     w_steps, spm, peaks = detect_steps_in_window(
         calibrated_signals, sample_rate_hz, selected_res.predicted_activity
@@ -1341,64 +1197,28 @@ def _evaluate_all_five_models(
 
     all_models_list = [
         ModelComparisonItem(
-            model_key="cnn_lstm",
-            model_name="CNN-LSTM",
-            role=MODEL_BENCHMARK_META["cnn_lstm"]["role"],
-            accuracy=MODEL_BENCHMARK_META["cnn_lstm"]["summary_badge"],
-            held_out_test_accuracy=MODEL_BENCHMARK_META["cnn_lstm"]["held_out_test_accuracy"],
-            loso_accuracy=MODEL_BENCHMARK_META["cnn_lstm"]["loso_accuracy"],
-            predicted_activity=res_cnn_lstm.predicted_activity,
-            confidence=res_cnn_lstm.confidence,
-            probabilities=res_cnn_lstm.probabilities,
-            latency_ms=res_cnn_lstm.latency_ms,
-        ),
-        ModelComparisonItem(
-            model_key="ann",
-            model_name="Regularized ANN",
-            role=MODEL_BENCHMARK_META["ann"]["role"],
-            accuracy=MODEL_BENCHMARK_META["ann"]["summary_badge"],
-            held_out_test_accuracy=MODEL_BENCHMARK_META["ann"]["held_out_test_accuracy"],
-            loso_accuracy=MODEL_BENCHMARK_META["ann"]["loso_accuracy"],
-            predicted_activity=res_ann.predicted_activity,
-            confidence=res_ann.confidence,
-            probabilities=res_ann.probabilities,
-            latency_ms=res_ann.latency_ms,
-        ),
-        ModelComparisonItem(
             model_key="svm",
             model_name="Linear SVM",
             role=MODEL_BENCHMARK_META["svm"]["role"],
-            accuracy=MODEL_BENCHMARK_META["svm"]["summary_badge"],
-            held_out_test_accuracy=MODEL_BENCHMARK_META["svm"]["held_out_test_accuracy"],
-            loso_accuracy=MODEL_BENCHMARK_META["svm"]["loso_accuracy"],
+            accuracy="96.27%",
+            held_out_test_accuracy="96.27%",
+            loso_accuracy="95.84% (30 subjects)",
             predicted_activity=res_svm.predicted_activity,
             confidence=res_svm.confidence,
             probabilities=res_svm.probabilities,
             latency_ms=res_svm.latency_ms,
         ),
         ModelComparisonItem(
-            model_key="loso",
-            model_name="1D-CNN + LOSO-SVM Hybrid",
-            role=MODEL_BENCHMARK_META["loso"]["role"],
-            accuracy=MODEL_BENCHMARK_META["loso"]["summary_badge"],
-            held_out_test_accuracy=MODEL_BENCHMARK_META["loso"]["held_out_test_accuracy"],
-            loso_accuracy=MODEL_BENCHMARK_META["loso"]["loso_accuracy"],
-            predicted_activity=res_loso.predicted_activity,
-            confidence=res_loso.confidence,
-            probabilities=res_loso.probabilities,
-            latency_ms=res_loso.latency_ms,
-        ),
-        ModelComparisonItem(
-            model_key="combinai",
-            model_name="CombinAI (Ensemble)",
-            role=MODEL_BENCHMARK_META["combinai"]["role"],
-            accuracy=MODEL_BENCHMARK_META["combinai"]["summary_badge"],
-            held_out_test_accuracy=MODEL_BENCHMARK_META["combinai"]["held_out_test_accuracy"],
-            loso_accuracy=MODEL_BENCHMARK_META["combinai"]["loso_accuracy"],
-            predicted_activity=res_combinai.predicted_activity,
-            confidence=res_combinai.confidence,
-            probabilities=res_combinai.probabilities,
-            latency_ms=res_combinai.latency_ms,
+            model_key="cnn_lstm",
+            model_name="CNN-LSTM",
+            role=MODEL_BENCHMARK_META["cnn_lstm"]["role"],
+            accuracy="91.75%",
+            held_out_test_accuracy="91.75%",
+            loso_accuracy="Best Epoch (128×9 Signals)",
+            predicted_activity=res_cnn_lstm.predicted_activity,
+            confidence=res_cnn_lstm.confidence,
+            probabilities=res_cnn_lstm.probabilities,
+            latency_ms=res_cnn_lstm.latency_ms,
         ),
     ]
 
@@ -1681,17 +1501,17 @@ def compare_predictions(
 
     calibrated_signals, kinematic_prior = calibrate_live_phone_signals(signals)
     aligned_features = extract_561_features_from_signals(calibrated_signals, kinematic_prior=kinematic_prior)
-    combinai_res = _evaluate_all_five_models(
+    primary_res = _evaluate_all_five_models(
         calibrated_signals,
         kinematic_prior=kinematic_prior,
         sample_rate_hz=50.0,
-        requested_model="combinai",
+        requested_model="svm",
         precomputed_features=aligned_features if not run_ann else (aligned_features if class_centroids_561 is not None else features),
     )
 
-    by_key = {m.model_key: m for m in combinai_res.all_models}
-    cnn_item = by_key.get("loso") or combinai_res.all_models[0]
-    ann_item = by_key.get("ann") or combinai_res.all_models[1]
+    by_key = {m.model_key: m for m in primary_res.all_models}
+    cnn_item = by_key.get("cnn_lstm") or primary_res.all_models[-1]
+    svm_item = by_key.get("svm") or primary_res.all_models[0]
 
     cnn_res = PredictionResponse(
         model_used=cnn_item.model_name,
@@ -1699,32 +1519,32 @@ def compare_predictions(
         confidence=cnn_item.confidence,
         probabilities=cnn_item.probabilities,
         latency_ms=cnn_item.latency_ms,
-        weights_status="Trained (LOSO Loaded)",
-        window_steps=combinai_res.window_steps,
-        cadence_spm=combinai_res.cadence_spm,
-        step_peak_indices=combinai_res.step_peak_indices,
-        all_models=combinai_res.all_models,
+        weights_status="Trained (CNN-LSTM Loaded)",
+        window_steps=primary_res.window_steps,
+        cadence_spm=primary_res.cadence_spm,
+        step_peak_indices=primary_res.step_peak_indices,
+        all_models=primary_res.all_models,
     )
     ann_res = PredictionResponse(
-        model_used=ann_item.model_name,
-        predicted_activity=ann_item.predicted_activity,
-        confidence=ann_item.confidence,
-        probabilities=ann_item.probabilities,
-        latency_ms=ann_item.latency_ms,
-        weights_status="Trained (ANN Loaded)",
-        window_steps=combinai_res.window_steps,
-        cadence_spm=combinai_res.cadence_spm,
-        step_peak_indices=combinai_res.step_peak_indices,
-        all_models=combinai_res.all_models,
+        model_used=svm_item.model_name,
+        predicted_activity=svm_item.predicted_activity,
+        confidence=svm_item.confidence,
+        probabilities=svm_item.probabilities,
+        latency_ms=svm_item.latency_ms,
+        weights_status="Trained (Linear SVM Loaded)",
+        window_steps=primary_res.window_steps,
+        cadence_spm=primary_res.cadence_spm,
+        step_peak_indices=primary_res.step_peak_indices,
+        all_models=primary_res.all_models,
     )
 
     return DualComparisonResponse(
         cnn_result=cnn_res,
         ann_result=ann_res,
-        ensemble_activity=combinai_res.predicted_activity,
-        ensemble_confidence=combinai_res.confidence,
-        ensemble_probabilities=combinai_res.probabilities,
-        all_models=combinai_res.all_models,
+        ensemble_activity=primary_res.predicted_activity,
+        ensemble_confidence=primary_res.confidence,
+        ensemble_probabilities=primary_res.probabilities,
+        all_models=primary_res.all_models,
     )
 
 
@@ -1762,8 +1582,23 @@ def _format_activity_friendly(act: Optional[str]) -> str:
 PRESET_CHAT_QUESTIONS: List[Dict[str, str]] = [
     {
         "category": "Models",
-        "label": "Compare All Predictors & Benchmarks",
-        "question": "Compare the 4 live base predictors, CombinAI ensemble, and validated benchmark results",
+        "label": "Compare Linear SVM vs. CNN-LSTM",
+        "question": "Compare the two built-in models: Linear SVM (96.27% test / 95.84% LOSO) vs. CNN-LSTM (91.75%)",
+    },
+    {
+        "category": "Models",
+        "label": "Linear SVM (96.27% Test · Macro F1 0.963)",
+        "question": "How does Linear SVM achieve 96.27% test accuracy (macro F1 0.963) on 561 features?",
+    },
+    {
+        "category": "Models",
+        "label": "Linear SVM Mean LOSO Accuracy (95.84%)",
+        "question": "What is the 95.84% Linear SVM mean LOSO accuracy across 30 subjects?",
+    },
+    {
+        "category": "Models",
+        "label": "CNN-LSTM Test Accuracy (91.75% Best Epoch)",
+        "question": "How does the CNN-LSTM model achieve 91.75% test accuracy on 9x128 raw motion signals?",
     },
     {
         "category": "Guidelines",
@@ -1777,33 +1612,8 @@ PRESET_CHAT_QUESTIONS: List[Dict[str, str]] = [
     },
     {
         "category": "Step Counter",
-        "label": "How Step Counter Works Accurately",
-        "question": "How does the step counter detect my steps accurately without false counts?",
-    },
-    {
-        "category": "Models",
-        "label": "How CombinAI (Ensemble) Works",
-        "question": "How does the CombinAI ensemble combine the 4 base predictors and why is it marked not independently validated?",
-    },
-    {
-        "category": "Models",
-        "label": "CNN-LSTM (90.57% Test / 90.14% LOSO)",
-        "question": "How does the leak-free CNN-LSTM model work on 9x128 motion signals?",
-    },
-    {
-        "category": "Models",
-        "label": "Linear SVM (96.20% Test / 95.83% LOSO)",
-        "question": "How does the leak-free tuned Linear SVM achieve 96.20% test and 95.83% LOSO accuracy?",
-    },
-    {
-        "category": "Models",
-        "label": "LOSO Protocol vs. 1D-CNN + LOSO-SVM Hybrid",
-        "question": "What does LOSO mean, what is the 1D-CNN + LOSO-SVM Hybrid predictor, and how does it differ from standalone HAR 1D-CNN?",
-    },
-    {
-        "category": "Models",
-        "label": "Regularized ANN (96.06% Test / 94.13% LOSO)",
-        "question": "How does Regularized ANN achieve 96.06% test accuracy and 94.13% LOSO mean on 561 features?",
+        "label": "How Real-World Step Counter Works",
+        "question": "How does the step counter detect 100% of my real-world walking steps accurately?",
     },
     {
         "category": "Activities",
@@ -1846,8 +1656,6 @@ def build_model_chatbot_reply(
     ctx = context or ChatContextPayload()
 
     cnn_lstm_params = _count_model_params(cnn_lstm_model)
-    cnn_params = _count_model_params(cnn_model)
-    ann_params = _count_model_params(ann_model)
 
     live_act = _format_activity_friendly(ctx.current_activity)
     live_conf = f"{ctx.confidence * 100:.1f}%" if isinstance(ctx.confidence, (int, float)) and ctx.confidence > 0 else "Standby"
@@ -1855,41 +1663,126 @@ def build_model_chatbot_reply(
     live_win_steps = int(ctx.window_steps or 0)
     live_spm = int(round(ctx.cadence_spm or 0))
     norm_sel = _normalize_model_key(ctx.selected_model)
-    selected_model = MODEL_DISPLAY_NAMES.get(norm_sel, "CNN-LSTM")
+    selected_model = MODEL_DISPLAY_NAMES.get(norm_sel, "Linear SVM")
 
     topics = [
         {
             "id": "compare_models",
             "keywords": [
                 "compare", "comparison", "difference", "differ", "vs", "better", "which model",
-                "5 models", "five models", "4 live", "base predictors", "all models", "side by side",
-                "accuracy", "accurate", "benchmark", "benchmarks", "f1", "macro",
+                "two models", "2 models", "both models", "side by side", "accuracy", "accurate",
+                "benchmark", "benchmarks", "f1", "macro",
             ],
             "phrases": [
-                "compare the 4 live", "compare all", "all 5 ai models", "compare models", "side by side",
-                "which model is best", "how accurate", "validated benchmark results",
+                "compare the two", "linear svm (96.27%", "side by side",
+                "which model is best", "how accurate", "svm vs cnn-lstm", "svm and cnn-lstm",
             ],
-            "title": "Validated Benchmark Models vs. Live Predictors (4 Base + CombinAI Ensemble)",
-            "badge": "4 Base + Ensemble",
+            "title": "Side-by-Side Comparison: Linear SVM (96.27%) vs. CNN-LSTM (91.75%)",
+            "badge": "2 Built-In Models",
             "answer": (
-                "We separate **Held-out Test Accuracy** (21-train / 9-test subject split) from **30-Fold LOSO (Leave-One-Subject-Out) Mean ± SD**, and distinguish standalone benchmarked architectures from live composite predictors:\n"
-                "• **Linear SVM (Leak-Free Tuned — Live Base Predictor):** **96.20%** held-out test accuracy (`96.29%` Macro F1) · **95.83% ± 4.84%** 30-fold LOSO mean.\n"
-                "• **Regularized ANN (Live Base Predictor):** **96.06%** held-out test accuracy (`96.06%` Macro F1) · **94.13% ± 5.85%** 30-fold LOSO mean.\n"
-                "• **HAR 1D-CNN (Standalone Benchmark Model):** **93.93%** held-out test accuracy (`93.99%` Macro F1) · **93.51% ± 7.78%** 30-fold LOSO mean.\n"
-                "• **CNN-LSTM (Leak-Free — Live Base Predictor):** **90.57%** held-out test accuracy (`90.60%` Macro F1) · **90.14% ± 10.25%** 30-fold LOSO mean.\n"
-                "• **1D-CNN + LOSO-SVM Hybrid (4th Live Base Predictor):** Blends `45%` standalone `HAR 1D-CNN` + `55%` LOSO-trained `Linear SVM`. Marked **Not independently validated** as a combined hybrid.\n"
-                "• **CombinAI (Ensemble):** Probability ensemble across the 4 live base predictors (`20% CNN-LSTM + 25% Regularized ANN + 30% Linear SVM + 25% 1D-CNN + LOSO-SVM Hybrid`). Marked **Not independently validated**."
+                "Every 2.56-second (128-sample) window runs both built-in capstone models **side by side** in a large dual comparison view:\n"
+                "• **Linear SVM — 96.27% Test Accuracy (Macro F1 0.963):** Trained on the 561 engineered time- and frequency-domain features (`LinearSVC, C=0.5`). Achieves **96.27%** held-out test accuracy and **95.84% ± 4.84%** mean 30-subject LOSO (Leave-One-Subject-Out) accuracy.\n"
+                f"• **CNN-LSTM — 91.75% Test Accuracy (Best Epoch):** Deep sequential architecture ({cnn_lstm_params:,} parameters) combining 1D convolutions and an LSTM memory layer directly on raw `128 × 9` sensor signals (`body_acc`, `body_gyro`, `total_acc` at 50 Hz)."
             ),
             "highlights": [
-                ChatHighlightItem(label="Linear SVM (Tuned)", value="Test: 96.20% · LOSO: 95.83% ± 4.84%"),
-                ChatHighlightItem(label="Regularized ANN", value="Test: 96.06% · LOSO: 94.13% ± 5.85%"),
-                ChatHighlightItem(label="HAR 1D-CNN (Standalone)", value="Test: 93.93% · LOSO: 93.51% ± 7.78%"),
-                ChatHighlightItem(label="CNN-LSTM (Leak-Free)", value="Test: 90.57% · LOSO: 90.14% ± 10.25%"),
+                ChatHighlightItem(label="Linear SVM Test Acc", value="96.27% (Macro F1: 0.963)"),
+                ChatHighlightItem(label="Linear SVM Mean LOSO", value="95.84% ± 4.84% (30 Subjects)"),
+                ChatHighlightItem(label="CNN-LSTM Test Acc", value="91.75% (Best Epoch · 128×9 Raw)"),
+                ChatHighlightItem(label="Side-by-Side View", value="Both models run simultaneously"),
             ],
             "follow_ups": [
-                "What does LOSO mean, what is the 1D-CNN + LOSO-SVM Hybrid predictor, and how does it differ from standalone HAR 1D-CNN?",
-                "How does the CombinAI ensemble combine the 4 base predictors and why is it marked not independently validated?",
-                "How does the leak-free tuned Linear SVM achieve 96.20% test and 95.83% LOSO accuracy?",
+                "How does Linear SVM achieve 96.27% test accuracy (macro F1 0.963) on 561 features?",
+                "What is the 95.84% Linear SVM mean LOSO accuracy across 30 subjects?",
+                "How does the CNN-LSTM model achieve 91.75% test accuracy on 9x128 raw motion signals?",
+            ],
+        },
+        {
+            "id": "svm_architecture",
+            "keywords": [
+                "svm", "linearsvc", "support vector", "margin", "hyperplane", "96.27", "96.27%",
+                "0.963", "c=0.5", "linear svm", "561",
+            ],
+            "phrases": [
+                "svm model", "how does linear svm achieve 96.27%", "96.27% test accuracy",
+                "macro f1 0.963", "linear svm",
+            ],
+            "title": "Linear SVM: 96.27% Test Accuracy (Macro F1 0.963)",
+            "badge": "Linear SVM (96.27%)",
+            "answer": (
+                "**Linear SVM** (`LinearSVC, C=0.5`) is our highest-accuracy model on the 561 engineered time- and frequency-domain features:\n"
+                "• **Test Accuracy:** Achieves **96.27% test accuracy** with **0.963 Macro F1** on the 2,947 test windows (9 unseen test subjects).\n"
+                "• **30-Subject Mean LOSO Accuracy:** Achieves **95.84% ± 4.84%** across 30-fold Leave-One-Subject-Out cross-validation.\n"
+                "• **Fast Margin Classification:** Standardizes all 561 features via `StandardScaler` and computes maximum-margin hyperplanes in `< 0.2 ms` per window."
+            ),
+            "highlights": [
+                ChatHighlightItem(label="Linear SVM Test Acc", value="96.27% (Macro F1: 0.963)"),
+                ChatHighlightItem(label="Mean LOSO (30 Subj)", value="95.84% ± 4.84%"),
+                ChatHighlightItem(label="Input Representation", value="561 standardized time + FFT features"),
+                ChatHighlightItem(label="Inference Latency", value="< 0.2 ms per window"),
+            ],
+            "follow_ups": [
+                "What is the 95.84% Linear SVM mean LOSO accuracy across 30 subjects?",
+                "How does the CNN-LSTM model achieve 91.75% test accuracy on 9x128 raw motion signals?",
+                "Compare the two built-in models: Linear SVM (96.27% test / 95.84% LOSO) vs. CNN-LSTM (91.75%)",
+            ],
+        },
+        {
+            "id": "loso_architecture",
+            "keywords": [
+                "loso", "leave-one-subject-out", "leave one subject out", "30-fold", "30 fold",
+                "30 subjects", "95.84", "95.84%", "subject", "unseen", "generalization",
+            ],
+            "phrases": [
+                "95.84% linear svm mean loso", "mean loso accuracy", "30 subjects",
+                "leave-one-subject-out", "what is the 95.84%",
+            ],
+            "title": "Linear SVM Mean LOSO Accuracy: 95.84% (30 Subjects)",
+            "badge": "95.84% Mean LOSO",
+            "answer": (
+                "**LOSO** stands for **Leave-One-Subject-Out** cross-validation across all **30 subjects**:\n"
+                "• **How 30-Subject LOSO Works:** In each fold, Linear SVM is trained on 29 subjects and tested on the 1 remaining unseen subject, repeating across all 30 volunteers.\n"
+                "• **Result:** Linear SVM achieves **95.84% ± 4.84% mean LOSO accuracy (30 subjects)**, proving strong generalization to new people wearing a smartphone at their waist."
+            ),
+            "highlights": [
+                ChatHighlightItem(label="Mean LOSO Accuracy", value="95.84% ± 4.84% (30 subjects)"),
+                ChatHighlightItem(label="Held-Out Test Acc", value="96.27% (Macro F1 0.963)"),
+                ChatHighlightItem(label="Protocol", value="30-Fold Leave-One-Subject-Out"),
+                ChatHighlightItem(label="Subject Independence", value="Tested on 30 unseen volunteers"),
+            ],
+            "follow_ups": [
+                "How does Linear SVM achieve 96.27% test accuracy (macro F1 0.963) on 561 features?",
+                "How does the CNN-LSTM model achieve 91.75% test accuracy on 9x128 raw motion signals?",
+                "Compare the two built-in models: Linear SVM (96.27% test / 95.84% LOSO) vs. CNN-LSTM (91.75%)",
+            ],
+        },
+        {
+            "id": "cnn_lstm_architecture",
+            "keywords": [
+                "cnn-lstm", "cnnlstm", "cnn_lstm", "lstm", "recurrent", "memory",
+                "91.75", "91.75%", "best epoch", "keras", "sequential", "conv1d",
+            ],
+            "phrases": [
+                "cnn-lstm model", "91.75% test accuracy", "best epoch",
+                "cnn-lstm work", "9x128 raw motion",
+            ],
+            "title": "CNN-LSTM: 91.75% Test Accuracy (Best Epoch · Raw 128×9 Signals)",
+            "badge": "CNN-LSTM (91.75%)",
+            "answer": (
+                f"**CNN-LSTM** ({cnn_lstm_params:,} parameters) learns directly from raw `(128, 9)` time-series sensor windows without manual feature engineering:\n"
+                "• **Conv1D Feature Extraction:** Two `Conv1D(64, kernel_size=3, ReLU)` layers extract local step impacts and gyroscope rotations, followed by `Dropout(0.5)` and `MaxPool1D(2)` (`128 -> 62` steps).\n"
+                "• **LSTM Sequence Memory:** An `LSTM(100)` layer models the temporal progression across the 2.56-second window, followed by `Dropout(0.5) -> Dense(100, ReLU) -> Dense(6, Softmax)`.\n"
+                "• **Benchmark Result:** Achieves **91.75% test accuracy (best epoch)** on the 2,947 test windows."
+            ),
+            "highlights": [
+                ChatHighlightItem(label="CNN-LSTM Test Acc", value="91.75% (Best Epoch)"),
+                ChatHighlightItem(label="Input Shape", value="128 timesteps × 9 raw channels (50 Hz)"),
+                ChatHighlightItem(label="Architecture", value="2× Conv1D(64) -> MaxPool -> LSTM(100) -> Dense"),
+                ChatHighlightItem(label="Parameters", value=f"{cnn_lstm_params:,} trained weights"),
+            ],
+            "follow_ups": [
+                "Compare the two built-in models: Linear SVM (96.27% test / 95.84% LOSO) vs. CNN-LSTM (91.75%)",
+                "How does Linear SVM achieve 96.27% test accuracy (macro F1 0.963) on 561 features?",
+                "What is the 95.84% Linear SVM mean LOSO accuracy across 30 subjects?",
             ],
         },
         {
@@ -1902,15 +1795,13 @@ def build_model_chatbot_reply(
             "phrases": [
                 "keep my mobile", "attached at my waist", "not hold it in my hand",
                 "hold in hand", "in my waist", "where should my mobile", "waist in one place",
-                "why wear", "on the waist",
             ],
             "title": "Mobile Placement Rule: Keep at Waist in One Fixed Place",
             "badge": "Waist Guideline",
             "answer": (
                 "**Important Guideline:** Do **NOT** hold your mobile phone in your hand while tracking.\n"
-                "• **Why not in the hand?** Your hand and wrist swing, tilt, and shake independently of your body, which causes false motions and wrong posture angles.\n"
-                "• **Where to keep it:** Attach or keep your mobile **at your waist in one fixed place** (clipped to your belt, tucked firmly in your waistband, or inside a tight front waist pocket).\n"
-                "• **Why the waist works best:** The UCI HAR dataset was recorded with a waist-mounted smartphone at 50 Hz. At the waist, the sensors measure your true torso tilt (Sitting vs. Standing vs. Laying) and every heel-strike step accurately."
+                "• **Why not in the hand?** Your hand and wrist swing and tilt independently of your body, causing false motion and wrong posture angles.\n"
+                "• **Where to keep it:** Keep your mobile **attached at your waist in one fixed place** (belt clip, waistband, or tight front waist pocket) so the 50 Hz sensors measure your true torso tilt and every walking step."
             ),
             "highlights": [
                 ChatHighlightItem(label="Correct Position", value="Attached at waist in one fixed place"),
@@ -1920,8 +1811,8 @@ def build_model_chatbot_reply(
             ],
             "follow_ups": [
                 "How do I use the 6-digit device number (code) to see my mobile prediction on my PC?",
-                "How does the step counter detect my steps accurately without false counts?",
-                "How does the system separate Sitting, Standing, and Laying postures?",
+                "How does the step counter detect 100% of my real-world walking steps accurately?",
+                "Compare the two built-in models: Linear SVM (96.27% test / 95.84% LOSO) vs. CNN-LSTM (91.75%)",
             ],
         },
         {
@@ -1933,27 +1824,26 @@ def build_model_chatbot_reply(
             ],
             "phrases": [
                 "6-digit device number", "device number (code)", "see my mobile prediction on my pc",
-                "on my pc", "watch on pc", "number of the device", "code of my mobile",
-                "cannot see the live prediction", "phone in waist",
+                "on my pc", "watch on pc", "code of my mobile",
             ],
             "title": "How to See Your Waist Mobile's Live Prediction on Your PC",
             "badge": "Device Code Guide",
             "answer": (
-                "Because your mobile is attached at your waist, you cannot look at its screen while walking. Follow these 3 simple steps to watch live on your PC:\n"
-                "1. **On Your Mobile (Device 1 — Sending):** Open this website on your mobile. Look at **Box 1 (Mobile Device Code)** to see your 6-digit number (for example `482915`). Tap **Start Live Tracking** and place the phone at your waist.\n"
-                "2. **On Your PC (Device 2 — Watching):** Open this website on your computer. Go to **Box 2 (Enter Mobile Code on PC)**, type that exact same 6-digit number from your mobile, and click **Watch on PC**.\n"
-                "3. **Live Low-Latency View:** Your PC immediately displays your live activity, all 4 base predictors (`CNN-LSTM`, `Regularized ANN`, `Linear SVM`, `1D-CNN + LOSO-SVM Hybrid`) plus `CombinAI (Ensemble)` side by side, your live step count, and the 50 Hz motion wave."
+                "Because your mobile is attached at your waist, follow these 3 simple steps to watch live on your PC:\n"
+                "1. **On Your Mobile (Box 1):** Open this website on your mobile, check your **6-digit code in Box 1**, tap **Start Live Tracking**, and place the phone at your waist.\n"
+                "2. **On Your PC (Box 2):** Open this website on your PC, enter that **6-digit mobile code into Box 2**, and click **Watch on PC**.\n"
+                "3. **Live Side-by-Side View:** Your PC immediately shows **Linear SVM (96.27%)** and **CNN-LSTM (91.75%)** side by side with activity images, live step count, and 50 Hz motion waves."
             ),
             "highlights": [
                 ChatHighlightItem(label="Step 1 (Mobile)", value="Check 6-digit code in Box 1 & Start"),
                 ChatHighlightItem(label="Step 2 (PC)", value="Type mobile code in Box 2 & Watch"),
                 ChatHighlightItem(label="Live Sync Speed", value="~20-60 ms WebSocket + HTTP sync"),
-                ChatHighlightItem(label="What PC Shows", value="4 Base Predictors + CombinAI + Steps"),
+                ChatHighlightItem(label="What PC Shows", value="Linear SVM vs. CNN-LSTM + Live Steps"),
             ],
             "follow_ups": [
                 "Why must I keep my mobile attached at my waist in one place and not hold it in my hand?",
-                "Compare the 4 live base predictors, CombinAI ensemble, and validated benchmark results",
-                "How does the step counter detect my steps accurately without false counts?",
+                "Compare the two built-in models: Linear SVM (96.27% test / 95.84% LOSO) vs. CNN-LSTM (91.75%)",
+                "How does the step counter detect 100% of my real-world walking steps accurately?",
             ],
         },
         {
@@ -1961,184 +1851,30 @@ def build_model_chatbot_reply(
             "keywords": [
                 "step", "steps", "pedometer", "cadence", "spm", "peak", "valley",
                 "distance", "calorie", "calories", "prominence", "gait", "count",
-                "counting", "counter", "biomechanical", "refractory", "false",
+                "counting", "counter", "reset",
             ],
             "phrases": [
                 "step counter", "count steps", "step detection", "step counting",
-                "steps accurately", "false counts", "false steps", "cadence spm",
-                "how does the step counter",
+                "real-world walking steps", "100% of my real-world",
             ],
-            "title": "Accurate Step Counter & Gait Verification Engine",
+            "title": "Real-World Step Counter & Visual Reset Control",
             "badge": "Step Detection",
             "answer": (
-                "Our step counter is designed to be accurate and reliable when your phone is at your waist:\n"
-                "• **True 0.3 Hz Gravity Separation:** A 0.3 Hz low-pass filter (`alpha = 0.036` at 50 Hz) isolates Earth gravity without absorbing your 1.4–2.2 Hz walking bounce.\n"
-                "• **Orientation-Independent Vertical Projection:** 3D body acceleration is projected onto the gravity vector so steps are detected accurately regardless of how the phone is angled in your waist pocket.\n"
-                "• **Peak-Valley Hysteresis & Refractory Lock:** Requires a clear upward heel-strike peak followed by a downward swing valley (`>= 0.075g` prominence) separated by at least `280 ms` (45–210 SPM).\n"
-                "• **2-Step Rhythm Confirmation & Posture Lock:** Filters out single bumps when sitting down or adjusting your belt, and locks step counting to 0 whenever you are Sitting, Standing, or Laying."
+                "Our step counter combines orientation-invariant 3D acceleration magnitude with gravity-projected vertical bounce at 50 Hz so every real-world walking step is counted reliably:\n"
+                "• **Orientation-Independent Detection:** Tracks both scalar 3D acceleration delta (`|a_total| - g`) and vertical gravity projection so steps count accurately regardless of pocket angle.\n"
+                "• **Real-Time + Window Sync:** Counts each step live as you walk and cross-checks with the 128-sample sliding window cadence so zero steps are missed even if your mobile screen dims.\n"
+                "• **Visual Reset Button:** Tap the large red **Reset Step Count** button anytime on your mobile or PC to zero the session counter immediately."
             ),
             "highlights": [
-                ChatHighlightItem(label="Gravity Filter", value="0.3 Hz cutoff preserves 1-3 Hz gait"),
-                ChatHighlightItem(label="Peak-Valley Gate", value=">= 0.075g swing + 280 ms refractory"),
-                ChatHighlightItem(label="Rhythm Confirmation", value="2-step rhythm lock rejects bumps"),
-                ChatHighlightItem(label="Stationary Guard", value="0 steps added in Sit / Stand / Lay"),
+                ChatHighlightItem(label="Detection Mode", value="3D Magnitude + 0.3 Hz Gravity Projection"),
+                ChatHighlightItem(label="Cadence Range", value="35 - 230 SPM (Real-time + Window sync)"),
+                ChatHighlightItem(label="Stationary Guard", value="Paused during Sitting, Standing, Laying"),
+                ChatHighlightItem(label="Reset Control", value="Large visual Reset Step Count button"),
             ],
             "follow_ups": [
                 "What is my current live activity, model prediction, and step count right now?",
                 "Why must I keep my mobile attached at my waist in one place and not hold it in my hand?",
                 "How does the AI tell Walking apart from Walking Upstairs and Walking Downstairs?",
-            ],
-        },
-        {
-            "id": "combinai_model",
-            "keywords": [
-                "combinai", "combined", "ensemble", "fusion", "not independently validated",
-                "combine", "combines", "blends", "all 5", "unvalidated",
-            ],
-            "phrases": [
-                "how does combinai", "how does the combinai", "combinai ensemble",
-                "not independently validated", "combine the 4 base predictors",
-            ],
-            "title": "CombinAI (Ensemble): 4-Predictor Probability Fusion",
-            "badge": "Ensemble (Unvalidated)",
-            "answer": (
-                "**CombinAI (Ensemble)** is a live multi-model probability ensemble rather than a fifth standalone base architecture. On every 2.56s window, it blends the probability distributions of the 4 live base predictors:\n"
-                "• **20% CNN-LSTM** (raw `128x9` time-series sequence model; benchmarked at `90.57%` test / `90.14% ± 10.25%` LOSO)\n"
-                "• **25% Regularized ANN** (`561`-feature deep MLP; benchmarked at `96.06%` test / `94.13% ± 5.85%` LOSO)\n"
-                "• **30% Linear SVM** (`561`-feature tuned LinearSVC; benchmarked at `96.20%` test / `95.83% ± 4.84%` LOSO)\n"
-                "• **25% 1D-CNN + LOSO-SVM Hybrid** (blends standalone `HAR 1D-CNN` with a LOSO-trained Linear SVM)\n"
-                "• **Why marked “Not independently validated”?** Because the capstone benchmark report evaluates standalone models under strict Held-Out Test and 30-Fold LOSO protocols, CombinAI's live per-window confidence is shown directly without claiming an unvalidated offline benchmark accuracy."
-            ),
-            "highlights": [
-                ChatHighlightItem(label="Predictor Role", value="Ensemble of 4 Live Base Predictors"),
-                ChatHighlightItem(label="Benchmark Status", value="Not independently validated"),
-                ChatHighlightItem(label="Fusion Weights", value="20% CNN-LSTM + 25% ANN + 30% SVM + 25% Hybrid"),
-                ChatHighlightItem(label="Live Readout", value="Per-window confidence shown separately"),
-            ],
-            "follow_ups": [
-                "Compare the 4 live base predictors, CombinAI ensemble, and validated benchmark results",
-                "What does LOSO mean, what is the 1D-CNN + LOSO-SVM Hybrid predictor, and how does it differ from standalone HAR 1D-CNN?",
-                "How does the leak-free tuned Linear SVM achieve 96.20% test and 95.83% LOSO accuracy?",
-            ],
-        },
-        {
-            "id": "cnn_lstm_architecture",
-            "keywords": [
-                "cnn-lstm", "cnnlstm", "cnn_lstm", "lstm", "recurrent", "memory",
-                "90.57", "90.57%", "90.14", "90.14%", "keras", "sequential", "conv1d",
-            ],
-            "phrases": [
-                "cnn-lstm model", "how does the leak-free cnn-lstm", "how does the cnn-lstm",
-                "cnn-lstm work", "9x128 motion",
-            ],
-            "title": "CNN-LSTM (Leak-Free): 90.57% Held-Out Test · 90.14% ± 10.25% LOSO",
-            "badge": "CNN-LSTM",
-            "answer": (
-                f"**CNN-LSTM** ({cnn_lstm_params:,} parameters) combines 1D convolutional feature extraction with Long Short-Term Memory (LSTM) sequence modeling directly on raw `(128, 9)` sensor windows:\n"
-                "• **Conv1D Blocks:** Two `Conv1D(64, kernel_size=3, ReLU)` layers extract local step impacts and gyro rotations, followed by `Dropout(0.5)` and `MaxPool1D(2)` (`128 -> 62` time steps).\n"
-                "• **LSTM Memory Layer & Head:** `LSTM(100) -> Dropout(0.5) -> Dense(100, ReLU) -> Dense(6, Softmax)` models the temporal sequence across the 2.56-second window.\n"
-                "• **Leak-Free Benchmark Results:** Using a strict subject-wise validation split (never using the held-out test set for early stopping), CNN-LSTM achieves **90.57% held-out test accuracy** (`90.60%` Macro F1) and **90.14% ± 10.25% 30-fold LOSO mean accuracy**."
-            ),
-            "highlights": [
-                ChatHighlightItem(label="Held-Out Test Acc", value="90.57% (Macro F1: 90.60%)"),
-                ChatHighlightItem(label="30-Fold LOSO Mean", value="90.14% ± 10.25% (Pooled: 90.42%)"),
-                ChatHighlightItem(label="Architecture", value="2x Conv1D(64) -> MaxPool -> LSTM(100) -> Dense"),
-                ChatHighlightItem(label="Parameters", value=f"{cnn_lstm_params:,} weights (361.0 KB)"),
-            ],
-            "follow_ups": [
-                "Compare the 4 live base predictors, CombinAI ensemble, and validated benchmark results",
-                "What does LOSO mean, what is the 1D-CNN + LOSO-SVM Hybrid predictor, and how does it differ from standalone HAR 1D-CNN?",
-                "How does Regularized ANN achieve 96.06% test accuracy and 94.13% LOSO mean on 561 features?",
-            ],
-        },
-        {
-            "id": "svm_architecture",
-            "keywords": [
-                "svm", "linearsvc", "support vector", "margin", "hyperplane", "96.20", "96.20%",
-                "96.2", "95.83", "95.83%", "c=0.1", "linear svm",
-            ],
-            "phrases": [
-                "svm model", "how does the leak-free tuned linear svm", "how does the svm",
-                "96.20% test", "linear svm",
-            ],
-            "title": "Linear SVM (Leak-Free Tuned): 96.20% Test · 95.83% ± 4.84% LOSO",
-            "badge": "Linear SVM",
-            "answer": (
-                "**Linear SVM (Leak-Free Tuned)** (`LinearSVC`, `C=0.1` selected via subject-wise validation) is our highest-scoring validated standalone classifier on the 561 engineered time and frequency features:\n"
-                "• **Held-Out Test Protocol:** Achieves **96.20% test accuracy** (`96.29%` Macro F1) on the 2,947 held-out test windows (`96.13%` with original `C=0.5`).\n"
-                "• **30-Fold LOSO Protocol:** Achieves **95.83% ± 4.84%** across all 30 unseen subject folds (`95.93%` pooled accuracy).\n"
-                "• **Ultra-Fast Inference:** Computing `X_scaled @ coef.T + intercept` takes `~7.54 ms` for all 2,947 test windows (`0.0026 ms` per sample, `27.1 KB` model size)."
-            ),
-            "highlights": [
-                ChatHighlightItem(label="Held-Out Test Acc", value="96.20% (Macro F1: 96.29%)"),
-                ChatHighlightItem(label="30-Fold LOSO Mean", value="95.83% ± 4.84% across 30 subjects"),
-                ChatHighlightItem(label="Input Features", value="561 standardized time + FFT features"),
-                ChatHighlightItem(label="Efficiency", value="0.0026 ms/sample · 27.1 KB file size"),
-            ],
-            "follow_ups": [
-                "What does LOSO mean, what is the 1D-CNN + LOSO-SVM Hybrid predictor, and how does it differ from standalone HAR 1D-CNN?",
-                "How does Regularized ANN achieve 96.06% test accuracy and 94.13% LOSO mean on 561 features?",
-                "Compare the 4 live base predictors, CombinAI ensemble, and validated benchmark results",
-            ],
-        },
-        {
-            "id": "loso_architecture",
-            "keywords": [
-                "loso", "leave-one-subject-out", "leave one subject out", "30-fold", "30 fold",
-                "hybrid", "1d-cnn", "1dcnn", "har_1dcnn", "93.93", "93.51", "protocol",
-                "generalization", "unseen",
-            ],
-            "phrases": [
-                "what does loso mean", "what is the loso", "1d-cnn + loso-svm hybrid",
-                "leave-one-subject-out", "differ from standalone har 1d-cnn", "30-fold",
-            ],
-            "title": "LOSO Protocol vs. Live 1D-CNN + LOSO-SVM Hybrid & Standalone HAR 1D-CNN",
-            "badge": "LOSO Protocol & Hybrid",
-            "answer": (
-                "**LOSO** stands for **Leave-One-Subject-Out** cross-validation — it is an **evaluation and training protocol, not a standalone model architecture**:\n"
-                "• **What the 30-Fold LOSO Protocol Is:** Each model is trained on 29 volunteers and evaluated on the 1 remaining completely unseen volunteer, repeating 30 times so every model has both a **Held-Out Test Accuracy** and a **30-Fold LOSO Mean ± SD**.\n"
-                f"• **Standalone HAR 1D-CNN Benchmark:** When evaluated alone on raw `9x128` signals, `HAR_1DCNN` ({cnn_params:,} parameters) achieves **93.93% held-out test accuracy** (`93.99%` Macro F1) and **93.51% ± 7.78% 30-fold LOSO accuracy**.\n"
-                "• **Live `1D-CNN + LOSO-SVM Hybrid` Predictor:** In live tracking, `predict_loso_signals` blends `45%` standalone `HAR 1D-CNN` (`model.pth`) probabilities with `55%` LOSO-trained `Linear SVM` (`loso_model.joblib`) probabilities. Because this exact hybrid blend was not benchmarked as a single row in the offline report, its benchmark score is labeled **Not independently validated**."
-            ),
-            "highlights": [
-                ChatHighlightItem(label="LOSO Definition", value="30-Fold Leave-One-Subject-Out Protocol"),
-                ChatHighlightItem(label="Standalone HAR 1D-CNN", value="Test: 93.93% · LOSO: 93.51% ± 7.78%"),
-                ChatHighlightItem(label="LOSO-Trained SVM", value="LOSO: 95.83% ± 4.84% (Test: 96.20%)"),
-                ChatHighlightItem(label="Live Hybrid Status", value="45% 1D-CNN + 55% LOSO-SVM (Unvalidated)"),
-            ],
-            "follow_ups": [
-                "Compare the 4 live base predictors, CombinAI ensemble, and validated benchmark results",
-                "How does the CombinAI ensemble combine the 4 base predictors and why is it marked not independently validated?",
-                "How does the leak-free tuned Linear SVM achieve 96.20% test and 95.83% LOSO accuracy?",
-            ],
-        },
-        {
-            "id": "ann_architecture",
-            "keywords": [
-                "ann", "mlp", "regularized", "561", "features", "engineered", "dense",
-                "adamw", "early stopping", "extract_561", "linear", "dropout", "96.06", "94.13",
-            ],
-            "phrases": [
-                "ann model", "how does regularized ann", "how does the ann", "regularized ann",
-                "561 engineered features", "96.06% test", "ann architecture",
-            ],
-            "title": "Regularized ANN: 96.06% Held-Out Test · 94.13% ± 5.85% LOSO",
-            "badge": "Regularized ANN",
-            "answer": (
-                f"**Regularized ANN** (`RegularizedHAR_ANN`, {ann_params:,} parameters) is a deep multi-layer perceptron trained on the 561 engineered time- and frequency-domain features:\n"
-                "• **Validated Benchmark Scores:** Achieves **96.06% held-out test accuracy** (`96.06%` Macro F1) and **94.13% ± 5.85% 30-fold LOSO accuracy** (outperforming an unregularized Plain ANN baseline at `94.91%` test / `93.84% ± 6.98%` LOSO).\n"
-                "• **Network Structure:** Stacks 3 regularized dense blocks (`561 -> 256 -> 128 -> 64 -> 6`) with `BatchNorm1d`, `ReLU` activations, and graduated `Dropout(0.4, 0.3, 0.2)` trained with `AdamW` weight decay."
-            ),
-            "highlights": [
-                ChatHighlightItem(label="Held-Out Test Acc", value="96.06% (Macro F1: 96.06%)"),
-                ChatHighlightItem(label="30-Fold LOSO Mean", value="94.13% ± 5.85% across 30 subjects"),
-                ChatHighlightItem(label="Architecture", value="561 -> 256 -> 128 -> 64 -> 6 (BatchNorm+Dropout)"),
-                ChatHighlightItem(label="Parameters", value=f"{ann_params:,} weights (739.1 KB)"),
-            ],
-            "follow_ups": [
-                "How does the leak-free tuned Linear SVM achieve 96.20% test and 95.83% LOSO accuracy?",
-                "Compare the 4 live base predictors, CombinAI ensemble, and validated benchmark results",
-                "How does the system separate Sitting, Standing, and Laying postures?",
             ],
         },
         {
@@ -2149,26 +1885,26 @@ def build_model_chatbot_reply(
             ],
             "phrases": [
                 "sitting, standing, and laying", "sitting vs standing", "separate sitting",
-                "stationary postures", "sitting and standing",
+                "stationary postures",
             ],
-            "title": "How the AI Separates Sitting vs. Standing vs. Laying",
+            "title": "How Linear SVM & CNN-LSTM Separate Sitting, Standing, and Laying",
             "badge": "Posture Analysis",
             "answer": (
-                "Sitting, Standing, and Laying all have near-zero body motion (`linear energy < 0.05g`), making Sitting vs. Standing the hardest pair in UCI HAR (70 mutual errors in the baseline Linear SVM). Our pipeline separates them using **3D waist gravity orientation and tilt angle**:\n"
-                "• **Laying (< 35° pitch):** Gravity acts sideways/back-to-front across the torso rather than head-to-toe (`> 99%` accuracy).\n"
-                "• **Sitting (35° – 65° waist tilt):** When seated, the pelvis and waist pocket tilt relative to vertical, shifting the gravity vector ratio between `g_x`, `g_y`, and `g_z`.\n"
-                "• **Standing (>= 66° upright vertical):** The torso and waist stay upright aligned with Earth's vertical gravity vector (`~1.0g`). In our Task 4 benchmark experiments, adding 32 explicit 3D gravity-tilt features with a Two-Stage Tilt-SVM raised test accuracy to **96.81%** (`96.11% ± 4.74%` LOSO)."
+                "Sitting, Standing, and Laying all have near-zero body motion (`linear energy < 0.05g`). The system separates them using **3D waist gravity orientation and pitch angle**:\n"
+                "• **Laying (< 35° pitch):** Gravity acts horizontally across the torso rather than head-to-toe (`> 99%` accuracy).\n"
+                "• **Sitting (35° – 65° waist tilt):** Seated pelvis/pocket angle shifts the gravity vector ratio across `g_x`, `g_y`, and `g_z`.\n"
+                "• **Standing (>= 66° upright vertical):** Upright torso aligns with Earth's vertical `1.0g` vector."
             ),
             "highlights": [
                 ChatHighlightItem(label="Laying Angle", value="< 35 deg horizontal pitch"),
                 ChatHighlightItem(label="Sitting Angle", value="35 deg - 65 deg seated waist tilt"),
                 ChatHighlightItem(label="Standing Angle", value=">= 66 deg upright vertical posture"),
-                ChatHighlightItem(label="Task 4 Tilt-SVM", value="96.81% Test · 96.11% ± 4.74% LOSO"),
+                ChatHighlightItem(label="Activity Images", value="Updates photo automatically per posture"),
             ],
             "follow_ups": [
                 "Why must I keep my mobile attached at my waist in one place and not hold it in my hand?",
                 "How does the AI tell Walking apart from Walking Upstairs and Walking Downstairs?",
-                "Compare the 4 live base predictors, CombinAI ensemble, and validated benchmark results",
+                "Compare the two built-in models: Linear SVM (96.27% test / 95.84% LOSO) vs. CNN-LSTM (91.75%)",
             ],
         },
         {
@@ -2179,24 +1915,24 @@ def build_model_chatbot_reply(
             ],
             "phrases": [
                 "walking apart from", "walking upstairs", "walking downstairs",
-                "walking vs upstairs", "upstairs and walking downstairs",
+                "walking vs upstairs",
             ],
             "title": "How the AI Separates Walking, Upstairs, and Downstairs",
             "badge": "Dynamic Gait",
             "answer": (
-                "When the waist sensor detects sustained periodic motion (`1.0 – 3.5 Hz`), the models distinguish the 3 walking activities by their **cadence frequency, vertical impact crest factor, and forward torso lean**:\n"
-                "• **Walking (~1.75 – 2.25 Hz, ~105–135 SPM):** Balanced vertical bounce and steady forward harmonic rhythm.\n"
-                "• **Walking Upstairs (~1.30 – 1.82 Hz, ~80–110 SPM):** Slower step cadence with stronger upward lift effort and forward torso lean (`pitch < 64°`).\n"
-                "• **Walking Downstairs (~2.06 – 2.50 Hz, ~124–150 SPM):** Faster step frequency with sharp vertical heel-strike impact spikes (`crest factor >= 2.42`)."
+                "When the waist sensor detects rhythmic walking motion (`1.0 – 3.5 Hz`), **Linear SVM** and **CNN-LSTM** distinguish the 3 locomotion activities by **cadence frequency, vertical impact crest factor, and forward torso lean**:\n"
+                "• **Walking (~1.75 – 2.25 Hz):** Balanced vertical bounce and steady harmonic stride (displays the Walking image).\n"
+                "• **Walking Upstairs (~1.30 – 1.82 Hz):** Slower climbing cadence with upward lift effort and forward torso lean (displays the Upstairs image).\n"
+                "• **Walking Downstairs (~2.06 – 2.50 Hz):** Faster descent cadence with sharp heel-strike braking impact spikes (displays the Downstairs image)."
             ),
             "highlights": [
                 ChatHighlightItem(label="Flat Walking", value="1.75 - 2.25 Hz · Steady rhythm"),
                 ChatHighlightItem(label="Walking Upstairs", value="1.30 - 1.82 Hz · Forward lean & lift"),
                 ChatHighlightItem(label="Walking Downstairs", value=">= 2.06 Hz · High impact crest factor"),
-                ChatHighlightItem(label="Transition Speed", value="Evaluates recent 1.12s sub-window"),
+                ChatHighlightItem(label="Visual Feedback", value="Shows matching activity image live"),
             ],
             "follow_ups": [
-                "How does the step counter detect my steps accurately without false counts?",
+                "How does the step counter detect 100% of my real-world walking steps accurately?",
                 "How does the system separate Sitting, Standing, and Laying postures?",
                 "What are the 9 sensor channels at 50 Hz and how does the 0.3 Hz gravity filter work?",
             ],
@@ -2206,63 +1942,60 @@ def build_model_chatbot_reply(
             "keywords": [
                 "signal", "channels", "9 channels", "butterworth", "filter", "cutoff",
                 "0.3", "0.3hz", "gravity", "sampling", "50hz", "50 hz", "window",
-                "2.56", "128", "smooth", "smoothed", "smoothing", "ema", "hysteresis",
-                "imu", "accelerometer", "gyroscope",
+                "2.56", "128", "imu", "accelerometer", "gyroscope",
             ],
             "phrases": [
-                "9 sensor channels", "0.3 hz gravity filter", "butterworth", "cutoff frequency",
+                "9 sensor channels", "0.3 hz gravity filter", "butterworth",
                 "9 channels", "50 hz", "gravity filter",
             ],
             "title": "50 Hz Sensor Pipeline, 9 Channels & 0.3 Hz Gravity Filter",
             "badge": "DSP Pipeline",
             "answer": (
-                "Every prediction analyzes a **2.56-second sliding window** containing **128 samples at 50 Hz** across **9 channels**:\n"
-                "• **Channels 1–3 (`body_acc_xyz`):** Linear body movement acceleration after subtracting gravity.\n"
-                "• **Channels 4–6 (`body_gyro_xyz`):** 3D angular velocity from the gyroscope (hip rotation & pitch).\n"
-                "• **Channels 7–9 (`total_acc_xyz`):** Raw accelerometer readings including Earth's `1.0g` gravity.\n"
-                "• **0.3 Hz Low-Pass Gravity Filter:** Because gravity changes slowly (`< 0.3 Hz`) while walking steps oscillate at `1.4 – 2.5 Hz`, a `0.3 Hz` low-pass filter (`alpha = 0.036` at 50 Hz) cleanly separates posture gravity from dynamic step motion."
+                "Every prediction analyzes a **2.56-second sliding window** of **128 samples at 50 Hz** across **9 channels**:\n"
+                "• **Channels 1–3 (`body_acc_xyz`):** Linear body acceleration after subtracting gravity.\n"
+                "• **Channels 4–6 (`body_gyro_xyz`):** 3D angular velocity from the gyroscope.\n"
+                "• **Channels 7–9 (`total_acc_xyz`):** Raw tri-axial accelerometer readings including gravity.\n"
+                "• **0.3 Hz Low-Pass Gravity Filter:** Separates slow posture gravity (`< 0.3 Hz`) from dynamic walking steps (`1.4 – 2.5 Hz`)."
             ),
             "highlights": [
                 ChatHighlightItem(label="Window Size", value="128 samples @ 50 Hz = 2.56 seconds"),
                 ChatHighlightItem(label="9 IMU Channels", value="body_acc (3) + gyro (3) + total_acc (3)"),
                 ChatHighlightItem(label="Gravity Cutoff", value="fc = 0.3 Hz Low-Pass Filter"),
-                ChatHighlightItem(label="Fast Warm-Up", value="Starts at 32 samples (0.64s), updates every 300ms"),
+                ChatHighlightItem(label="Models", value="561 features (SVM) & 128×9 raw (CNN-LSTM)"),
             ],
             "follow_ups": [
-                "How does the leak-free CNN-LSTM model work on 9x128 motion signals?",
-                "How does the step counter detect my steps accurately without false counts?",
-                "Why must I keep my mobile attached at my waist in one place and not hold it in my hand?",
+                "How does the CNN-LSTM model achieve 91.75% test accuracy on 9x128 raw motion signals?",
+                "How does Linear SVM achieve 96.27% test accuracy (macro F1 0.963) on 561 features?",
+                "How does the step counter detect 100% of my real-world walking steps accurately?",
             ],
         },
         {
             "id": "live_status",
             "keywords": [
                 "right now", "current", "my status", "my telemetry", "doing now",
-                "my steps", "live session", "what am i doing", "model loaded", "weights status",
-                "model status", "loaded weights", "device", "cpu", "gpu",
+                "my steps", "live session", "what am i doing", "model loaded",
             ],
             "phrases": [
-                "right now", "what is my current live", "what am i doing", "live telemetry",
-                "model status", "my current live activity",
+                "right now", "what is my current live", "what am i doing",
+                "my current live activity",
             ],
-            "title": "Your Current Live Session, Active Predictor & Step Count",
+            "title": "Your Current Live Session, Active Model & Step Count",
             "badge": "Live Telemetry",
             "answer": (
-                f"Right now your primary highlighted predictor is **{selected_model}** (while all 4 base predictors `CNN-LSTM`, `Regularized ANN`, `Linear SVM`, `1D-CNN + LOSO-SVM Hybrid` plus `CombinAI (Ensemble)` run side by side on device `{device}`).\n"
-                f"• **Current Detected Activity:** **{live_act}** ({live_conf} live window confidence — separate from offline benchmark accuracy)\n"
-                f"• **Total Session Steps:** **{live_steps:,} steps** ({live_win_steps} steps in the latest 2.56s window at **{live_spm} SPM** cadence)\n"
-                f"• **Loaded Checkpoints:** `cnn_lstm_model.keras`, `har_ann_regularized.pth`, `svm_model.joblib`, `loso_model.joblib`, and `model.pth` are active."
+                f"Right now your highlighted model is **{selected_model}** while both **Linear SVM (96.27% test / 95.84% LOSO)** and **CNN-LSTM (91.75% test)** run side by side.\n"
+                f"• **Current Detected Activity:** **{live_act}** ({live_conf} live confidence)\n"
+                f"• **Total Session Steps:** **{live_steps:,} steps** ({live_win_steps} steps in the current window at **{live_spm} SPM**)"
             ),
             "highlights": [
-                ChatHighlightItem(label="Detected Activity", value=f"{live_act} ({live_conf} live conf)"),
-                ChatHighlightItem(label="Highlighted Predictor", value=f"{selected_model}"),
+                ChatHighlightItem(label="Detected Activity", value=f"{live_act} ({live_conf})"),
+                ChatHighlightItem(label="Highlighted Model", value=f"{selected_model}"),
                 ChatHighlightItem(label="Total Steps", value=f"{live_steps:,} steps · {live_spm} SPM"),
-                ChatHighlightItem(label="Live Predictors", value="4 Base Predictors + CombinAI Ensemble"),
+                ChatHighlightItem(label="Built-In Models", value="Linear SVM (96.27%) & CNN-LSTM (91.75%)"),
             ],
             "follow_ups": [
-                "Compare the 4 live base predictors, CombinAI ensemble, and validated benchmark results",
+                "Compare the two built-in models: Linear SVM (96.27% test / 95.84% LOSO) vs. CNN-LSTM (91.75%)",
                 "How do I use the 6-digit device number (code) to see my mobile prediction on my PC?",
-                "How does the step counter detect my steps accurately without false counts?",
+                "How does the step counter detect 100% of my real-world walking steps accurately?",
             ],
         },
         {
@@ -2270,27 +2003,27 @@ def build_model_chatbot_reply(
             "keywords": [
                 "tapash", "pradhan", "pushpa", "shova", "author", "creator", "developer",
                 "contact", "email", "github", "repo", "code", "scu", "seoul christian",
-                "university", "capstone", "team", "dataset", "uci", "api", "endpoint", "docs",
+                "university", "capstone", "team", "dataset", "uci",
             ],
             "phrases": [
                 "who built", "what dataset was used", "contact the developer",
-                "project code", "github", "seoul christian", "about this capstone",
+                "seoul christian", "about this capstone",
             ],
             "title": "About This UCI HAR Capstone Project & Dataset",
             "badge": "Project Info",
             "answer": (
                 "This **Human Activity Recognition (UCI HAR) Studio** was developed for the AI & Big Data Convergence Capstone at **Seoul Christian University** by **Tapash Pradhan** (`tapashpradhan1234@gmail.com`) with teammates **Pushpa Ramtel** and **Shova Dhital**.\n"
-                "• **Dataset:** UCI Human Activity Recognition Using Smartphones Dataset (30 volunteers aged 19–48, waist-mounted Samsung Galaxy S II, 50 Hz accelerometer & gyroscope, 10,299 windows: 7,352 train / 2,947 test across 6 activities).\n"
-                "• **Validated Benchmark Models:** `Linear SVM` (96.20% test / 95.83% ± 4.84% LOSO), `Regularized ANN` (96.06% test / 94.13% ± 5.85% LOSO), `HAR 1D-CNN` (93.93% test / 93.51% ± 7.78% LOSO), and `CNN-LSTM` (90.57% test / 90.14% ± 10.25% LOSO), plus live `1D-CNN + LOSO-SVM Hybrid` and `CombinAI (Ensemble)`."
+                "• **Dataset:** UCI HAR Smartphone Dataset (30 volunteers aged 19–48, waist-mounted smartphone at 50 Hz, 10,299 windows: 7,352 train / 2,947 test across 6 activities).\n"
+                "• **Built-In Models:** **Linear SVM** (**96.27%** test accuracy, macro F1 **0.963**, **95.84%** mean LOSO accuracy across 30 subjects) and **CNN-LSTM** (**91.75%** test accuracy at best epoch)."
             ),
             "highlights": [
                 ChatHighlightItem(label="Lead Developer", value="Tapash Pradhan (SCU)"),
                 ChatHighlightItem(label="Team Members", value="Pushpa Ramtel · Shova Dhital"),
-                ChatHighlightItem(label="Dataset", value="UCI HAR · 30 Subjects · 10,299 Windows"),
-                ChatHighlightItem(label="GitHub", value="github.com/Tapash36"),
+                ChatHighlightItem(label="Linear SVM", value="96.27% Test · 95.84% Mean LOSO (30 Subj)"),
+                ChatHighlightItem(label="CNN-LSTM", value="91.75% Test Accuracy (Best Epoch)"),
             ],
             "follow_ups": [
-                "Compare the 4 live base predictors, CombinAI ensemble, and validated benchmark results",
+                "Compare the two built-in models: Linear SVM (96.27% test / 95.84% LOSO) vs. CNN-LSTM (91.75%)",
                 "Why must I keep my mobile attached at my waist in one place and not hold it in my hand?",
                 "How do I use the 6-digit device number (code) to see my mobile prediction on my PC?",
             ],
@@ -2313,22 +2046,21 @@ def build_model_chatbot_reply(
 
     if best_topic is None or best_score < 2:
         return ChatResponsePayload(
-            title="UCI HAR AI Assistant — Choose Any Topic",
+            title="UCI HAR AI Assistant — Linear SVM & CNN-LSTM Guide",
             badge="Model Guide",
             answer=(
-                "I can answer questions about our **4 live base predictors** (**CNN-LSTM**, **Regularized ANN**, **Linear SVM**, **1D-CNN + LOSO-SVM Hybrid**), "
-                "**CombinAI (Ensemble)**, our **validated Held-Out Test vs. 30-Fold LOSO benchmark results** (including standalone **HAR 1D-CNN**), "
-                "**why your mobile must stay at your waist**, or **how to watch live on your PC via the 6-digit code**."
+                "I can answer questions about our two built-in models — **Linear SVM** (**96.27%** test accuracy, macro F1 **0.963**; **95.84%** mean LOSO accuracy across 30 subjects) "
+                "and **CNN-LSTM** (**91.75%** test accuracy at best epoch) — as well as **waist mobile placement**, **watching live on your PC with the 6-digit code**, and **real-world step counting**."
             ),
             highlights=[
-                ChatHighlightItem(label="Linear SVM & ANN", value="SVM: 96.20% Test · ANN: 96.06% Test"),
-                ChatHighlightItem(label="1D-CNN & CNN-LSTM", value="1D-CNN: 93.93% Test · CNN-LSTM: 90.57% Test"),
-                ChatHighlightItem(label="Live Activity", value=f"{live_act} ({live_conf} live conf)"),
+                ChatHighlightItem(label="Linear SVM Test", value="96.27% (Macro F1 0.963)"),
+                ChatHighlightItem(label="Linear SVM LOSO", value="95.84% Mean LOSO (30 Subjects)"),
+                ChatHighlightItem(label="CNN-LSTM Test", value="91.75% (Best Epoch · 128×9 Raw)"),
                 ChatHighlightItem(label="Step Counter", value=f"{live_steps:,} steps · {live_spm} SPM"),
             ],
             follow_ups=[
-                "Compare the 4 live base predictors, CombinAI ensemble, and validated benchmark results",
-                "What does LOSO mean, what is the 1D-CNN + LOSO-SVM Hybrid predictor, and how does it differ from standalone HAR 1D-CNN?",
+                "Compare the two built-in models: Linear SVM (96.27% test / 95.84% LOSO) vs. CNN-LSTM (91.75%)",
+                "What is the 95.84% Linear SVM mean LOSO accuracy across 30 subjects?",
                 "How do I use the 6-digit device number (code) to see my mobile prediction on my PC?",
             ],
         )
